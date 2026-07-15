@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,8 @@ from sphinx_interrogator.protocol import VmClient
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = ROOT / "benchmarks/profiles/tutorial.toml"
 SCHEMA = json.loads((ROOT / "spec/protocol.schema.json").read_text(encoding="utf-8"))
+CHALLENGE_SCHEMA = json.loads((ROOT / "spec/challenge.schema.json").read_text(encoding="utf-8"))
+JUDGE_SCHEMA = json.loads((ROOT / "spec/judge.schema.json").read_text(encoding="utf-8"))
 
 
 def vm_binary() -> Path:
@@ -30,10 +33,57 @@ def vm_binary() -> Path:
     return binary
 
 
+@pytest.fixture
+def challenge(tmp_path: Path) -> Path:
+    """Create one isolated deterministic tutorial challenge through the real CLI."""
+    output = tmp_path / "challenge"
+    completed = subprocess.run(
+        [
+            str(vm_binary()),
+            "challenge",
+            "create",
+            "--profile",
+            str(PROFILE),
+            "--output",
+            str(output),
+            "--challenge-id",
+            "pytest-challenge",
+            "--seed",
+            "20260715",
+            "--fault",
+            "reference",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=5,
+    )
+    assert completed.returncode == 0, completed.stderr
+    generated = json.loads(completed.stdout)
+    public = json.loads((output / "public/challenge.json").read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(CHALLENGE_SCHEMA).validate(generated)
+    jsonschema.Draft202012Validator(CHALLENGE_SCHEMA).validate(public)
+    assert generated == public
+    with (output / "public/profile.toml").open("rb") as handle:
+        public_profile = tomllib.load(handle)
+    assert not {
+        "fault_variant",
+        "generation_root_seed",
+        "noise_key",
+        "commitment_nonce",
+        "secret",
+    }.intersection(public_profile)
+    if os.name == "posix":
+        assert (output / "private").stat().st_mode & 0o777 == 0o700
+        assert (output / "private/secret.bin").stat().st_mode & 0o777 == 0o600
+    return output
+
+
 @pytest.mark.integration
-def test_client_round_trip_tracks_public_budgets_and_versions() -> None:
+def test_client_round_trip_tracks_public_budgets_and_versions(challenge: Path) -> None:
     """Python must negotiate and execute only through the real process boundary."""
-    with VmClient.start(vm_binary(), profile=PROFILE, timeout_seconds=2.0) as client:
+    with VmClient.start(vm_binary(), challenge=challenge, timeout_seconds=2.0) as client:
         hello = client.hello()
         assert hello.profile_name == "tutorial"
         assert hello.capabilities == ("close", "execute", "hard_reset", "soft_reset")
@@ -62,7 +112,7 @@ def test_client_round_trip_tracks_public_budgets_and_versions() -> None:
 
 
 @pytest.mark.integration
-def test_server_recovers_after_malformed_and_oversized_lines() -> None:
+def test_server_recovers_after_malformed_and_oversized_lines(challenge: Path) -> None:
     """Transport errors are bounded, schema-valid, and do not kill the server loop."""
     requests = [
         "{not-json}",
@@ -84,7 +134,7 @@ def test_server_recovers_after_malformed_and_oversized_lines() -> None:
         ),
     ]
     completed = subprocess.run(
-        [str(vm_binary()), "--profile", str(PROFILE)],
+        [str(vm_binary()), "serve", "--challenge", str(challenge)],
         input="\n".join(requests) + "\n",
         capture_output=True,
         text=True,
@@ -107,11 +157,11 @@ def test_server_recovers_after_malformed_and_oversized_lines() -> None:
 
 
 @pytest.mark.integration
-def test_python_canonical_program_and_sparse_memory_execute_in_rust() -> None:
+def test_python_canonical_program_and_sparse_memory_execute_in_rust(challenge: Path) -> None:
     """The independent Python representation is accepted by the authoritative parser."""
     source = (ROOT / "tests/fixtures/programs/full-v1.source.spx").read_text(encoding="utf-8")
     canonical = Program.parse(source, lanes=4).render()
-    with VmClient.start(vm_binary(), profile=PROFILE, timeout_seconds=2.0) as client:
+    with VmClient.start(vm_binary(), challenge=challenge, timeout_seconds=2.0) as client:
         client.hello()
         golden = client.execute(
             canonical,
@@ -131,3 +181,151 @@ def test_python_canonical_program_and_sparse_memory_execute_in_rust() -> None:
     assert memory.status == "halted"
     assert memory.static_cycles == 5
     assert memory.public_digest != "0000000000000000"
+
+
+@pytest.mark.integration
+def test_fault_assignment_changes_only_aggregate_observation(tmp_path: Path) -> None:
+    """Off/reference challenges share architecture while one guarded bank gets one cycle."""
+    challenges: dict[str, Path] = {}
+    for variant in ("off", "reference"):
+        output = tmp_path / variant
+        completed = subprocess.run(
+            [
+                str(vm_binary()),
+                "challenge",
+                "create",
+                "--profile",
+                str(PROFILE),
+                "--output",
+                str(output),
+                "--challenge-id",
+                f"process-{variant}",
+                "--seed",
+                "314159",
+                "--fault",
+                variant,
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=5,
+        )
+        assert completed.returncode == 0, completed.stderr
+        challenges[variant] = output
+
+    outcomes: dict[str, list[tuple[int, str]]] = {}
+    for variant, challenge_path in challenges.items():
+        variant_outcomes: list[tuple[int, str]] = []
+        with VmClient.start(vm_binary(), challenge=challenge_path, timeout_seconds=2.0) as client:
+            client.hello()
+            for bank in range(4):
+                result = client.execute(
+                    f"PROBE 0, 0, 0\nANCHOR {bank}, 0\nHALT\n",
+                    session_id="fault-confinement",
+                    logical_batch_id=f"anchor-{bank}",
+                    reset="hard",
+                )
+                variant_outcomes.append(
+                    (result.observation.cycle_bucket - result.static_cycles, result.public_digest)
+                )
+        outcomes[variant] = variant_outcomes
+
+    assert [delta for delta, _ in outcomes["off"]] == [0, 0, 0, 0]
+    assert sorted(delta for delta, _ in outcomes["reference"]) == [0, 0, 0, 1]
+    assert [digest for _, digest in outcomes["reference"]] == [
+        digest for _, digest in outcomes["off"]
+    ]
+
+
+@pytest.mark.integration
+def test_judge_records_only_one_schema_valid_submission(challenge: Path) -> None:
+    """A campaign token cannot turn the final Boolean judge into a guess oracle."""
+    public = json.loads((challenge / "public/challenge.json").read_text(encoding="utf-8"))
+    command = [
+        str(vm_binary()),
+        "judge",
+        "--challenge",
+        str(challenge),
+        "--campaign-token",
+        public["campaign_token"],
+        "--guess",
+        "0000",
+    ]
+    first = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=5,
+    )
+    second = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=5,
+    )
+    assert first.returncode == 0, first.stderr
+    assert second.returncode == 0, second.stderr
+    first_response = json.loads(first.stdout)
+    second_response = json.loads(second.stdout)
+    jsonschema.Draft202012Validator(JUDGE_SCHEMA).validate(first_response)
+    jsonschema.Draft202012Validator(JUDGE_SCHEMA).validate(second_response)
+    assert first_response["submission_recorded"] is True
+    assert second_response["submission_recorded"] is False
+    assert second_response["accepted"] is False
+
+
+@pytest.mark.integration
+def test_seeded_standard_transcript_replays_across_fresh_processes(tmp_path: Path) -> None:
+    """A fixed challenge and public schedule reproduce seeded jitter exactly."""
+    output = tmp_path / "standard"
+    completed = subprocess.run(
+        [
+            str(vm_binary()),
+            "challenge",
+            "create",
+            "--profile",
+            str(ROOT / "benchmarks/profiles/standard.toml"),
+            "--output",
+            str(output),
+            "--challenge-id",
+            "standard-replay",
+            "--seed",
+            "271828",
+            "--fault",
+            "reference",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=5,
+    )
+    assert completed.returncode == 0, completed.stderr
+
+    def transcript() -> list[tuple[int, int, str]]:
+        observations: list[tuple[int, int, str]] = []
+        with VmClient.start(vm_binary(), challenge=output, timeout_seconds=2.0) as client:
+            client.hello()
+            for repetition in range(3):
+                result = client.execute(
+                    "PROBE 0, 0, 0\nANCHOR 0, 0\nHALT\n",
+                    session_id="deterministic-transcript",
+                    logical_batch_id="deterministic-transcript",
+                    reset="hard",
+                    execution_seed_id=f"repetition-{repetition}",
+                )
+                observations.append(
+                    (
+                        result.observation.cycle_bucket,
+                        result.static_cycles,
+                        result.public_digest,
+                    )
+                )
+        return observations
+
+    assert transcript() == transcript()

@@ -3,7 +3,7 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 export CARGO_BUILD_JOBS := env_var_or_default("CARGO_BUILD_JOBS", "2")
 export CARGO_TARGET_DIR := env_var_or_default("CARGO_TARGET_DIR", "target")
 
-bootstrap:
+bootstrap: bootstrap-formal
     @command -v cargo >/dev/null
     @command -v uv >/dev/null
     @rustc --version
@@ -11,6 +11,14 @@ bootstrap:
     @uv --version
     uv sync --frozen --extra dev
     cargo fetch --locked
+
+bootstrap-formal:
+    @command -v curl >/dev/null
+    @command -v java >/dev/null
+    @mkdir -p .tools
+    @if [[ ! -f .tools/tla2tools-1.7.4.jar ]]; then curl --fail --location --silent --show-error --output .tools/tla2tools-1.7.4.jar https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar; fi
+    @printf '%s  %s\n' '936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88' '.tools/tla2tools-1.7.4.jar' | sha256sum --check --status
+    @echo 'TLC tla2tools 1.7.4 ready'
 
 fmt:
     cargo fmt --all -- --check

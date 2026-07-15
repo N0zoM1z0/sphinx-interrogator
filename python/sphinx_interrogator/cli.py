@@ -1,4 +1,4 @@
-"""Command-line entry points for inspecting and exercising the design scaffold."""
+"""Command-line entry points for inspecting public relations and the VM endpoint."""
 
 from __future__ import annotations
 
@@ -52,10 +52,10 @@ def render_anchor_switch(
 
 @main.command("hello")
 @click.option("--vm", type=click.Path(path_type=Path, exists=True), required=True)
-@click.option("--profile", type=click.Path(path_type=Path, exists=True), required=True)
-def hello(vm: Path, profile: Path) -> None:
+@click.option("--challenge", type=click.Path(path_type=Path, exists=True), required=True)
+def hello(vm: Path, challenge: Path) -> None:
     """Start a local public VM process and print its handshake as JSON."""
-    with VmClient.start(vm, profile=profile) as client:
+    with VmClient.start(vm, challenge=challenge) as client:
         result = client.hello()
     click.echo(json.dumps(asdict(result), indent=2, sort_keys=True))
 

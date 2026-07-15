@@ -149,7 +149,8 @@
             "name",
             "semantic_version",
             "bucket_width",
-            "lanes"
+            "lanes",
+            "hard_reset_available"
           ],
           "properties": {
             "name": {

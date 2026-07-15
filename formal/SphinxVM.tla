@@ -1,7 +1,7 @@
 ------------------------------ MODULE SphinxVM ------------------------------
-EXTENDS Naturals, FiniteSets, TLC
+EXTENDS Integers, FiniteSets, TLC
 
-CONSTANTS Lanes, Tokens, Epochs, Banks, FaultEnabled
+CONSTANTS Lanes, Tokens, Epochs, Banks, FaultEnabled, SoftPreserved
 
 ASSUME /\ Lanes # {}
        /\ Tokens # {}
@@ -11,13 +11,15 @@ ASSUME /\ Lanes # {}
 VARIABLES phase,
           replayCredit,
           lastBank,
+          uopCacheTag,
+          uopCacheValid,
           pendingBank,
           pendingEpoch,
           pendingGuard,
           faultCycles
 
-vars == <<phase, replayCredit, lastBank, pendingBank, pendingEpoch,
-          pendingGuard, faultCycles>>
+vars == <<phase, replayCredit, lastBank, uopCacheTag, uopCacheValid,
+          pendingBank, pendingEpoch, pendingGuard, faultCycles>>
 
 None == -1
 
@@ -25,13 +27,18 @@ None == -1
    model replaces this operator with the bit-vector S-box definition. *)
 BankOf(lane, token, epoch) == (lane + token + (2 * epoch)) % 4
 
+Xor2(a, b) == (((a % 2) + (b % 2)) % 2)
+              + (2 * ((((a \div 2) % 2) + ((b \div 2) % 2)) % 2))
+
 GuardOf(lane, token, epoch) ==
-    phase = ((lane + token + epoch) % 4)
+    phase = Xor2(Xor2(lane % 4, token % 4), epoch)
 
 Init ==
     /\ phase = 0
     /\ replayCredit = 0
     /\ lastBank = None
+    /\ uopCacheTag = 0
+    /\ uopCacheValid = FALSE
     /\ pendingBank = None
     /\ pendingEpoch = None
     /\ pendingGuard = FALSE
@@ -45,6 +52,8 @@ Probe(lane, token, epoch) ==
     /\ pendingEpoch' = epoch
     /\ pendingGuard' = GuardOf(lane, token, epoch)
     /\ phase' = (phase + 1 + epoch) % 4
+    /\ uopCacheTag' = 12
+    /\ uopCacheValid' = TRUE
     /\ UNCHANGED <<replayCredit, lastBank, faultCycles>>
 
 Anchor(bank, epoch) ==
@@ -64,11 +73,15 @@ Anchor(bank, epoch) ==
        /\ pendingBank' = None
        /\ pendingEpoch' = None
        /\ pendingGuard' = FALSE
+       /\ uopCacheTag' = 13
+       /\ uopCacheValid' = TRUE
        /\ UNCHANGED phase
 
 Pad(amount) ==
     /\ amount \in 0..3
     /\ phase' = (phase + amount) % 4
+    /\ uopCacheTag' = 14
+    /\ uopCacheValid' = TRUE
     /\ UNCHANGED <<replayCredit, lastBank, pendingBank, pendingEpoch,
                     pendingGuard, faultCycles>>
 
@@ -77,15 +90,31 @@ Fence ==
     /\ pendingBank' = None
     /\ pendingEpoch' = None
     /\ pendingGuard' = FALSE
+    /\ uopCacheTag' = 15
+    /\ uopCacheValid' = TRUE
     /\ UNCHANGED <<phase, lastBank, faultCycles>>
 
-HardReset == Init'
-
-SoftReset ==
+HardReset ==
+    /\ phase' = 0
+    /\ replayCredit' = 0
+    /\ lastBank' = None
+    /\ uopCacheTag' = 0
+    /\ uopCacheValid' = FALSE
     /\ pendingBank' = None
     /\ pendingEpoch' = None
     /\ pendingGuard' = FALSE
-    /\ UNCHANGED <<phase, replayCredit, lastBank, faultCycles>>
+    /\ faultCycles' = 0
+
+SoftReset ==
+    /\ phase' = IF "phase" \in SoftPreserved THEN phase ELSE 0
+    /\ lastBank' = IF "lastBank" \in SoftPreserved THEN lastBank ELSE None
+    /\ replayCredit' = IF "replayCredit" \in SoftPreserved THEN replayCredit ELSE 0
+    /\ uopCacheTag' = IF "uopCache" \in SoftPreserved THEN uopCacheTag ELSE 0
+    /\ uopCacheValid' = IF "uopCache" \in SoftPreserved THEN uopCacheValid ELSE FALSE
+    /\ pendingBank' = None
+    /\ pendingEpoch' = None
+    /\ pendingGuard' = FALSE
+    /\ UNCHANGED faultCycles
 
 Next ==
     \/ \E lane \in Lanes, token \in Tokens, epoch \in Epochs:
@@ -100,6 +129,8 @@ TypeOK ==
     /\ phase \in 0..3
     /\ replayCredit \in 0..3
     /\ lastBank \in Banks \cup {None}
+    /\ uopCacheTag \in 0..15
+    /\ uopCacheValid \in BOOLEAN
     /\ pendingBank \in Banks \cup {None}
     /\ pendingEpoch \in Epochs \cup {None}
     /\ pendingGuard \in BOOLEAN

@@ -35,6 +35,12 @@ fault delta, jitter sample, private configuration, or pre-quantized exact cycle 
 The JSON Schema in `spec/protocol.schema.json` is normative. Golden fixtures and live
 Rust/Python process tests validate the same response shapes.
 
+The challenge and one-shot judge documents have separate normative schemas at
+`spec/challenge.schema.json` and `spec/judge.schema.json`. The public challenge document
+contains its ID, exact profile hash, opaque salted commitment, protocol version, public
+campaign token, and budget copy. It contains no secret, mapping, fault assignment,
+noise key, or commitment nonce.
+
 ## Public inputs and session state
 
 `public_input.registers` supplies a prefix of `r0..r7`. `public_input.memory` is a
@@ -43,3 +49,35 @@ sparse object whose canonical decimal keys are addresses `0..255` and whose valu
 hard or soft reset first clears architectural data; reset `none` preserves prior
 architectural data and overlays only supplied entries. The program itself is parsed
 and fully validated before a session, budget counter, input, or machine state changes.
+
+Hard reset clears all hidden scheduler state. Soft reset preserves exactly the typed
+fields listed by the public profile and clears every other hidden field. A logical
+batch ID is charged once even when several physical executions form a paired or sampled
+experiment; every execution is still charged to the physical budget. Hard reset is
+charged per accepted hard-reset execution.
+
+## Challenge and judge commands
+
+The target is served only from a complete generated challenge:
+
+```text
+sphinx-vm challenge create --profile <profile.toml> --output <new-dir> \
+  [--challenge-id <id>] [--seed <development-seed>] \
+  [--fault off|reference|weak|signed]
+sphinx-vm serve --challenge <challenge-dir>
+sphinx-vm judge --challenge <challenge-dir> \
+  --campaign-token <public-token> --guess <ordered-lowercase-hex-cells>
+```
+
+`--seed` is a target-side reproducibility facility for local development/evaluation;
+it must never be supplied to System B because it derives the challenge secret. Omitting
+it uses operating-system entropy. The resulting generation root is logged only in the
+mode-0700 private configuration. The fault selection is private as well. In blind
+controls, `standard.toml` and `fault_free.toml` are
+byte-identical public profiles and differ only in private challenge assignment.
+
+The judge validates a complete guess, atomically consumes the campaign token on its
+first well-formed submission, and returns only public IDs plus `submission_recorded`
+and `accepted`. A later invocation for the same token returns
+`submission_recorded=false, accepted=false`, so it cannot be used as a repeated guess
+oracle.

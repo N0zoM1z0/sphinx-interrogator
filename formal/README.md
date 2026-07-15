@@ -1,7 +1,7 @@
-# Formal scaffold
+# Executable formal model
 
-This directory gives coding agents a small executable specification surface before the
-full proof effort begins.
+This directory contains the finite scheduler model and bounded relation obligations used
+alongside the concrete Rust/Python differential tests.
 
 - `SphinxVM.tla` models the hidden scheduler state, reset semantics, pending probes,
   anchors, and guarded replay delta as a finite transition system.
@@ -9,19 +9,33 @@ full proof effort begins.
 - `relation_contracts.smt2` checks the base architectural and fault-free obligations
   for an anchor-switch relation and a directional reference-fault lemma.
 
-The files are deliberately smaller than the production semantics. They are not a
-certificate for the final implementation. Milestones M1–M3 must connect these models
-to the concrete Rust transition functions through differential/property tests and
-record exact bounds for every bounded-completeness claim.
+The TLA+ model remains an abstraction rather than a full implementation certificate. The
+verification script additionally exhausts all 131,072 combinations of the two-bit phase,
+two-bit replay credit, low lane bits, token, epoch, secret bank, and anchor bank. Shared
+golden vectors connect the independent Python model to the concrete Rust transition.
 
 Run the structural and SMT checks with:
 
 ```bash
+just bootstrap-formal
 just verify-formal
 ```
 
-When `tla2tools.jar` is available:
+The verification command also runs an internal mutation self-test. To see the deliberate
+replay-suppression defect rejected directly:
 
 ```bash
-java -jar tla2tools.jar -config formal/SphinxVM.cfg formal/SphinxVM.tla
+uv run --frozen python scripts/check_formal_scaffold.py --mutate-suppression
+```
+
+That command is expected to exit with status 1 and identify the first counterexample.
+
+The bootstrap recipe downloads the pinned TLA+ 1.7.4 command-line artifact into the
+ignored `.tools/` directory and verifies its SHA-256 checksum. To override that local
+path, set `TLA2TOOLS_JAR`. The equivalent direct model-check command is:
+
+```bash
+java -XX:+UseParallelGC -jar .tools/tla2tools-1.7.4.jar -workers 1 \
+  -metadir .cache/tlc \
+  -config formal/SphinxVM.cfg formal/SphinxVM.tla
 ```

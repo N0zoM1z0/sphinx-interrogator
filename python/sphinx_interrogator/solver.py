@@ -8,8 +8,7 @@ from math import prod
 
 from sphinx_interrogator.model import CandidateSummary
 from sphinx_interrogator.relations import BankFact
-
-SBOX4: tuple[int, ...] = (6, 11, 0, 4, 13, 3, 15, 8, 10, 2, 5, 12, 1, 14, 7, 9)
+from sphinx_interrogator.target_model import SBOX4
 
 
 class InconsistentModelError(RuntimeError):

@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-15 16:58Z**
+Last updated: **2026-07-15 17:29Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -137,3 +137,62 @@ checkpoint rather than a claim that the milestone is formally closed.
 - relation certificates/extractors, persistence/hypothesis solver, tutorial recovery,
   CEGIS, standard/noise evaluation, active learning, reducer, TLC, and release evidence
   remain M3 through M9.
+
+## M2 microarchitecture, challenges, and formal checkpoint
+
+M2 replaces the combined scaffold machine/configuration with explicit `microcode`,
+`microarchitecture`, `mapping`, `fault`, `noise`, and strict public `profile` modules.
+Every retired instruction uses one microcode table for public static cost and the pure
+hidden-state transition. Off/reference/weak/signed policies are applied separately as
+timing deltas, so fault selection cannot alter architectural writes or transition shape.
+
+Challenge creation now writes `public/profile.toml`, schema-valid public metadata, and
+a mode-`0700` private tree containing the ordered secret, complete private mapping,
+fault assignment, privately logged generation root, noise key, and commitment nonce.
+The length-framed commitment binds all of that material. Loading rejects public hash,
+budget, mapping, secret, key, or commitment mismatches. The one-shot judge atomically
+consumes its public campaign token and returns only schema-valid public metadata and two
+Booleans. The release server accepts only a complete challenge directory.
+
+The independent Python target-family model and concrete Rust transition both execute
+`tests/fixtures/model/micro-vectors.json`. Rust additionally exhausts the public S-box
+mapping and all 2,048 reduced off-fault cells. Live process tests sweep all four anchors
+against matching off/reference challenges: off produces `[0,0,0,0]`, reference produces
+one `+1` and three zero deltas, and every public digest is equal. Another live test
+restarts two standard-profile servers and obtains byte-equivalent seeded schedules.
+
+Pinned formal tooling is TLA+ tools 1.7.4 / TLC 2.19 on OpenJDK 17.0.19. The final M2
+command suite used repository-specific Cargo home/target paths and two build jobs. No
+other Cargo process was active:
+
+```text
+just fmt             pass after formatting the two new Python model/test files
+just lint            pass (Clippy -D warnings, Ruff, strict mypy)
+just test            pass (42 Rust lib + 2 Rust binary; 68 Python; 6 live process tests)
+just schema-check    pass (protocol, relation, challenge, judge, and public profiles)
+just docs-check      pass
+just verify-formal   pass (Z3 unsat x3; TLC 70,557 generated/2,276 distinct states;
+                          131,072 guarded-replay combinations; mutation self-test rejected)
+just boundary-audit  pass; binary sha256=628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b
+```
+
+The direct intentional mutation command was also run:
+
+```text
+uv run --frozen python scripts/check_formal_scaffold.py --mutate-suppression
+exit 1 (expected): reference delta mismatch at phase=0, replay=2, lane=0,
+token=0, epoch=0, secret_bank=0, anchor_bank=0
+```
+
+`just demo-tutorial` still exits 1 at its explicit M5 recovery/judge/report TODO. This
+is recorded as an outstanding cross-milestone semantic gate, not replaced by the M2
+challenge/server/judge smoke coverage.
+
+## Remaining limitations after M2
+
+- M3 must replace the early relation scaffold with all required typed templates,
+  certificates, normalizers, and sound exact/bounded extractors.
+- M4–M5 must add durable campaign evidence, exact Z3 uniqueness, and the real accepted
+  tutorial recovery/fault-free-control flows before M1/M2 formal closure.
+- CEGIS, stochastic calibration/MaxSMT, active learning/retraction, reduction,
+  benchmark acceptance, and the final release audit remain M6–M9.

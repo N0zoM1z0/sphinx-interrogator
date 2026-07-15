@@ -226,7 +226,9 @@ The observation pipeline is:
 5. quantize with `floor(cycles / bucket_width)`;
 6. return the bucket and public metadata.
 
-Diagnostic mode may expose internals only to System A unit tests. The public server must require a compile-time feature or separate binary for diagnostics, and boundary tests must ensure it cannot be enabled by a protocol request.
+Internal transition values are available only to in-crate System A tests; the release
+server implements no diagnostic request or response shape. Boundary tests inspect the
+actual generated public artifacts, permissions, Python imports, and live response keys.
 
 ## 8. Profiles
 
@@ -275,7 +277,17 @@ private/secret.bin
 private/config.toml
 ```
 
-The commitment may be `SHA-256(domain || profile_hash || secret || nonce)`. The nonce remains private until optional post-experiment reveal. Interrogator cannot use the commitment as a practical guess oracle. The judge compares a final guess and returns a Boolean result plus campaign metadata.
+The version-1 commitment hashes a domain tag and length-framed challenge ID, profile
+hash, secret cells, private lane permutation, salts, private fault assignment, logged
+private generation root, noise key, and a 256-bit private nonce. The nonce remains private; therefore the public
+commitment identifies an immutable challenge package without becoming a practical
+offline guess oracle. Loading or judging rejects any public or private material that
+does not reproduce the commitment.
+
+Challenge creation refuses an existing output path. On POSIX systems, public
+directories/files use modes `0755`/`0644`, while the private tree and files use
+`0700`/`0600`. The judge atomically creates a mode-`0600` marker for the public campaign
+token before comparing the final ordered-cell guess, enforcing one submission.
 
 ## 10. Required invariants
 
@@ -286,6 +298,6 @@ The commitment may be `SHA-256(domain || profile_hash || secret || nonce)`. The 
 5. Soft reset preserves exactly the documented state subset.
 6. Same secret, profile, program, seed, reset history, and request schedule produce the same deterministic-profile transcript.
 7. Gas and size bounds guarantee termination.
-8. Turning the fault off changes only timing deltas and derived microstate, never architectural semantics.
+8. Fault selection changes only timing deltas; the hidden state transition and architectural semantics are shared by all variants.
 
 These invariants should be represented in unit/property tests and, where practical, in TLA+/SMT models.

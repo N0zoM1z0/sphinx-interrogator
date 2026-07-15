@@ -75,7 +75,7 @@ The numerical budgets in `docs/EVALUATION.md` are project acceptance targets, no
 8. Use [`docs/GITHUB_SETUP.md`](docs/GITHUB_SETUP.md) for repository metadata, labels, milestones, and first issues.
 9. See [`VALIDATION.md`](VALIDATION.md) for the current verification record and explicit limitations.
 
-## Planned commands
+## Build and verification commands
 
 ```bash
 just bootstrap          # install/check local toolchains
@@ -87,7 +87,29 @@ just demo-tutorial      # recover a seeded 16-bit challenge
 just benchmark-standard # reproducible standard-profile campaign suite
 ```
 
-The scaffold deliberately keeps several implementation functions unfinished. The exact expected behavior, milestones, and acceptance tests are specified under `agent/`.
+`just demo-tutorial` and `just benchmark-standard` remain later-milestone acceptance
+commands. The language, architecture, microcode/fault model, isolated challenges,
+public process server, and one-shot judge are implemented; certified relations,
+persistence, recovery, synthesis, learning, and evaluation are the remaining research
+layers. Exact status and executed evidence are maintained in
+[`agent/STATUS.md`](agent/STATUS.md) and [`VALIDATION.md`](VALIDATION.md).
+
+## Local target lifecycle
+
+Build the target, create an isolated deterministic development challenge, and launch
+its public JSONL endpoint:
+
+```bash
+CARGO_TARGET_DIR=.cache/sphinx-target CARGO_BUILD_JOBS=2 cargo build --locked --bin sphinx-vm
+.cache/sphinx-target/debug/sphinx-vm challenge create \
+  --profile benchmarks/profiles/tutorial.toml \
+  --output /tmp/sphinx-tutorial --challenge-id tutorial-1 --seed 7 --fault reference
+.cache/sphinx-target/debug/sphinx-vm serve --challenge /tmp/sphinx-tutorial
+```
+
+The process reads one JSON request per stdin line and writes one response per stdout
+line. Only the Rust target and judge may access `/tmp/sphinx-tutorial/private/`;
+Interrogator receives the public directory and process observations.
 
 ## Scope and safety
 

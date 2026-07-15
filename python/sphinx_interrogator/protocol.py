@@ -68,12 +68,12 @@ class VmClient:
         cls,
         executable: str | Path,
         *,
-        profile: str | Path,
+        challenge: str | Path,
         extra_args: Sequence[str] = (),
         timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
     ) -> VmClient:
         """Start the public VM binary without importing or linking its implementation."""
-        command = [str(executable), "--profile", str(profile), *extra_args]
+        command = [str(executable), "serve", "--challenge", str(challenge), *extra_args]
         process = subprocess.Popen(
             command,
             stdin=subprocess.PIPE,

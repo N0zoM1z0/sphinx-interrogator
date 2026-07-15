@@ -27,7 +27,7 @@ def validate_schema_documents() -> list[str]:
         try:
             schema = load_json(path)
             jsonschema.Draft202012Validator.check_schema(schema)
-        except Exception as error:
+        except (OSError, json.JSONDecodeError, jsonschema.exceptions.SchemaError) as error:
             errors.append(f"{path.relative_to(ROOT)}: {error}")
     return errors
 
@@ -41,6 +41,10 @@ def validate_fixtures() -> list[str]:
         ROOT / "spec/relation.schema.json": sorted(
             (ROOT / "tests/fixtures/relations").glob("*.json")
         ),
+        ROOT / "spec/challenge.schema.json": [
+            ROOT / "tests/fixtures/challenge/public-challenge.json"
+        ],
+        ROOT / "spec/judge.schema.json": [ROOT / "tests/fixtures/challenge/judge-response.json"],
     }
     errors: list[str] = []
     for schema_path, fixtures in assignments.items():
@@ -66,8 +70,13 @@ def validate_profiles() -> list[str]:
         "semantic_version",
         "lanes",
         "secret_cells",
-        "fault_mode",
+        "hidden_permutation",
+        "hidden_salts",
         "bucket_width",
+        "noise_mode",
+        "noise_bound",
+        "soft_reset_preserves",
+        "hard_reset_budget",
         "logical_query_budget",
         "physical_execution_budget",
         "max_program_instructions",
@@ -84,8 +93,20 @@ def validate_profiles() -> list[str]:
                 errors.append(f"{path.relative_to(ROOT)} has unsupported profile_version")
             if not isinstance(profile.get("bucket_width"), int) or profile["bucket_width"] < 1:
                 errors.append(f"{path.relative_to(ROOT)} has invalid bucket_width")
-            if profile.get("server_diagnostics") is not False:
-                errors.append(f"{path.relative_to(ROOT)} enables public diagnostics")
+            if not isinstance(profile.get("hidden_permutation"), bool) or not isinstance(
+                profile.get("hidden_salts"), bool
+            ):
+                errors.append(f"{path.relative_to(ROOT)} has invalid hidden mapping flags")
+            forbidden = {"fault_mode", "fault_variant", "server_diagnostics", "noise_key"}
+            leaked = sorted(forbidden.intersection(profile))
+            if leaked:
+                errors.append(f"{path.relative_to(ROOT)} contains private keys {leaked}")
+            if profile.get("noise_mode") == "none" and (
+                profile.get("noise_bound") != 0
+                or profile.get("outlier_probability", 0.0) != 0.0
+                or profile.get("outlier_bound", 0) != 0
+            ):
+                errors.append(f"{path.relative_to(ROOT)} has contradictory no-noise settings")
         except (OSError, tomllib.TOMLDecodeError) as error:
             errors.append(f"{path.relative_to(ROOT)}: {error}")
     return errors

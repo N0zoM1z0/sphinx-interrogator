@@ -5,15 +5,22 @@
 //! the JSONL protocol defined in `spec/protocol.schema.json`.
 
 pub mod architecture;
-pub mod config;
+pub mod challenge;
+pub mod fault;
 pub mod isa;
+pub mod judge;
 pub mod machine;
+pub mod mapping;
+pub mod microarchitecture;
+pub mod microcode;
+pub mod noise;
 mod parser;
+pub mod profile;
 pub mod protocol;
 mod validate;
 
 pub use architecture::{ArchitecturalState, Flags};
-pub use config::Profile;
 pub use isa::{Instruction, Program, ProgramError};
 pub use machine::{ExecutionResult, Machine, ResetKind};
+pub use profile::Profile;
 pub use protocol::Server;

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/judge.schema.json",
+  "title": "SphinxVM one-shot judge response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "judge_version",
+    "challenge_id",
+    "campaign_token",
+    "submission_recorded",
+    "accepted"
+  ],
+  "properties": {
+    "judge_version": {
+      "const": "1.0"
+    },
+    "challenge_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "campaign_token": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "submission_recorded": {
+      "type": "boolean"
+    },
+    "accepted": {
+      "type": "boolean"
+    }
+  }
+}

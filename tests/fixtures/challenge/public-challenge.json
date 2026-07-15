@@ -1,0 +1,13 @@
+{
+  "challenge_version": "1.0",
+  "challenge_id": "golden-challenge",
+  "profile_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "commitment": "2222222222222222222222222222222222222222222222222222222222222222",
+  "protocol_version": "1.0",
+  "campaign_token": "campaign-golden",
+  "budgets": {
+    "hard_resets": 100,
+    "logical_queries": 80,
+    "physical_executions": 1000
+  }
+}

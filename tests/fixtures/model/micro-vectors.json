@@ -1,0 +1,22 @@
+{
+  "model_version": "1.0",
+  "bank_vectors": [
+    {"secret": 0, "token": 0, "salt": 0, "epoch": 0, "bank": 2},
+    {"secret": 0, "token": 0, "salt": 0, "epoch": 1, "bank": 1},
+    {"secret": 15, "token": 0, "salt": 0, "epoch": 0, "bank": 1},
+    {"secret": 15, "token": 0, "salt": 0, "epoch": 1, "bank": 2},
+    {"secret": 3, "token": 5, "salt": 2, "epoch": 0, "bank": 1},
+    {"secret": 3, "token": 5, "salt": 2, "epoch": 1, "bank": 3},
+    {"secret": 14, "token": 7, "salt": 3, "epoch": 0, "bank": 1},
+    {"secret": 14, "token": 7, "salt": 3, "epoch": 1, "bank": 1},
+    {"secret": 8, "token": 15, "salt": 6, "epoch": 0, "bank": 3},
+    {"secret": 8, "token": 15, "salt": 6, "epoch": 1, "bank": 2}
+  ],
+  "cell_vectors": [
+    {"phase": 0, "replay_credit": 0, "lane": 0, "token": 0, "epoch": 0, "secret_bank": 2, "anchor_bank": 2, "next_phase": 1, "next_replay_credit": 1, "last_bank": 2, "reference_delta": 1, "weak_delta": 1, "signed_delta": 1},
+    {"phase": 0, "replay_credit": 2, "lane": 0, "token": 0, "epoch": 0, "secret_bank": 2, "anchor_bank": 1, "next_phase": 1, "next_replay_credit": 1, "last_bank": 2, "reference_delta": 0, "weak_delta": 0, "signed_delta": -1},
+    {"phase": 0, "replay_credit": 3, "lane": 0, "token": 0, "epoch": 0, "secret_bank": 2, "anchor_bank": 2, "next_phase": 1, "next_replay_credit": 3, "last_bank": 2, "reference_delta": 0, "weak_delta": 0, "signed_delta": 0},
+    {"phase": 0, "replay_credit": 1, "lane": 0, "token": 0, "epoch": 0, "secret_bank": 2, "anchor_bank": 2, "next_phase": 1, "next_replay_credit": 2, "last_bank": 2, "reference_delta": 1, "weak_delta": 0, "signed_delta": 1},
+    {"phase": 3, "replay_credit": 0, "lane": 1, "token": 1, "epoch": 0, "secret_bank": 3, "anchor_bank": 3, "next_phase": 0, "next_replay_credit": 1, "last_bank": 3, "reference_delta": 0, "weak_delta": 0, "signed_delta": 0}
+  ]
+}

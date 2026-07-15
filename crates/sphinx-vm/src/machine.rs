@@ -1,30 +1,43 @@
-//! Concrete architectural and microarchitectural execution.
+//! Composition of independent architecture, microcode, fault, and noise semantics.
 
-use crate::architecture::{ArchitecturalState, ArchitecturalStatus, ExperimentEvent};
-use crate::config::Profile;
+use crate::architecture::{ArchitecturalState, ArchitecturalStatus};
+use crate::fault::{timing_delta, FaultVariant};
 use crate::isa::Program;
-
-/// Public S-box used by both the implementation and the solver specification.
-pub const SBOX4: [u8; 16] = [6, 11, 0, 4, 13, 3, 15, 8, 10, 2, 5, 12, 1, 14, 7, 9];
+use crate::mapping::BankMapping;
+use crate::microarchitecture::{resolve_request, transition, MicroState};
+use crate::microcode::{lower, VaultRequest};
+use crate::noise::{sample, NoiseConfiguration, NoiseContext};
+use crate::profile::Profile;
 
 /// Reset mode selected by a public execute request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResetKind {
-    /// Clear architectural and all microarchitectural state.
+    /// Clear architectural and every hidden microarchitectural field.
     Hard,
-    /// Clear architectural state and preserve only profile-declared hidden fields.
+    /// Clear architectural state and preserve exactly the public-profile subset.
     Soft,
-    /// Continue from the current session state.
+    /// Preserve state and begin another program in the same session.
     None,
 }
 
 /// Optional public inputs supplied with an execution request.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct PublicInput {
-    /// Initial values for `r0..r7`; missing entries are zero.
+    /// Initial values for `r0..r7`; missing entries are unchanged after reset.
     pub registers: Vec<u16>,
     /// Sparse initial values for public 16-bit data memory.
     pub memory: Vec<(usize, u16)>,
+}
+
+/// Public request-schedule coordinates used only for deterministic noise derivation.
+#[derive(Debug, Clone, Copy)]
+pub struct ExecutionContext<'a> {
+    /// Server-global one-based physical execution number.
+    pub physical_execution: u64,
+    /// Public session identifier.
+    pub session_id: &'a str,
+    /// Optional public execution-seed identifier.
+    pub execution_seed_id: Option<&'a str>,
 }
 
 /// Public execution result before protocol serialization.
@@ -40,67 +53,69 @@ pub struct ExecutionResult {
     pub bucket_width: u64,
     /// Number of retired instructions.
     pub retired_instructions: u64,
-    /// Public fault-free static cycles of retired instructions.
+    /// Public fault-free static cycles of retired microcode.
     pub static_cycles: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct ProbeEvent {
-    bank: u8,
-    epoch: u8,
-    guard: bool,
+/// Private, validated machine parameters never implementing serialization.
+#[derive(Debug, Clone)]
+pub struct PrivateMachineConfig {
+    mapping: BankMapping,
+    fault_variant: FaultVariant,
+    noise_key: [u8; 32],
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-struct MicroState {
-    phase: u8,
-    last_bank: Option<u8>,
-    replay_credit: u8,
-    pending_probe: Option<ProbeEvent>,
+impl PrivateMachineConfig {
+    /// Construct validated runtime-private parameters.
+    #[must_use]
+    pub fn new(mapping: BankMapping, fault_variant: FaultVariant, noise_key: [u8; 32]) -> Self {
+        Self {
+            mapping,
+            fault_variant,
+            noise_key,
+        }
+    }
+
+    /// Construct identity mapping and zero salts for deterministic System A tests.
+    pub fn identity(
+        secret: Vec<u8>,
+        lanes: usize,
+        fault_variant: FaultVariant,
+        noise_key: [u8; 32],
+    ) -> Result<Self, String> {
+        Ok(Self::new(
+            BankMapping::identity(secret, lanes)?,
+            fault_variant,
+            noise_key,
+        ))
+    }
 }
 
 /// Stateful SphinxVM session.
 #[derive(Debug, Clone)]
 pub struct Machine {
     profile: Profile,
-    secret: Vec<u8>,
-    permutation: Vec<usize>,
-    salts: Vec<u8>,
+    private: PrivateMachineConfig,
     architecture: ArchitecturalState,
     micro: MicroState,
-    execution_counter: u64,
 }
 
 impl Machine {
-    /// Construct a session from a public profile and private four-bit cells.
-    ///
-    /// Version-1 scaffold challenges use identity lane mapping and zero salts. The
-    /// full task specification requires private challenge generation for research
-    /// profiles; keeping those parameters explicit here prevents protocol leakage.
-    pub fn new(profile: Profile, secret: Vec<u8>) -> Result<Self, String> {
+    /// Construct a session from strictly separated public and private configuration.
+    pub fn new(profile: Profile, private: PrivateMachineConfig) -> Result<Self, String> {
         profile.validate().map_err(|error| error.to_string())?;
-        if secret.len() != profile.secret_cells {
+        if private.mapping.secret_cells() != profile.secret_cells {
             return Err(format!(
-                "secret contains {} cells; profile requires {}",
-                secret.len(),
+                "private mapping contains {} cells; profile requires {}",
+                private.mapping.secret_cells(),
                 profile.secret_cells
             ));
         }
-        if secret.iter().any(|cell| *cell > 15) {
-            return Err("every secret cell must fit in four bits".to_owned());
-        }
-        let permutation = (0..profile.lanes)
-            .map(|lane| lane % profile.secret_cells)
-            .collect();
-        let salts = vec![0; profile.lanes];
         Ok(Self {
             profile,
-            secret,
-            permutation,
-            salts,
+            private,
             architecture: ArchitecturalState::default(),
             micro: MicroState::default(),
-            execution_counter: 0,
         })
     }
 
@@ -120,60 +135,77 @@ impl Machine {
             }
             ResetKind::Soft => {
                 self.architecture = ArchitecturalState::default();
-                let old = self.micro.clone();
-                self.micro = MicroState {
-                    phase: if self.profile.preserves_on_soft_reset("phase") {
-                        old.phase
-                    } else {
-                        0
-                    },
-                    last_bank: if self.profile.preserves_on_soft_reset("last_bank") {
-                        old.last_bank
-                    } else {
-                        None
-                    },
-                    replay_credit: if self.profile.preserves_on_soft_reset("replay_credit") {
-                        old.replay_credit
-                    } else {
-                        0
-                    },
-                    pending_probe: None,
-                };
+                self.micro = self.micro.soft_reset(&self.profile.soft_reset_preserves);
             }
         }
     }
 
-    /// Execute one validated program and return only public observations.
+    /// Execute one validated program and return only aggregate public observations.
     #[must_use]
     pub fn execute(
         &mut self,
         program: &Program,
         reset: ResetKind,
         input: &PublicInput,
-        execution_seed_id: Option<&str>,
+        context: ExecutionContext<'_>,
     ) -> ExecutionResult {
         self.reset(reset);
         self.architecture.prepare_execution(self.profile.max_gas);
         for (index, value) in input.registers.iter().take(8).enumerate() {
-            let _result = self.architecture.set_register(index, *value);
+            let _set_result = self.architecture.set_register(index, *value);
         }
         for (address, value) in &input.memory {
-            let _result = self.architecture.set_memory(*address, *value);
+            let _set_result = self.architecture.set_memory(*address, *value);
         }
 
+        let mut scheduled_static_cycles = 0_u64;
         let mut fault_cycles = 0_i64;
         while self.architecture.status() == ArchitecturalStatus::Running {
+            let instruction = program.instructions().get(self.architecture.pc());
+            let Some(instruction) = instruction else {
+                let _step = self.architecture.step(program);
+                continue;
+            };
+            let microprogram = lower(instruction);
             let step = self.architecture.step(program);
-            if let Some(event) = step.experiment {
-                self.execute_experiment(event, &mut fault_cycles);
+            if !step.retired {
+                continue;
             }
+            let static_cycles = microprogram.fault_free_cycles();
+            scheduled_static_cycles = scheduled_static_cycles.saturating_add(static_cycles);
+            let probe_bank = match microprogram.request() {
+                Some(VaultRequest::Probe { lane, token, epoch }) => {
+                    self.private.mapping.bank(lane, token, epoch)
+                }
+                _ => None,
+            };
+            let resolved = resolve_request(microprogram.request(), probe_bank);
+            let hidden_transition = transition(&self.micro, resolved, microprogram.cache_tag());
+            fault_cycles = fault_cycles.saturating_add(timing_delta(
+                self.private.fault_variant,
+                hidden_transition.fault_context,
+            ));
+            self.micro = hidden_transition.next;
         }
 
-        let noise = self.sample_noise(execution_seed_id);
-        let static_cycles = self.architecture.static_cycles();
-        let concrete_cycles = saturating_add_signed(static_cycles, fault_cycles + noise);
+        debug_assert_eq!(scheduled_static_cycles, self.architecture.static_cycles());
+        let jitter = sample(
+            NoiseConfiguration {
+                mode: self.profile.noise_mode,
+                noise_bound: self.profile.noise_bound,
+                outlier_probability: self.profile.outlier_probability,
+                outlier_bound: self.profile.outlier_bound,
+                private_key: &self.private.noise_key,
+            },
+            NoiseContext {
+                physical_execution: context.physical_execution,
+                session_id: context.session_id,
+                execution_seed_id: context.execution_seed_id,
+            },
+        );
+        let concrete_cycles =
+            saturating_add_signed(scheduled_static_cycles, fault_cycles.saturating_add(jitter));
         let cycle_bucket = concrete_cycles / self.profile.bucket_width;
-        self.execution_counter = self.execution_counter.saturating_add(1);
 
         ExecutionResult {
             halted: self.architecture.status() == ArchitecturalStatus::Halted,
@@ -181,74 +213,8 @@ impl Machine {
             cycle_bucket,
             bucket_width: self.profile.bucket_width,
             retired_instructions: self.architecture.retired_instructions(),
-            static_cycles,
+            static_cycles: scheduled_static_cycles,
         }
-    }
-
-    fn execute_experiment(&mut self, event: ExperimentEvent, fault_cycles: &mut i64) {
-        match event {
-            ExperimentEvent::Probe { lane, token, epoch } => {
-                let bank = self.bank(lane, token, epoch);
-                let lane_low = u8::try_from(lane & 0b11).unwrap_or_default();
-                let guard_value = lane_low ^ token ^ epoch;
-                let guard = self.micro.phase == (guard_value & 0b11);
-                self.micro.pending_probe = Some(ProbeEvent { bank, epoch, guard });
-                self.micro.phase = (self.micro.phase + 1 + epoch) & 0b11;
-            }
-            ExperimentEvent::Anchor { bank, epoch } => {
-                if let Some(probe) = self.micro.pending_probe.take() {
-                    if probe.epoch == epoch {
-                        let collision = probe.bank == bank;
-                        let suppress = self.micro.replay_credit == 0b11;
-                        if self.profile.fault_mode == "reference"
-                            && collision
-                            && probe.guard
-                            && !suppress
-                        {
-                            *fault_cycles += 1;
-                        }
-                        self.micro.replay_credit = if collision {
-                            self.micro.replay_credit.saturating_add(1).min(3)
-                        } else {
-                            self.micro.replay_credit.saturating_sub(1)
-                        };
-                        self.micro.last_bank = Some(probe.bank);
-                    }
-                }
-            }
-            ExperimentEvent::Pad { amount } => {
-                let phase_step = u8::try_from(amount & 0b11).unwrap_or_default();
-                self.micro.phase = (self.micro.phase + phase_step) & 0b11;
-            }
-            ExperimentEvent::Fence => {
-                self.micro.pending_probe = None;
-                self.micro.replay_credit = 0;
-            }
-        }
-    }
-
-    fn bank(&self, lane: usize, token: u8, epoch: u8) -> u8 {
-        let secret_index = self.permutation[lane];
-        let input = self.secret[secret_index] ^ token ^ self.salts[lane];
-        let value = SBOX4[usize::from(input)];
-        (value >> (2 * epoch)) & 0b11
-    }
-
-    fn sample_noise(&self, execution_seed_id: Option<&str>) -> i64 {
-        if self.profile.noise_mode == "none" || self.profile.noise_bound == 0 {
-            return 0;
-        }
-        let mut hash = 0xcbf2_9ce4_8422_2325_u64 ^ self.execution_counter;
-        if let Some(seed) = execution_seed_id {
-            for byte in seed.as_bytes() {
-                hash ^= u64::from(*byte);
-                hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
-            }
-        }
-        let bound = self.profile.noise_bound.unsigned_abs();
-        let width = bound.saturating_mul(2).saturating_add(1);
-        let sample = hash % width;
-        i64::try_from(sample).unwrap_or_default() - self.profile.noise_bound
     }
 }
 
@@ -261,12 +227,47 @@ fn saturating_add_signed(base: u64, delta: i64) -> u64 {
 }
 
 #[cfg(test)]
+pub(crate) fn evaluate_fault_free(
+    program: &Program,
+    input: &PublicInput,
+    gas: u64,
+) -> (ArchitecturalState, u64) {
+    let mut architecture = ArchitecturalState::default();
+    architecture.prepare_execution(gas);
+    for (index, value) in input.registers.iter().take(8).enumerate() {
+        let _set_result = architecture.set_register(index, *value);
+    }
+    for (address, value) in &input.memory {
+        let _set_result = architecture.set_memory(*address, *value);
+    }
+    let mut cycles = 0_u64;
+    while architecture.status() == ArchitecturalStatus::Running {
+        let microprogram = program.instructions().get(architecture.pc()).map(lower);
+        let step = architecture.step(program);
+        if step.retired {
+            if let Some(microprogram) = microprogram {
+                cycles = cycles.saturating_add(microprogram.fault_free_cycles());
+            }
+        }
+    }
+    (architecture, cycles)
+}
+
+#[cfg(test)]
 mod tests {
     use crate::architecture::ArchitecturalState;
-    use crate::config::Profile;
+    use crate::fault::FaultVariant;
     use crate::isa::Program;
+    use crate::microarchitecture::MicroStateField;
+    use crate::noise::NoiseMode;
+    use crate::profile::Profile;
 
-    use super::{Machine, PublicInput, ResetKind};
+    use super::{
+        evaluate_fault_free, ExecutionContext, Machine, PrivateMachineConfig, PublicInput,
+        ResetKind,
+    };
+
+    const NOISE_KEY: [u8; 32] = [0x42; 32];
 
     fn tutorial_profile() -> Profile {
         Profile {
@@ -277,9 +278,8 @@ mod tests {
             secret_cells: 4,
             hidden_permutation: false,
             hidden_salts: false,
-            fault_mode: "reference".to_owned(),
             bucket_width: 1,
-            noise_mode: "none".to_owned(),
+            noise_mode: NoiseMode::None,
             noise_bound: 0,
             outlier_probability: 0.0,
             outlier_bound: 0,
@@ -289,7 +289,18 @@ mod tests {
             physical_execution_budget: 100,
             max_program_instructions: 128,
             max_gas: 4096,
-            server_diagnostics: false,
+        }
+    }
+
+    fn private(secret: Vec<u8>, variant: FaultVariant) -> Result<PrivateMachineConfig, String> {
+        PrivateMachineConfig::identity(secret, 4, variant, NOISE_KEY)
+    }
+
+    fn context(physical_execution: u64) -> ExecutionContext<'static> {
+        ExecutionContext {
+            physical_execution,
+            session_id: "test-session",
+            execution_seed_id: Some("test-seed"),
         }
     }
 
@@ -306,10 +317,16 @@ mod tests {
             Ok(value) => value,
             Err(error) => panic!("test program did not parse: {error}"),
         };
-        let first_machine = Machine::new(profile.clone(), vec![0, 1, 2, 3]);
-        let mut off_profile = profile;
-        off_profile.fault_mode = "off".to_owned();
-        let second_machine = Machine::new(off_profile, vec![15, 14, 13, 12]);
+        let first_config = match private(vec![0, 1, 2, 3], FaultVariant::Reference) {
+            Ok(value) => value,
+            Err(error) => panic!("first private config failed: {error}"),
+        };
+        let second_config = match private(vec![15, 14, 13, 12], FaultVariant::Off) {
+            Ok(value) => value,
+            Err(error) => panic!("second private config failed: {error}"),
+        };
+        let first_machine = Machine::new(profile.clone(), first_config);
+        let second_machine = Machine::new(profile, second_config);
         let mut first = match first_machine {
             Ok(value) => value,
             Err(error) => panic!("first machine construction failed: {error}"),
@@ -318,29 +335,179 @@ mod tests {
             Ok(value) => value,
             Err(error) => panic!("second machine construction failed: {error}"),
         };
-        let left = first.execute(&program, ResetKind::Hard, &PublicInput::default(), None);
-        let right = second.execute(&program, ResetKind::Hard, &PublicInput::default(), None);
+        let left = first.execute(
+            &program,
+            ResetKind::Hard,
+            &PublicInput::default(),
+            context(1),
+        );
+        let right = second.execute(
+            &program,
+            ResetKind::Hard,
+            &PublicInput::default(),
+            context(1),
+        );
         assert_eq!(first.architecture, second.architecture);
         assert_eq!(left.public_digest, right.public_digest);
         assert_eq!(left.static_cycles, right.static_cycles);
     }
 
     #[test]
-    fn fault_free_control_removes_secret_timing_delta() {
-        let mut profile = tutorial_profile();
-        profile.fault_mode = "off".to_owned();
-        let parsed = Program::parse("PROBE 0, 0, 0\nANCHOR 1, 0\nHALT\n", 4, 128, 4096);
+    fn fault_free_evaluator_matches_public_static_schedule() {
+        let parsed = Program::parse(
+            "PROBE 0, 0, 0\nANCHOR 1, 0\nPAD 2\nFENCE\nHALT\n",
+            4,
+            128,
+            4096,
+        );
         let program = match parsed {
             Ok(value) => value,
             Err(error) => panic!("test program did not parse: {error}"),
         };
-        let machine = Machine::new(profile, vec![0, 1, 2, 3]);
+        let (architecture, cycles) = evaluate_fault_free(&program, &PublicInput::default(), 4096);
+        assert_eq!(cycles, 14);
+        assert_eq!(cycles, architecture.static_cycles());
+    }
+
+    #[test]
+    fn off_variant_removes_secret_timing_delta() {
+        let profile = tutorial_profile();
+        let parsed = Program::parse("PROBE 0, 0, 0\nANCHOR 2, 0\nHALT\n", 4, 128, 4096);
+        let program = match parsed {
+            Ok(value) => value,
+            Err(error) => panic!("test program did not parse: {error}"),
+        };
+        let config = match private(vec![0, 1, 2, 3], FaultVariant::Off) {
+            Ok(value) => value,
+            Err(error) => panic!("private config failed: {error}"),
+        };
+        let machine = Machine::new(profile, config);
         let mut vm = match machine {
             Ok(value) => value,
             Err(error) => panic!("machine construction failed: {error}"),
         };
-        let result = vm.execute(&program, ResetKind::Hard, &PublicInput::default(), None);
+        let result = vm.execute(
+            &program,
+            ResetKind::Hard,
+            &PublicInput::default(),
+            context(1),
+        );
         assert_eq!(result.cycle_bucket, result.static_cycles);
+    }
+
+    #[test]
+    fn mutation_ladder_changes_observation_but_not_machine_architecture() {
+        let profile = tutorial_profile();
+        let parsed = Program::parse(
+            "PROBE 0, 0, 0\nANCHOR 2, 0\nPAD 3\nPROBE 0, 0, 0\nANCHOR 2, 0\nPAD 3\nPROBE 0, 0, 0\nANCHOR 0, 0\nHALT\n",
+            4,
+            128,
+            4096,
+        );
+        let program = match parsed {
+            Ok(value) => value,
+            Err(error) => panic!("mutation-ladder program failed: {error}"),
+        };
+        let mut reference_architecture: Option<ArchitecturalState> = None;
+        for (variant, expected_delta) in [
+            (FaultVariant::Off, 0),
+            (FaultVariant::Reference, 2),
+            (FaultVariant::Weak, 1),
+            (FaultVariant::Signed, 1),
+        ] {
+            let config = match private(vec![0, 1, 2, 3], variant) {
+                Ok(value) => value,
+                Err(error) => panic!("private mutation config failed: {error}"),
+            };
+            let mut machine = match Machine::new(profile.clone(), config) {
+                Ok(value) => value,
+                Err(error) => panic!("mutation machine failed: {error}"),
+            };
+            let result = machine.execute(
+                &program,
+                ResetKind::Hard,
+                &PublicInput::default(),
+                context(1),
+            );
+            assert_eq!(result.cycle_bucket - result.static_cycles, expected_delta);
+            if let Some(expected) = &reference_architecture {
+                assert_eq!(&machine.architecture, expected);
+            } else {
+                reference_architecture = Some(machine.architecture.clone());
+            }
+        }
+    }
+
+    #[test]
+    fn fault_free_cost_is_secret_independent_over_all_reduced_cells() {
+        let profile = tutorial_profile();
+        for secret_cell in 0..=15 {
+            for token in 0..=15 {
+                for epoch in 0..=1 {
+                    for anchor in 0..=3 {
+                        let source =
+                            format!("PROBE 0, {token}, {epoch}\nANCHOR {anchor}, {epoch}\nHALT\n");
+                        let program = match Program::parse(&source, 4, 8, 128) {
+                            Ok(value) => value,
+                            Err(error) => panic!("reduced cell failed to parse: {error}"),
+                        };
+                        let config = match private(vec![secret_cell, 0, 0, 0], FaultVariant::Off) {
+                            Ok(value) => value,
+                            Err(error) => panic!("reduced private config failed: {error}"),
+                        };
+                        let mut machine = match Machine::new(profile.clone(), config) {
+                            Ok(value) => value,
+                            Err(error) => panic!("reduced machine failed: {error}"),
+                        };
+                        let result = machine.execute(
+                            &program,
+                            ResetKind::Hard,
+                            &PublicInput::default(),
+                            context(1),
+                        );
+                        assert_eq!(result.static_cycles, 10);
+                        assert_eq!(result.cycle_bucket, result.static_cycles);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn soft_reset_preserves_only_profile_declared_hidden_state() {
+        let mut profile = tutorial_profile();
+        profile.soft_reset_preserves = vec![
+            MicroStateField::Phase,
+            MicroStateField::ReplayCredit,
+            MicroStateField::UopCache,
+        ];
+        let config = match private(vec![0, 1, 2, 3], FaultVariant::Reference) {
+            Ok(value) => value,
+            Err(error) => panic!("private config failed: {error}"),
+        };
+        let machine = Machine::new(profile, config);
+        let mut vm = match machine {
+            Ok(value) => value,
+            Err(error) => panic!("machine construction failed: {error}"),
+        };
+        let populate = Program::parse("PROBE 0, 0, 0\nANCHOR 2, 0\nHALT\n", 4, 16, 128);
+        let populate = match populate {
+            Ok(value) => value,
+            Err(error) => panic!("populate program failed: {error}"),
+        };
+        let _first = vm.execute(
+            &populate,
+            ResetKind::Hard,
+            &PublicInput::default(),
+            context(1),
+        );
+        let before = vm.micro.clone();
+        vm.reset(ResetKind::Soft);
+        assert_eq!(vm.micro.phase(), before.phase());
+        assert_eq!(vm.micro.replay_credit(), before.replay_credit());
+        assert_eq!(vm.micro.uop_cache(), before.uop_cache());
+        assert_eq!(vm.micro.last_bank(), None);
+        assert_eq!(vm.architecture.registers(), &[0; 8]);
     }
 
     #[test]
@@ -363,7 +530,11 @@ mod tests {
             };
             let mut reference: Option<ArchitecturalState> = None;
             for secret in &secrets {
-                let machine = Machine::new(profile.clone(), secret.clone());
+                let config = match private(secret.clone(), FaultVariant::Reference) {
+                    Ok(value) => value,
+                    Err(error) => panic!("generated private config failed: {error}"),
+                };
+                let machine = Machine::new(profile.clone(), config);
                 let mut machine = match machine {
                     Ok(value) => value,
                     Err(error) => panic!("generated machine should construct: {error}"),
@@ -372,7 +543,7 @@ mod tests {
                     &program,
                     ResetKind::Hard,
                     &PublicInput::default(),
-                    Some("generated-noninterference"),
+                    context(1),
                 );
                 if let Some(expected) = &reference {
                     assert_eq!(&machine.architecture, expected);

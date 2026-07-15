@@ -49,6 +49,11 @@ The M1 implementation now replaces the partial language/interpreter with complet
 Rust and independent Python models plus cross-language golden evidence. Its functional
 acceptance checks pass, but the mandatory semantic `demo-tutorial` gate remains the
 real M5 flow and is not yet available, so M1 is not declared closed.
+The M2 checkpoint now supplies the production challenge/judge, explicit microcode,
+fault-free and faulty timing composition, typed hidden state/reset semantics, seeded
+noise, independent Python target-family model, concrete differential vectors, and
+executable TLC/SMT/exhaustive checks. Persistence, certified M3 relations/extractors,
+and M4–M9 campaign layers remain outstanding.
 
 ## Progress
 
@@ -56,7 +61,7 @@ real M5 flow and is not yet available, so M1 is not declared closed.
 - [x] (2026-07-15 16:10Z) Verify and import the 106-file research handoff as commit `ab30e28`; inspect the full tree and record the real scaffold baseline.
 - [x] (2026-07-15 16:17Z) Complete M0 locks, fail-closed checks, bounded/correlated JSONL protocol, live process/schema tests, and initial boundary audit; evidence is recorded in `VALIDATION.md`.
 - [ ] (2026-07-15 16:58Z) M1 implementation and milestone-specific acceptance pass: full DSL/AST/validator/interpreter, canonical text/JSON/hash fixtures, sparse memory, malformed-input checks, and generated noninterference tests. Closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
-- [ ] (date) Complete M2 microarchitecture, reference fault, profiles, challenge isolation, and observation pipeline.
+- [ ] (2026-07-15 17:29Z) M2 implementation and milestone-specific acceptance pass: microcode/state/fault/noise separation, strict public/private profiles, committed challenge packages, one-shot judge, live fault confinement/replay, exhaustive Rust/Python vectors, TLC, and mutation detection. Formal closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
 - [ ] (date) Complete M3 relation templates, certificates, normalizers, and sound exact/bounded extractors.
 - [ ] (date) Complete M4 harness, append-only/SQLite knowledge base, constraint IR, and exact hypothesis store.
 - [ ] (date) Complete M5 tutorial recovery and fault-free negative control.
@@ -84,6 +89,15 @@ real M5 flow and is not yet available, so M1 is not declared closed.
 
 - Observation: The repository-wide semantic demo gate cannot pass during M1 without implementing the actual M5 challenge/recovery/judge flow.
   Evidence: `just demo-tutorial` on 2026-07-15 printed its explicit M5 TODO and exited 1. A weaker smoke recipe would not satisfy the task, so the M1 implementation is checkpointed without falsely closing the milestone.
+
+- Observation: The initial M2 commitment covered the secret but not all runtime-private scheduler configuration.
+  Evidence: review found that changing the private fault variant could still pass load-time commitment verification; the version-1 commitment now length-frames and binds the secret, permutation, salts, fault, logged generation root, noise key, and nonce, with a tamper regression test.
+
+- Observation: Running TLC exposed two defects that structural token checks could not detect.
+  Evidence: the abstract guard used addition instead of the concrete XOR rule, and `HardReset == Init'` was not executable TLA+. After correction, TLC 2.19 exhausts 2,276 distinct reachable states without an invariant violation.
+
+- Observation: A formal check that only produces positive results can silently become vacuous.
+  Evidence: the M2 checker now exhausts 131,072 guarded-replay combinations and self-tests an intentional `replay_credit == 2` suppression mutation; the direct mutated run exits 1 at `phase=0,replay=2,lane=0,token=0,epoch=0,secret_bank=0,anchor_bank=0`.
 
 Add dated observations here. Include failed assumptions, benchmark results, solver behavior, tool limitations, and concise command/artifact evidence.
 
@@ -156,6 +170,24 @@ Record every later material deviation here before or with implementation.
   Alternatives considered: conservatively reject programs whose encoded sum exceeds runtime gas; call the sum a minimum.
   Date/author: 2026-07-15, Codex.
   Consequences: `encoded_gas` is reported honestly, and structured runtime gas exhaustion remains authoritative and secret-independent.
+
+- Decision: Put fault selection and every seed-bearing value only in strict private challenge configuration, while keeping the standard and fault-free public profile files byte-identical.
+  Rationale: Blind negative controls must not identify their assignment through profile names or fields, and a public deterministic generation seed would reveal the challenge secret.
+  Alternatives considered: retain a public `fault_mode`; log the root seed in public metadata; use separate visibly named control profiles.
+  Date/author: 2026-07-15, Codex.
+  Consequences: challenge creation logs its generation root under mode `0600`; the public commitment is opaque without its private nonce/root; System B receives only public metadata and process observations.
+
+- Decision: Share one explicit microcode lowering and one pure hidden-state transition across off/reference/weak/signed variants, then apply the selected fault as a separate timing delta.
+  Rationale: Fault variants must not accidentally change architecture or take a different scheduler path.
+  Alternatives considered: per-variant evaluators; embed fault selection inside the transition.
+  Date/author: 2026-07-15, Codex.
+  Consequences: Rust tests compare architecture across variants, and a live off/reference bank sweep observes deltas `[0,0,0,0]` versus a permutation of `[0,0,0,1]` with identical digests.
+
+- Decision: Pin TLA+ tools 1.7.4 in the ignored local tool directory and make `just verify-formal` run TLC, Z3, exhaustive finite checks, and a mutation self-test.
+  Rationale: Structural formal-file checks did not establish that the TLA+ specification parsed or that invariants held.
+  Alternatives considered: leave TLC optional until M9; commit the binary JAR; rely only on Python enumeration.
+  Date/author: 2026-07-15, Codex.
+  Consequences: `just bootstrap-formal` verifies the downloaded JAR SHA-256, TLC state goes under ignored `.cache/`, and missing formal tooling fails closed.
 
 ## Milestones
 
@@ -458,14 +490,15 @@ Populate during implementation:
 
 - M0 baseline and validation record: `VALIDATION.md`, 2026-07-15; locked toolchains, quality checks, live protocol tests, and initial boundary audit pass.
 - M1 language/architecture evidence: `VALIDATION.md`, `tests/fixtures/programs/`, and `docs/DSL_AND_ARCHITECTURE.md`, 2026-07-15; all milestone-specific tests and repository checks pass, while the required M5 tutorial gate remains explicitly pending.
+- M2 target/challenge evidence: `VALIDATION.md`, `tests/fixtures/model/`, `tests/fixtures/challenge/`, and `docs/SYSTEM_A_SPHINX_VM.md`, 2026-07-15; 44 Rust and 68 Python tests cover the semantic split, live fault confinement, deterministic replay, permissions, and judge policy.
 - Tutorial acceptance report: pending.
 - Standard full-system report: pending.
 - Baseline/ablation report: pending.
 - Fault-free control report: pending.
 - One-shot leakage audit: pending.
-- Mutation ladder: pending.
-- Formal/TLA+/SMT report: pending.
-- Boundary-audit report: initial M0 evidence in `VALIDATION.md`; challenge permission/judge coverage remains pending M2/M9.
+- Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; statistical M7/M9 calibration remains pending.
+- Formal/TLA+/SMT report: M2 scheduler/exhaustive/SMT evidence in `VALIDATION.md`; full relation/session obligations remain pending M3/M9.
+- Boundary-audit report: M2 artifact permission/public-key/live-response evidence in `VALIDATION.md`; final release rerun remains pending M9.
 - Minimized witness collection: pending.
 - Release manifest/revision: pending.
 

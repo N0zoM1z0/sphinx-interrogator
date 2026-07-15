@@ -1,6 +1,6 @@
 # Repository guide
 
-## 1. Planned tree
+## 1. Repository tree
 
 ```text
 sphinx-interrogator/
@@ -101,14 +101,15 @@ just boundary-audit
 
 The root commands are the verification surface used by coding agents and CI.
 
-## 5. Public CLI sketch
+## 5. Public CLI
 
 ### Target
 
 ```text
-sphinx-vm serve --profile <public.toml> --private-challenge-fd <n>
-sphinx-vm challenge create --profile <name> --seed <n> --out <dir>
-sphinx-vm judge --private <dir> --guess <hex>
+sphinx-vm challenge create --profile <public.toml> --output <new-dir> \
+  [--challenge-id <id>] [--seed <n>] [--fault off|reference|weak|signed]
+sphinx-vm serve --challenge <challenge-dir>
+sphinx-vm judge --challenge <challenge-dir> --campaign-token <token> --guess <hex-cells>
 ```
 
 Challenge creation/judging are development/evaluation tools. The normal Interrogator process should be launched with only the `serve` endpoint.
@@ -116,13 +117,15 @@ Challenge creation/judging are development/evaluation tools. The normal Interrog
 ### Interrogator
 
 ```text
-sphinx-interrogate doctor
-sphinx-interrogate recover --endpoint stdio --profile <file> --run-dir <dir>
-sphinx-interrogate replay --run-dir <dir>
-sphinx-interrogate inspect --run-dir <dir>
-sphinx-interrogate reduce --witness <id>
-sphinx-interrogate benchmark --matrix <file>
+sphinx-interrogate hello --vm <binary> --challenge <dir>
+sphinx-interrogate render-cell --lane <n> --token <n> --epoch <n> --anchor <n>
+sphinx-interrogate render-anchor-switch --lane <n> --token <n> --epoch <n> \
+  --bank-a <n> --bank-b <n>
 ```
+
+Recovery, replay, inspection, reduction, and benchmark subcommands are introduced by
+their corresponding M4–M9 milestones; they are not placeholder commands in the current
+CLI.
 
 ## 6. Coding conventions
 

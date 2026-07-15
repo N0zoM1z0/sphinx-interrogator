@@ -5,9 +5,9 @@ use std::collections::{hash_map::Entry, BTreeMap, HashMap, HashSet};
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use crate::config::Profile;
 use crate::isa::Program;
-use crate::machine::{Machine, PublicInput, ResetKind};
+use crate::machine::{ExecutionContext, Machine, PrivateMachineConfig, PublicInput, ResetKind};
+use crate::profile::Profile;
 
 /// Exact public protocol version implemented by this server.
 pub const PROTOCOL_VERSION: &str = "1.0";
@@ -76,7 +76,7 @@ type RequestFailure = (&'static str, String, bool);
 /// Stateful process-boundary server for one private challenge.
 pub struct Server {
     profile: Profile,
-    secret: Vec<u8>,
+    private: PrivateMachineConfig,
     sessions: HashMap<String, Machine>,
     logical_batches: HashSet<String>,
     physical_executions_used: u64,
@@ -85,11 +85,11 @@ pub struct Server {
 
 impl Server {
     /// Construct a server from a public profile and private secret cells.
-    pub fn new(profile: Profile, secret: Vec<u8>) -> Result<Self, String> {
-        let _validation = Machine::new(profile.clone(), secret.clone())?;
+    pub fn new(profile: Profile, private: PrivateMachineConfig) -> Result<Self, String> {
+        let _validation = Machine::new(profile.clone(), private.clone())?;
         Ok(Self {
             profile,
-            secret,
+            private,
             sessions: HashMap::new(),
             logical_batches: HashSet::new(),
             physical_executions_used: 0,
@@ -309,7 +309,7 @@ impl Server {
             ));
         }
         if let Entry::Vacant(entry) = self.sessions.entry(request.session_id.clone()) {
-            let machine = Machine::new(self.profile.clone(), self.secret.clone())
+            let machine = Machine::new(self.profile.clone(), self.private.clone())
                 .map_err(|message| ("internal_error", message, false))?;
             entry.insert(machine);
         }
@@ -345,7 +345,11 @@ impl Server {
             &program,
             reset,
             &public_input,
-            request.execution_seed_id.as_deref(),
+            ExecutionContext {
+                physical_execution: used,
+                session_id: &request.session_id,
+                execution_seed_id: request.execution_seed_id.as_deref(),
+            },
         );
         let status = if result.halted {
             "halted"
@@ -543,7 +547,10 @@ fn serialize_value(value: Value) -> String {
 mod tests {
     use serde_json::Value;
 
-    use crate::config::Profile;
+    use crate::fault::FaultVariant;
+    use crate::machine::PrivateMachineConfig;
+    use crate::noise::NoiseMode;
+    use crate::profile::Profile;
 
     use super::{Server, MAX_REQUEST_LINE_BYTES};
 
@@ -556,9 +563,8 @@ mod tests {
             secret_cells: 4,
             hidden_permutation: false,
             hidden_salts: false,
-            fault_mode: "reference".to_owned(),
             bucket_width: 1,
-            noise_mode: "none".to_owned(),
+            noise_mode: NoiseMode::None,
             noise_bound: 0,
             outlier_probability: 0.0,
             outlier_bound: 0,
@@ -568,12 +574,21 @@ mod tests {
             physical_execution_budget: 10,
             max_program_instructions: 128,
             max_gas: 4096,
-            server_diagnostics: false,
         }
     }
 
     fn server() -> Server {
-        match Server::new(profile(), vec![0, 1, 2, 3]) {
+        let private = PrivateMachineConfig::identity(
+            vec![0, 1, 2, 3],
+            4,
+            FaultVariant::Reference,
+            [0x24; 32],
+        );
+        let private = match private {
+            Ok(value) => value,
+            Err(error) => panic!("private test config failed: {error}"),
+        };
+        match Server::new(profile(), private) {
             Ok(value) => value,
             Err(error) => panic!("server construction failed: {error}"),
         }

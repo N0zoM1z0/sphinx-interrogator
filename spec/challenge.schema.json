@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/challenge.schema.json",
+  "title": "SphinxVM public challenge metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "challenge_version",
+    "challenge_id",
+    "profile_sha256",
+    "commitment",
+    "protocol_version",
+    "campaign_token",
+    "budgets"
+  ],
+  "properties": {
+    "challenge_version": {
+      "const": "1.0"
+    },
+    "challenge_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "profile_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "commitment": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "protocol_version": {
+      "const": "1.0"
+    },
+    "campaign_token": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hard_resets",
+        "logical_queries",
+        "physical_executions"
+      ],
+      "properties": {
+        "hard_resets": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "logical_queries": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "physical_executions": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}
