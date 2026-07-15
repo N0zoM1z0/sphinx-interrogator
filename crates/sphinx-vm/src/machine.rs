@@ -195,7 +195,9 @@ impl Machine {
 
     fn execute_instruction(&mut self, instruction: &Instruction, fault_cycles: &mut i64) {
         match instruction {
-            Instruction::MovI { dst, value } => self.architecture.registers[usize::from(*dst)] = *value,
+            Instruction::MovI { dst, value } => {
+                self.architecture.registers[usize::from(*dst)] = *value
+            }
             Instruction::Mov { dst, src } => {
                 self.architecture.registers[usize::from(*dst)] =
                     self.architecture.registers[usize::from(*src)];

@@ -65,6 +65,12 @@ Recommended:
 
 Dependencies should be pinned in a generated lockfile once implementation begins. Do not manually edit generated locks.
 
+The implementation uses committed `Cargo.lock` and `uv.lock` files. Local and CI
+verification must use Cargo `--locked` and uv `--frozen`. The checked
+`.python-version` selects Python 3.12. Cargo work should use a repository-specific
+target directory; on shared developer machines, keep `CARGO_BUILD_JOBS` low enough not
+to disrupt unrelated builds.
+
 ## 4. Command contract
 
 The final repository must implement these stable commands:
@@ -80,6 +86,7 @@ just schema-check
 just verify-formal
 just demo-tutorial
 just benchmark-standard
+just boundary-audit
 ```
 
 Additional useful commands:

@@ -80,6 +80,12 @@ class ExactFakeClient:
             static_cycles=static_cycles,
             physical_executions_used=self.counter,
             physical_executions_remaining=10_000 - self.counter,
+            logical_queries_used=self.counter // 2,
+            logical_queries_remaining=10_000 - self.counter // 2,
+            hard_resets_used=self.counter,
+            hard_resets_remaining=10_000 - self.counter,
+            server_version="0.1.0",
+            profile_version="0.1.0",
         )
 
 

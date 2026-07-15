@@ -32,21 +32,25 @@ Out of scope:
 
 ## Current Repository State
 
-The archive contains:
+The verified research handoff was imported as root commit `ab30e28`. It contains the
+design documents, normative task specification, initial Rust/Python scaffold, schemas,
+formal seeds, profiles, and tests. The original ZIP and conversation remain locally in
+the ignored `preparation/` directory.
 
-- comprehensive design documents under `docs/`;
-- the normative task specification and agent workflow under `agent/`;
-- initial workspace/package/task-runner configuration;
-- planned schema/formal/code scaffolds to be completed;
-- no implemented end-to-end recovery at design-package creation time.
-
-The first implementing agent must run all existing scaffold checks, inspect actual files, and revise this section with concrete results. Do not assume the scaffold compiles merely because it was generated.
+Baseline inspection established that the Python scaffold passed 14 narrow unit tests
+while the Rust scaffold initially failed formatting, dependency resolution, and
+Clippy. Milestone M0 repaired those failures, committed Rust/Python locks, hardened the
+bounded JSONL transport and budget accounting, added exact-version negotiation, and
+introduced live cross-process/schema/boundary tests. The only recovery path remains a
+hand-invoked exact tutorial campaign against a fixed scaffold secret. There is no
+complete DSL/architecture, production challenge/judge, persistence, Z3 hypothesis
+store, bounded-noise extractor, CEGIS loop, state learner, or release evidence yet.
 
 ## Progress
 
 - [x] (2026-07-15 00:00Z) Create project brief, formal model, architecture, research basis, evaluation design, safety policy, task specification, and initial ExecPlan.
-- [ ] (date) Inspect the full working tree and record toolchain/check baseline.
-- [ ] (date) Complete M0 public schemas, dependency lock, and target/client protocol round trip.
+- [x] (2026-07-15 16:10Z) Verify and import the 106-file research handoff as commit `ab30e28`; inspect the full tree and record the real scaffold baseline.
+- [x] (2026-07-15 16:17Z) Complete M0 locks, fail-closed checks, bounded/correlated JSONL protocol, live process/schema tests, and initial boundary audit; evidence is recorded in `VALIDATION.md`.
 - [ ] (date) Complete M1 DSL, validator, architectural semantics, and secret-independence tests.
 - [ ] (date) Complete M2 microarchitecture, reference fault, profiles, challenge isolation, and observation pipeline.
 - [ ] (date) Complete M3 relation templates, certificates, normalizers, and sound exact/bounded extractors.
@@ -61,6 +65,15 @@ The first implementing agent must run all existing scaffold checks, inspect actu
 
 - Observation: No implementation experiments have been run at design-package creation time.
   Evidence: `agent/STATUS.md` marks all implementation checks pending.
+
+- Observation: The unmodified Rust scaffold does not satisfy its declared verification surface.
+  Evidence: `cargo fmt --all -- --check` reports formatting differences; Clippy rejects the equal-priority `all` lint group; without `Cargo.lock`, Rust 1.82 resolves `indexmap 2.14.0`, whose manifest requires the unstabilized edition-2024 Cargo feature.
+
+- Observation: The exact tutorial algorithm is not sound for the other published profiles.
+  Evidence: a direct process run recovered the fixed tutorial secret in 10 relations, but the same scaffold campaign returned false singleton `66666666` for the fault-free profile and raised `InconsistentModelError` on standard because it treated equal quantized buckets as exact equality.
+
+- Observation: Other long-running Rust builds are active on this host.
+  Evidence: process inspection showed an OpenVM Cargo test using a separate `/home/yann/yann/ZK/arguzz-workspace/.cache/openvm-target` target directory.
 
 Add dated observations here. Include failed assumptions, benchmark results, solver behavior, tool limitations, and concise command/artifact evidence.
 
@@ -97,6 +110,24 @@ Add dated observations here. Include failed assumptions, benchmark results, solv
   Consequences: M8 depends on stable macro alphabets and output discretization.
 
 Record every later material deviation here before or with implementation.
+
+- Decision: Preserve the verified handoff as an immutable Git baseline and keep the original preparation artifacts outside version control.
+  Rationale: Implementation commits can now be reviewed against the exact supplied scaffold without duplicating the ZIP/extracted source in history.
+  Alternatives considered: commit `preparation/`; edit the extracted tree in place without a baseline.
+  Date/author: 2026-07-15, Codex.
+  Consequences: commit `ab30e28` is the audit point for every scaffold replacement.
+
+- Decision: Keep Rust 1.82 as the declared MSRV and commit a compatible dependency lock, including `indexmap 2.12.1`.
+  Rationale: The task package explicitly pins 1.82; silently upgrading the toolchain would hide an M0 reproducibility failure.
+  Alternatives considered: switch the repository to the host's newer stable toolchain; leave dependency resolution unlocked.
+  Date/author: 2026-07-15, Codex.
+  Consequences: CI and local commands use `--locked`; dependency upgrades must demonstrate MSRV compatibility.
+
+- Decision: Limit this repository to two Cargo build jobs and use only its own target directory.
+  Rationale: A separate OpenVM build is active and must not be interrupted or contend through a shared target lock.
+  Alternatives considered: stop the other build; use unrestricted host parallelism.
+  Date/author: 2026-07-15, Codex.
+  Consequences: checks may take longer but do not modify or lock another project's build artifacts.
 
 ## Milestones
 
@@ -397,7 +428,7 @@ Record command excerpts and artifact hashes/paths in `Artifacts and Evidence` ra
 
 Populate during implementation:
 
-- Baseline check log: pending.
+- M0 baseline and validation record: `VALIDATION.md`, 2026-07-15; locked toolchains, quality checks, live protocol tests, and initial boundary audit pass.
 - Tutorial acceptance report: pending.
 - Standard full-system report: pending.
 - Baseline/ablation report: pending.
@@ -405,7 +436,7 @@ Populate during implementation:
 - One-shot leakage audit: pending.
 - Mutation ladder: pending.
 - Formal/TLA+/SMT report: pending.
-- Boundary-audit report: pending.
+- Boundary-audit report: initial M0 evidence in `VALIDATION.md`; challenge permission/judge coverage remains pending M2/M9.
 - Minimized witness collection: pending.
 - Release manifest/revision: pending.
 

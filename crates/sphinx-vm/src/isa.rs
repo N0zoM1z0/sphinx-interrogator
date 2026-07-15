@@ -27,7 +27,10 @@ impl std::fmt::Display for ProgramError {
             Self::Parse { line, message } => write!(formatter, "line {line}: {message}"),
             Self::Limit(message) => write!(formatter, "program limit: {message}"),
             Self::Unsupported { line, opcode } => {
-                write!(formatter, "line {line}: unsupported scaffold opcode {opcode}")
+                write!(
+                    formatter,
+                    "line {line}: unsupported scaffold opcode {opcode}"
+                )
             }
         }
     }
@@ -168,7 +171,10 @@ impl Program {
     /// Return the public fault-free static cycle count.
     #[must_use]
     pub fn static_cycles(&self) -> u64 {
-        self.instructions.iter().map(Instruction::static_cycles).sum()
+        self.instructions
+            .iter()
+            .map(Instruction::static_cycles)
+            .sum()
     }
 
     /// Render a canonical text representation.
@@ -210,11 +216,7 @@ fn is_identifier(value: &str) -> bool {
     }
 }
 
-fn parse_instruction(
-    source: &str,
-    line: usize,
-    lanes: usize,
-) -> Result<Instruction, ProgramError> {
+fn parse_instruction(source: &str, line: usize, lanes: usize) -> Result<Instruction, ProgramError> {
     let mut pieces = source.splitn(2, char::is_whitespace);
     let opcode = pieces.next().unwrap_or_default().to_ascii_uppercase();
     let operands = pieces.next().unwrap_or_default().trim();
@@ -304,8 +306,9 @@ fn parse_instruction(
             require_arity(&args, 0, line, &opcode)?;
             Ok(Instruction::Halt)
         }
-        "LOAD" | "STORE" | "CMP" | "JMP" | "JZ" | "JNZ" | "CALL" | "RET"
-        | "LOOP" => Err(ProgramError::Unsupported { line, opcode }),
+        "LOAD" | "STORE" | "CMP" | "JMP" | "JZ" | "JNZ" | "CALL" | "RET" | "LOOP" => {
+            Err(ProgramError::Unsupported { line, opcode })
+        }
         _ => Err(parse_error(line, format!("unknown opcode {opcode}"))),
     }
 }
@@ -345,15 +348,10 @@ fn parse_usize(value: &str, line: usize, role: &str) -> Result<usize, ProgramErr
         .map_err(|_| parse_error(line, format!("{role} {value} is not non-negative")))
 }
 
-fn parse_bounded_u8(
-    value: &str,
-    line: usize,
-    role: &str,
-    maximum: u8,
-) -> Result<u8, ProgramError> {
+fn parse_bounded_u8(value: &str, line: usize, role: &str, maximum: u8) -> Result<u8, ProgramError> {
     let parsed = parse_integer(value, line, role)?;
-    let converted = u8::try_from(parsed)
-        .map_err(|_| parse_error(line, format!("{role} {value} is not u8")))?;
+    let converted =
+        u8::try_from(parsed).map_err(|_| parse_error(line, format!("{role} {value} is not u8")))?;
     if converted > maximum {
         return Err(parse_error(
             line,

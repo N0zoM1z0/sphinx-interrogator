@@ -16,6 +16,12 @@ def result(request_id: str, bucket: int) -> ExecutionResult:
         static_cycles=1,
         physical_executions_used=1,
         physical_executions_remaining=9,
+        logical_queries_used=1,
+        logical_queries_remaining=9,
+        hard_resets_used=1,
+        hard_resets_remaining=9,
+        server_version="0.1.0",
+        profile_version="0.1.0",
     )
 
 

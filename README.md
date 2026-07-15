@@ -67,11 +67,12 @@ The numerical budgets in `docs/EVALUATION.md` are project acceptance targets, no
 
 1. Read [`docs/PROJECT_BRIEF.md`](docs/PROJECT_BRIEF.md) for the design in one document.
 2. Read [`docs/FORMAL_MODEL.md`](docs/FORMAL_MODEL.md) and [`docs/RELATION_ORACLES.md`](docs/RELATION_ORACLES.md) for the mathematical core.
-3. Read [`agent/CODEX_TASK_SPEC.md`](agent/CODEX_TASK_SPEC.md) for the complete implementation contract.
-4. Give [`agent/CODEX_MASTER_PROMPT.md`](agent/CODEX_MASTER_PROMPT.md) to Codex from the repository root.
-5. The coding agent must follow [`AGENTS.md`](AGENTS.md) and maintain [`agent/plans/0001-full-system.md`](agent/plans/0001-full-system.md).
-6. Use [`docs/GITHUB_SETUP.md`](docs/GITHUB_SETUP.md) for repository metadata, labels, milestones, and first issues.
-7. See [`VALIDATION.md`](VALIDATION.md) for checks run on this design package and explicit environment limitations.
+3. Read [`docs/PROTOCOL.md`](docs/PROTOCOL.md) for the versioned black-box boundary.
+4. Read [`agent/CODEX_TASK_SPEC.md`](agent/CODEX_TASK_SPEC.md) for the complete implementation contract.
+5. Give [`agent/CODEX_MASTER_PROMPT.md`](agent/CODEX_MASTER_PROMPT.md) to Codex from the repository root.
+6. The coding agent must follow [`AGENTS.md`](AGENTS.md) and maintain [`agent/plans/0001-full-system.md`](agent/plans/0001-full-system.md).
+7. Use [`docs/GITHUB_SETUP.md`](docs/GITHUB_SETUP.md) for repository metadata, labels, milestones, and first issues.
+8. See [`VALIDATION.md`](VALIDATION.md) for the current verification record and explicit limitations.
 
 ## Planned commands
 

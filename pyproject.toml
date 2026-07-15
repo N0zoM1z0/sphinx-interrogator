@@ -38,6 +38,9 @@ packages = ["python/sphinx_interrogator"]
 [tool.pytest.ini_options]
 addopts = "-ra --strict-markers"
 testpaths = ["tests/python"]
+markers = [
+  "integration: launches the separately built SphinxVM process",
+]
 
 [tool.ruff]
 line-length = 100

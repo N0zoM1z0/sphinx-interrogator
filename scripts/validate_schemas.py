@@ -9,6 +9,8 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
+import jsonschema
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -19,18 +21,12 @@ def load_json(path: Path) -> Any:
 
 
 def validate_schema_documents() -> list[str]:
-    """Parse every schema and optionally run the library's schema self-check."""
+    """Parse every schema and run the Draft 2020-12 schema self-check."""
     errors: list[str] = []
-    try:
-        import jsonschema
-    except ImportError:
-        jsonschema = None  # type: ignore[assignment]
-
     for path in sorted((ROOT / "spec").glob("*.schema.json")):
         try:
             schema = load_json(path)
-            if jsonschema is not None:
-                jsonschema.Draft202012Validator.check_schema(schema)
+            jsonschema.Draft202012Validator.check_schema(schema)
         except Exception as error:
             errors.append(f"{path.relative_to(ROOT)}: {error}")
     return errors
@@ -38,12 +34,6 @@ def validate_schema_documents() -> list[str]:
 
 def validate_fixtures() -> list[str]:
     """Validate checked-in fixture documents against their normative schemas."""
-    try:
-        import jsonschema
-    except ImportError:
-        print("jsonschema not installed; fixture instance validation skipped")
-        return []
-
     assignments = {
         ROOT / "spec/protocol.schema.json": sorted(
             (ROOT / "tests/fixtures/protocol").glob("*.json")

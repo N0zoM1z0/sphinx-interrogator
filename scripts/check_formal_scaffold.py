@@ -18,11 +18,10 @@ def require_tokens(path: Path, tokens: tuple[str, ...]) -> list[str]:
 
 
 def check_smt() -> list[str]:
-    """Run the bounded SMT lemmas when a Z3 executable is on PATH."""
+    """Run the bounded SMT lemmas and fail closed when Z3 is unavailable."""
     z3 = shutil.which("z3")
     if z3 is None:
-        print("z3 executable not found; SMT execution skipped after structural check")
-        return []
+        return ["z3 executable not found; run `uv sync --extra dev` before verification"]
     path = ROOT / "formal/relation_contracts.smt2"
     completed = subprocess.run(
         [z3, str(path)],

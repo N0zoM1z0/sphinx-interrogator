@@ -1,68 +1,96 @@
-# Package validation record
+# Verification record
 
-Validation date: **2026-07-15**
+Last updated: **2026-07-15 16:17Z**
 
-This record describes checks run against the design package itself. It does not claim that the full research system or its benchmark acceptance targets are implemented.
+This is a living implementation record. The immutable generated-package baseline is
+commit `ab30e28`; its original checksum manifest and archive remain in the local
+`preparation/` directory. This record distinguishes completed checks from later
+milestone requirements and never treats a scaffold check as full-system evidence.
 
-## Passed checks
-
-```text
-PYTHONPATH=python python3 -m compileall -q python scripts tests/python
-```
-
-All Python source, scripts, and tests compiled to bytecode.
+## M0 environment
 
 ```text
-.venv/bin/ruff format --check python tests/python scripts
-.venv/bin/ruff check python tests/python scripts
-PYTHONPATH=python .venv/bin/mypy python
+rustc 1.82.0 (f6e511eec 2024-10-15)
+cargo 1.82.0 (8f40fc59f 2024-08-21)
+Python 3.12.13
+uv 0.11.28
+just 1.56.0
 ```
 
-Result: formatting clean, lint clean, and strict mypy reported no issues in the Python package.
+Cargo builds used a repository-specific target directory and
+`CARGO_BUILD_JOBS=2`. A separate OpenVM build active on the host was not stopped,
+inspected beyond process identification, or made to share this project's target.
+
+## M0 commands and results
 
 ```text
-PYTHONPATH=python .venv/bin/pytest -q tests/python
+just bootstrap
 ```
 
-Result: **14 passed**, including an end-to-end deterministic tutorial loop against a black-box-compatible fake target.
+Passed with frozen `uv.lock` and `Cargo.lock`. Cargo 1.82 compatibility is preserved by
+locking `indexmap` to 2.12.1; dependency commands use `--locked`/`--frozen`.
 
 ```text
-python3 scripts/validate_schemas.py
-python3 scripts/check_markdown_links.py
-ruby -e 'require "yaml"; YAML.load_file(ARGV[0])' <each .github YAML file>
+just fmt
+just lint
 ```
 
-Result: JSON Schemas parsed, protocol/relation fixtures validated, public TOML profiles passed structural checks, all repository-relative Markdown links resolved, and all checked-in GitHub YAML files parsed successfully.
+Passed. Rustfmt and Ruff formatting are clean. Clippy passed for all targets/features
+with warnings denied; Ruff lint and strict mypy passed for the Python package.
 
 ```text
-PATH="$PWD/.venv/bin:$PATH" python3 scripts/check_formal_scaffold.py
+just test
 ```
 
-Result: formal structure passed and Z3 returned `unsat` for all three bounded relation-contract checks.
+Passed:
 
-A Tree-sitter Rust parser was also run over every checked-in `.rs` file. All files produced syntax trees without error or missing nodes.
+- 10 Rust tests, including bounded transport recovery, identifiers, and budgets;
+- 18 Python tests;
+- 2 of the Python tests launched the separately built Rust binary and validated live
+  responses against the normative JSON Schema;
+- malformed JSON and an oversized line produced typed errors, after which the same
+  server accepted `hello` and `close`.
 
-The Python CLI was smoke-tested through `--help`, `render-cell`, and `render-anchor-switch`; it produced canonical DSL programs and a deterministic relation-certificate digest.
+```text
+just schema-check
+just docs-check
+```
 
-## Environment limitations
+Passed. Schema validation now fails closed if `jsonschema` is unavailable. Protocol and
+relation fixtures and all public profiles validate; repository-relative documentation
+links resolve.
 
-The execution environment did not contain `cargo`, `rustc`, `rustfmt`, `clippy`, `just`, or the TLA+ TLC tools. Direct installation of Rust was unavailable because the runtime could not resolve the Rust distribution host. Consequently:
+```text
+just verify-formal
+```
 
-- Rust syntax was parsed, but the crate was **not compiled or linked** here;
-- `cargo fmt`, `cargo clippy`, and Rust unit tests were **not executed**;
-- the TLA+ model received structural review, but TLC state exploration was **not executed**.
+The M0 formal scaffold passed and Z3 returned `unsat` for all three checked contracts.
+This is not yet evidence for the complete M1/M2 machine or all relation templates. TLC
+state exploration and concrete/symbolic differential checks remain required.
 
-GitHub Actions is configured to run the Rust formatting, Clippy, and test surface on a normal hosted runner. Milestone M0 explicitly requires resolving any resulting compiler or lint findings before implementation proceeds.
+```text
+just boundary-audit
+```
 
-## Deliberately incomplete surfaces
+The initial M0 boundary audit passed. It checked System B imports/host-introspection
+markers, launched the Rust target as a separate process, exercised a probe through the
+public protocol, rejected unexpected response fields, scanned typed response keys for
+private microarchitectural fields, and recorded the target binary SHA-256. Private
+challenge permission isolation and one-shot judge controls do not exist until M2 and
+therefore are not claimed here.
 
-The package contains an executable reference scaffold, schemas, tests, and formal seeds. It deliberately leaves the following to the Codex implementation task:
+## Current limitations
 
-- complete ISA, challenge generation, private judge, and hardened process server;
-- production Z3/MaxSMT encoding and exact uniqueness proof artifacts;
-- all relation families and bounded certificates;
-- CEGIS campaign integration, model counting, and state-conditioned query selection;
-- AALpy learning loop and conformance testing;
-- stochastic profile calibration, witness reduction, benchmark reports, and release evidence.
+M0 establishes a reproducible public process boundary, not the finished research
+system. The following remain incomplete:
 
-The authoritative completion contract is `agent/CODEX_TASK_SPEC.md`.
+- full DSL, validator, architectural state, control flow, and cross-language parser;
+- separate architectural, fault-free, and faulty semantic implementations;
+- private challenge generation, commitments, judge, profile separation, and fault
+  mutations;
+- proof-producing relation certificates and exact/bounded extractors;
+- append-only/SQLite knowledge base and serializable Z3/MaxSMT hypothesis store;
+- accepted tutorial flow, CEGIS, standard/noise calibration, active learning, reducer,
+  benchmarks, TLC evidence, and release audit.
+
+The authoritative completion criteria remain `agent/CODEX_TASK_SPEC.md`.

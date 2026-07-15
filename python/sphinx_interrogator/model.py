@@ -48,6 +48,12 @@ class ExecutionResult:
     static_cycles: int
     physical_executions_used: int
     physical_executions_remaining: int
+    logical_queries_used: int
+    logical_queries_remaining: int
+    hard_resets_used: int
+    hard_resets_remaining: int
+    server_version: str
+    profile_version: str
 
 
 @dataclass(frozen=True, slots=True)

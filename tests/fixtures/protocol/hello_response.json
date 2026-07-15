@@ -15,10 +15,19 @@
     "lanes": 4,
     "hard_reset_available": true
   },
+  "capabilities": [
+    "close",
+    "execute",
+    "hard_reset",
+    "soft_reset"
+  ],
   "limits": {
+    "max_request_line_bytes": 131072,
     "max_program_bytes": 65536,
     "max_instructions": 128,
     "max_gas": 4096,
+    "max_sessions": 64,
+    "hard_resets": 10000,
     "logical_queries": 80,
     "physical_executions": 1000
   }

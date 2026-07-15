@@ -106,6 +106,7 @@
         "ok",
         "server",
         "profile",
+        "capabilities",
         "limits"
       ],
       "properties": {
@@ -172,6 +173,18 @@
             }
           }
         },
+        "capabilities": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "close",
+              "execute",
+              "hard_reset",
+              "soft_reset"
+            ]
+          }
+        },
         "limits": {
           "$ref": "#/$defs/Limits"
         }
@@ -181,13 +194,20 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "max_request_line_bytes",
         "max_program_bytes",
         "max_instructions",
         "max_gas",
+        "max_sessions",
+        "hard_resets",
         "logical_queries",
         "physical_executions"
       ],
       "properties": {
+        "max_request_line_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
         "max_program_bytes": {
           "type": "integer",
           "minimum": 1
@@ -199,6 +219,14 @@
         "max_gas": {
           "type": "integer",
           "minimum": 1
+        },
+        "max_sessions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "hard_resets": {
+          "type": "integer",
+          "minimum": 0
         },
         "logical_queries": {
           "type": "integer",
@@ -293,7 +321,8 @@
         "public_digest",
         "observation",
         "public_metrics",
-        "budget"
+        "budget",
+        "semantics"
       ],
       "properties": {
         "protocol_version": {
@@ -367,7 +396,11 @@
           "additionalProperties": false,
           "required": [
             "physical_executions_used",
-            "physical_executions_remaining"
+            "physical_executions_remaining",
+            "logical_queries_used",
+            "logical_queries_remaining",
+            "hard_resets_used",
+            "hard_resets_remaining"
           ],
           "properties": {
             "physical_executions_used": {
@@ -377,6 +410,42 @@
             "physical_executions_remaining": {
               "type": "integer",
               "minimum": 0
+            },
+            "logical_queries_used": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "logical_queries_remaining": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hard_resets_used": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hard_resets_remaining": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "semantics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "server_version",
+            "profile_version"
+          ],
+          "properties": {
+            "server_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "profile_version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
             }
           }
         }
@@ -465,6 +534,8 @@
                 "unsupported_version",
                 "invalid_program",
                 "budget_exhausted",
+                "request_too_large",
+                "session_limit",
                 "internal_error"
               ]
             },

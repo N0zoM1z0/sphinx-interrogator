@@ -17,6 +17,14 @@
   },
   "budget": {
     "physical_executions_used": 1,
-    "physical_executions_remaining": 999
+    "physical_executions_remaining": 999,
+    "logical_queries_used": 1,
+    "logical_queries_remaining": 79,
+    "hard_resets_used": 1,
+    "hard_resets_remaining": 9999
+  },
+  "semantics": {
+    "server_version": "0.1.0",
+    "profile_version": "0.1.0"
   }
 }

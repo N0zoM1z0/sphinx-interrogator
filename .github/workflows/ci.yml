@@ -10,14 +10,16 @@ permissions:
 jobs:
   rust:
     runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "2"
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.82.0
         with:
           components: rustfmt, clippy
       - run: cargo fmt --all -- --check
-      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-      - run: cargo test --workspace --all-targets
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --workspace --all-targets
 
   python:
     runs-on: ubuntu-latest
@@ -26,11 +28,27 @@ jobs:
       - uses: astral-sh/setup-uv@v4
         with:
           python-version: "3.12"
-      - run: uv sync --extra dev
-      - run: uv run ruff format --check python tests/python scripts
-      - run: uv run ruff check python tests/python scripts
-      - run: uv run mypy python
-      - run: uv run pytest tests/python
-      - run: uv run python scripts/validate_schemas.py
-      - run: uv run python scripts/check_markdown_links.py
-      - run: uv run python scripts/check_formal_scaffold.py
+      - run: uv sync --frozen --extra dev
+      - run: uv run --frozen ruff format --check python tests/python scripts
+      - run: uv run --frozen ruff check python tests/python scripts
+      - run: uv run --frozen mypy python
+      - run: uv run --frozen pytest tests/python -m "not integration"
+      - run: uv run --frozen python scripts/validate_schemas.py
+      - run: uv run --frozen python scripts/check_markdown_links.py
+      - run: uv run --frozen python scripts/check_formal_scaffold.py
+
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "2"
+      SPHINX_VM_BINARY: target/debug/sphinx-vm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.82.0
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --extra dev
+      - run: cargo build --locked --bin sphinx-vm
+      - run: uv run --frozen pytest tests/python -m integration
+      - run: uv run --frozen python scripts/boundary_audit.py
