@@ -126,6 +126,7 @@ class VmClient:
         logical_batch_id: str,
         reset: str = "hard",
         registers: Sequence[int] = (),
+        memory: Mapping[int, int] | None = None,
         execution_seed_id: str | None = None,
     ) -> ExecutionResult:
         """Execute one public program and decode its aggregate observation."""
@@ -137,7 +138,10 @@ class VmClient:
             "session_id": session_id,
             "reset": reset,
             "program": program,
-            "public_input": {"registers": list(registers), "memory": {}},
+            "public_input": {
+                "registers": list(registers),
+                "memory": _encode_public_memory(memory),
+            },
             "logical_batch_id": logical_batch_id,
         }
         if execution_seed_id is not None:
@@ -350,3 +354,19 @@ def _string_tuple(value: Mapping[str, object], key: str) -> tuple[str, ...]:
     if not isinstance(item, list) or any(not isinstance(entry, str) for entry in item):
         raise ProtocolError(f"field {key} is not an array of strings")
     return tuple(item)
+
+
+def _encode_public_memory(memory: Mapping[int, int] | None) -> dict[str, int]:
+    if memory is None:
+        return {}
+    entries: list[tuple[int, int]] = []
+    for address, value in memory.items():
+        if not isinstance(address, int) or isinstance(address, bool) or not 0 <= address <= 255:
+            raise ValueError("public memory addresses must be integers in 0..255")
+        if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value <= 65_535:
+            raise ValueError("public memory values must be integers in 0..65535")
+        entries.append((address, value))
+    encoded: dict[str, int] = {}
+    for address, value in sorted(entries):
+        encoded[str(address)] = value
+    return encoded

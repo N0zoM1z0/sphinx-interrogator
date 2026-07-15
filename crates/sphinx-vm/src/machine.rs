@@ -1,7 +1,8 @@
 //! Concrete architectural and microarchitectural execution.
 
+use crate::architecture::{ArchitecturalState, ArchitecturalStatus, ExperimentEvent};
 use crate::config::Profile;
-use crate::isa::{Instruction, Program};
+use crate::isa::Program;
 
 /// Public S-box used by both the implementation and the solver specification.
 pub const SBOX4: [u8; 16] = [6, 11, 0, 4, 13, 3, 15, 8, 10, 2, 5, 12, 1, 14, 7, 9];
@@ -22,6 +23,8 @@ pub enum ResetKind {
 pub struct PublicInput {
     /// Initial values for `r0..r7`; missing entries are zero.
     pub registers: Vec<u16>,
+    /// Sparse initial values for public 16-bit data memory.
+    pub memory: Vec<(usize, u16)>,
 }
 
 /// Public execution result before protocol serialization.
@@ -46,12 +49,6 @@ struct ProbeEvent {
     bank: u8,
     epoch: u8,
     guard: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-struct ArchitecturalState {
-    registers: [u16; 8],
-    digest: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -81,6 +78,7 @@ impl Machine {
     /// full task specification requires private challenge generation for research
     /// profiles; keeping those parameters explicit here prevents protocol leakage.
     pub fn new(profile: Profile, secret: Vec<u8>) -> Result<Self, String> {
+        profile.validate().map_err(|error| error.to_string())?;
         if secret.len() != profile.secret_cells {
             return Err(format!(
                 "secret contains {} cells; profile requires {}",
@@ -155,103 +153,52 @@ impl Machine {
         execution_seed_id: Option<&str>,
     ) -> ExecutionResult {
         self.reset(reset);
+        self.architecture.prepare_execution(self.profile.max_gas);
         for (index, value) in input.registers.iter().take(8).enumerate() {
-            self.architecture.registers[index] = *value;
+            let _result = self.architecture.set_register(index, *value);
+        }
+        for (address, value) in &input.memory {
+            let _result = self.architecture.set_memory(*address, *value);
         }
 
-        let mut static_cycles = 0_u64;
         let mut fault_cycles = 0_i64;
-        let mut retired = 0_u64;
-        let mut halted = false;
-
-        for instruction in program.instructions() {
-            let cost = instruction.static_cycles();
-            if static_cycles.saturating_add(cost) > self.profile.max_gas {
-                break;
-            }
-            static_cycles += cost;
-            retired += 1;
-            self.execute_instruction(instruction, &mut fault_cycles);
-            if matches!(instruction, Instruction::Halt) {
-                halted = true;
-                break;
+        while self.architecture.status() == ArchitecturalStatus::Running {
+            let step = self.architecture.step(program);
+            if let Some(event) = step.experiment {
+                self.execute_experiment(event, &mut fault_cycles);
             }
         }
 
         let noise = self.sample_noise(execution_seed_id);
+        let static_cycles = self.architecture.static_cycles();
         let concrete_cycles = saturating_add_signed(static_cycles, fault_cycles + noise);
         let cycle_bucket = concrete_cycles / self.profile.bucket_width;
         self.execution_counter = self.execution_counter.saturating_add(1);
 
         ExecutionResult {
-            halted,
-            public_digest: self.architecture.digest,
+            halted: self.architecture.status() == ArchitecturalStatus::Halted,
+            public_digest: self.architecture.digest(),
             cycle_bucket,
             bucket_width: self.profile.bucket_width,
-            retired_instructions: retired,
+            retired_instructions: self.architecture.retired_instructions(),
             static_cycles,
         }
     }
 
-    fn execute_instruction(&mut self, instruction: &Instruction, fault_cycles: &mut i64) {
-        match instruction {
-            Instruction::MovI { dst, value } => {
-                self.architecture.registers[usize::from(*dst)] = *value
-            }
-            Instruction::Mov { dst, src } => {
-                self.architecture.registers[usize::from(*dst)] =
-                    self.architecture.registers[usize::from(*src)];
-            }
-            Instruction::Add { dst, lhs, rhs } => {
-                self.architecture.registers[usize::from(*dst)] = self.architecture.registers
-                    [usize::from(*lhs)]
-                .wrapping_add(self.architecture.registers[usize::from(*rhs)]);
-            }
-            Instruction::Xor { dst, lhs, rhs } => {
-                self.architecture.registers[usize::from(*dst)] = self.architecture.registers
-                    [usize::from(*lhs)]
-                    ^ self.architecture.registers[usize::from(*rhs)];
-            }
-            Instruction::And { dst, lhs, rhs } => {
-                self.architecture.registers[usize::from(*dst)] = self.architecture.registers
-                    [usize::from(*lhs)]
-                    & self.architecture.registers[usize::from(*rhs)];
-            }
-            Instruction::Or { dst, lhs, rhs } => {
-                self.architecture.registers[usize::from(*dst)] = self.architecture.registers
-                    [usize::from(*lhs)]
-                    | self.architecture.registers[usize::from(*rhs)];
-            }
-            Instruction::Shl { dst, src, amount } => {
-                self.architecture.registers[usize::from(*dst)] =
-                    self.architecture.registers[usize::from(*src)] << *amount;
-            }
-            Instruction::Shr { dst, src, amount } => {
-                self.architecture.registers[usize::from(*dst)] =
-                    self.architecture.registers[usize::from(*src)] >> *amount;
-            }
-            Instruction::MixOut { src } => {
-                self.architecture.digest = mix_digest(
-                    self.architecture.digest,
-                    self.architecture.registers[usize::from(*src)],
-                );
-            }
-            Instruction::Probe { lane, token, epoch } => {
-                let bank = self.bank(*lane, *token, *epoch);
-                let lane_low = u8::try_from(*lane & 0b11).unwrap_or_default();
-                let guard_value = lane_low ^ *token ^ *epoch;
+    fn execute_experiment(&mut self, event: ExperimentEvent, fault_cycles: &mut i64) {
+        match event {
+            ExperimentEvent::Probe { lane, token, epoch } => {
+                let bank = self.bank(lane, token, epoch);
+                let lane_low = u8::try_from(lane & 0b11).unwrap_or_default();
+                let guard_value = lane_low ^ token ^ epoch;
                 let guard = self.micro.phase == (guard_value & 0b11);
-                self.micro.pending_probe = Some(ProbeEvent {
-                    bank,
-                    epoch: *epoch,
-                    guard,
-                });
-                self.micro.phase = (self.micro.phase + 1 + *epoch) & 0b11;
+                self.micro.pending_probe = Some(ProbeEvent { bank, epoch, guard });
+                self.micro.phase = (self.micro.phase + 1 + epoch) & 0b11;
             }
-            Instruction::Anchor { bank, epoch } => {
+            ExperimentEvent::Anchor { bank, epoch } => {
                 if let Some(probe) = self.micro.pending_probe.take() {
-                    if probe.epoch == *epoch {
-                        let collision = probe.bank == *bank;
+                    if probe.epoch == epoch {
+                        let collision = probe.bank == bank;
                         let suppress = self.micro.replay_credit == 0b11;
                         if self.profile.fault_mode == "reference"
                             && collision
@@ -269,15 +216,14 @@ impl Machine {
                     }
                 }
             }
-            Instruction::Pad { amount } => {
-                let phase_step = u8::try_from(*amount & 0b11).unwrap_or_default();
+            ExperimentEvent::Pad { amount } => {
+                let phase_step = u8::try_from(amount & 0b11).unwrap_or_default();
                 self.micro.phase = (self.micro.phase + phase_step) & 0b11;
             }
-            Instruction::Fence => {
+            ExperimentEvent::Fence => {
                 self.micro.pending_probe = None;
                 self.micro.replay_credit = 0;
             }
-            Instruction::Halt => {}
         }
     }
 
@@ -314,13 +260,9 @@ fn saturating_add_signed(base: u64, delta: i64) -> u64 {
     }
 }
 
-fn mix_digest(digest: u64, value: u16) -> u64 {
-    let mixed = digest ^ u64::from(value);
-    mixed.wrapping_mul(0x0000_0100_0000_01b3)
-}
-
 #[cfg(test)]
 mod tests {
+    use crate::architecture::ArchitecturalState;
     use crate::config::Profile;
     use crate::isa::Program;
 
@@ -352,15 +294,22 @@ mod tests {
     }
 
     #[test]
-    fn architectural_digest_is_secret_independent() {
+    fn complete_architecture_is_secret_and_fault_independent() {
         let profile = tutorial_profile();
-        let parsed = Program::parse("MOVI r0, 7\nMIXOUT r0\nHALT\n", 4, 128, 4096);
+        let parsed = Program::parse(
+            "MOVI r0, 7\nMOVI r1, 12\nADD r2, r0, r1\nSTORE [r0 + 1], r2\nPROBE 0, 3, 1\nANCHOR 2, 1\nLOAD r3, [r0 + 1]\nCMP r2, r3\nMIXOUT r3\nFENCE\nHALT\n",
+            4,
+            128,
+            4096,
+        );
         let program = match parsed {
             Ok(value) => value,
             Err(error) => panic!("test program did not parse: {error}"),
         };
         let first_machine = Machine::new(profile.clone(), vec![0, 1, 2, 3]);
-        let second_machine = Machine::new(profile, vec![15, 14, 13, 12]);
+        let mut off_profile = profile;
+        off_profile.fault_mode = "off".to_owned();
+        let second_machine = Machine::new(off_profile, vec![15, 14, 13, 12]);
         let mut first = match first_machine {
             Ok(value) => value,
             Err(error) => panic!("first machine construction failed: {error}"),
@@ -371,6 +320,7 @@ mod tests {
         };
         let left = first.execute(&program, ResetKind::Hard, &PublicInput::default(), None);
         let right = second.execute(&program, ResetKind::Hard, &PublicInput::default(), None);
+        assert_eq!(first.architecture, second.architecture);
         assert_eq!(left.public_digest, right.public_digest);
         assert_eq!(left.static_cycles, right.static_cycles);
     }
@@ -391,5 +341,45 @@ mod tests {
         };
         let result = vm.execute(&program, ResetKind::Hard, &PublicInput::default(), None);
         assert_eq!(result.cycle_bucket, result.static_cycles);
+    }
+
+    #[test]
+    fn generated_experiments_preserve_architecture_for_several_secrets() {
+        let profile = tutorial_profile();
+        let secrets = [
+            vec![0, 0, 0, 0],
+            vec![1, 5, 9, 13],
+            vec![15, 14, 13, 12],
+            vec![3, 7, 11, 15],
+        ];
+        for token in 0..=15 {
+            let source = format!(
+                "MOVI r0, {token}\nADD r1, r0, r0\nPROBE 0, {token}, 0\nANCHOR 1, 0\nMIXOUT r1\nHALT\n"
+            );
+            let parsed = Program::parse(&source, 4, 32, 4096);
+            let program = match parsed {
+                Ok(value) => value,
+                Err(error) => panic!("generated program should validate: {error}"),
+            };
+            let mut reference: Option<ArchitecturalState> = None;
+            for secret in &secrets {
+                let machine = Machine::new(profile.clone(), secret.clone());
+                let mut machine = match machine {
+                    Ok(value) => value,
+                    Err(error) => panic!("generated machine should construct: {error}"),
+                };
+                let _result = machine.execute(
+                    &program,
+                    ResetKind::Hard,
+                    &PublicInput::default(),
+                    Some("generated-noninterference"),
+                );
+                if let Some(expected) = &reference {
+                    assert_eq!(&machine.architecture, expected);
+                } else {
+                    reference = Some(machine.architecture.clone());
+                }
+            }
+        }
     }
 }

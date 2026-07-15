@@ -45,13 +45,17 @@ introduced live cross-process/schema/boundary tests. The only recovery path rema
 hand-invoked exact tutorial campaign against a fixed scaffold secret. There is no
 complete DSL/architecture, production challenge/judge, persistence, Z3 hypothesis
 store, bounded-noise extractor, CEGIS loop, state learner, or release evidence yet.
+The M1 implementation now replaces the partial language/interpreter with complete
+Rust and independent Python models plus cross-language golden evidence. Its functional
+acceptance checks pass, but the mandatory semantic `demo-tutorial` gate remains the
+real M5 flow and is not yet available, so M1 is not declared closed.
 
 ## Progress
 
 - [x] (2026-07-15 00:00Z) Create project brief, formal model, architecture, research basis, evaluation design, safety policy, task specification, and initial ExecPlan.
 - [x] (2026-07-15 16:10Z) Verify and import the 106-file research handoff as commit `ab30e28`; inspect the full tree and record the real scaffold baseline.
 - [x] (2026-07-15 16:17Z) Complete M0 locks, fail-closed checks, bounded/correlated JSONL protocol, live process/schema tests, and initial boundary audit; evidence is recorded in `VALIDATION.md`.
-- [ ] (date) Complete M1 DSL, validator, architectural semantics, and secret-independence tests.
+- [ ] (2026-07-15 16:58Z) M1 implementation and milestone-specific acceptance pass: full DSL/AST/validator/interpreter, canonical text/JSON/hash fixtures, sparse memory, malformed-input checks, and generated noninterference tests. Closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
 - [ ] (date) Complete M2 microarchitecture, reference fault, profiles, challenge isolation, and observation pipeline.
 - [ ] (date) Complete M3 relation templates, certificates, normalizers, and sound exact/bounded extractors.
 - [ ] (date) Complete M4 harness, append-only/SQLite knowledge base, constraint IR, and exact hypothesis store.
@@ -74,6 +78,12 @@ store, bounded-noise extractor, CEGIS loop, state learner, or release evidence y
 
 - Observation: Other long-running Rust builds are active on this host.
   Evidence: process inspection showed an OpenVM Cargo test using a separate `/home/yann/yann/ZK/arguzz-workspace/.cache/openvm-target` target directory.
+
+- Observation: Summing every encoded instruction once is neither a minimum nor a maximum dynamic gas path in the presence of branches and loops.
+  Evidence: the interrupted M1 draft called that value `minimum_gas`; it is now named and documented as exact `encoded_gas`, while the executor enforces the profile gas limit on the retired path.
+
+- Observation: The repository-wide semantic demo gate cannot pass during M1 without implementing the actual M5 challenge/recovery/judge flow.
+  Evidence: `just demo-tutorial` on 2026-07-15 printed its explicit M5 TODO and exited 1. A weaker smoke recipe would not satisfy the task, so the M1 implementation is checkpointed without falsely closing the milestone.
 
 Add dated observations here. Include failed assumptions, benchmark results, solver behavior, tool limitations, and concise command/artifact evidence.
 
@@ -128,6 +138,24 @@ Record every later material deviation here before or with implementation.
   Alternatives considered: stop the other build; use unrestricted host parallelism.
   Date/author: 2026-07-15, Codex.
   Consequences: checks may take longer but do not modify or lock another project's build artifacts.
+
+- Decision: Retain CALL/RET with forward-only calls, make LOOP the only backward edge, and validate an exact bounded return-stack abstraction before execution.
+  Rationale: This implements the complete requested ISA while making recursion, reachable return underflow, stack overflow, and unbounded arbitrary backedges invalid programs.
+  Alternatives considered: omit CALL/RET; allow arbitrary backward branches and rely only on gas.
+  Date/author: 2026-07-15, Codex.
+  Consequences: LOOP counts backedges and runtime gas supplies a second termination bound; the exact behavior is documented in `docs/DSL_AND_ARCHITECTURE.md`.
+
+- Decision: Make `(base + signed offset) mod 256` the total memory-address rule and normalize all resolved branch targets to `LNNN` labels.
+  Rationale: Total addressing prevents execution traps, while index-derived labels make independent formatting stable across source label choices.
+  Alternatives considered: trap on out-of-range addresses; preserve user labels in hashes.
+  Date/author: 2026-07-15, Codex.
+  Consequences: Rust and Python independently agree on canonical text, typed-AST JSON, and SHA-256 through the checked-in full-ISA fixture.
+
+- Decision: Distinguish exact encoded cost from dynamic execution gas instead of using an inaccurately named static minimum.
+  Rationale: Conditional paths can skip encoded instructions and LOOP can repeat them; a one-pass sum is exact only as an encoded resource measure.
+  Alternatives considered: conservatively reject programs whose encoded sum exceeds runtime gas; call the sum a minimum.
+  Date/author: 2026-07-15, Codex.
+  Consequences: `encoded_gas` is reported honestly, and structured runtime gas exhaustion remains authoritative and secret-independent.
 
 ## Milestones
 
@@ -429,6 +457,7 @@ Record command excerpts and artifact hashes/paths in `Artifacts and Evidence` ra
 Populate during implementation:
 
 - M0 baseline and validation record: `VALIDATION.md`, 2026-07-15; locked toolchains, quality checks, live protocol tests, and initial boundary audit pass.
+- M1 language/architecture evidence: `VALIDATION.md`, `tests/fixtures/programs/`, and `docs/DSL_AND_ARCHITECTURE.md`, 2026-07-15; all milestone-specific tests and repository checks pass, while the required M5 tutorial gate remains explicitly pending.
 - Tutorial acceptance report: pending.
 - Standard full-system report: pending.
 - Baseline/ablation report: pending.

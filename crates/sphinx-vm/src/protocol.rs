@@ -1,6 +1,6 @@
 //! Public JSON Lines protocol server.
 
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::collections::{hash_map::Entry, BTreeMap, HashMap, HashSet};
 
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -39,7 +39,7 @@ struct WirePublicInput {
     #[serde(default)]
     registers: Vec<u16>,
     #[serde(default)]
-    memory: HashMap<String, u16>,
+    memory: BTreeMap<String, u16>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -70,6 +70,8 @@ enum ParsedRequest {
     Execute(ExecuteRequest),
     Close(CloseRequest),
 }
+
+type RequestFailure = (&'static str, String, bool);
 
 /// Stateful process-boundary server for one private challenge.
 pub struct Server {
@@ -266,13 +268,7 @@ impl Server {
                 true,
             ));
         }
-        if !request.public_input.memory.is_empty() {
-            return Err((
-                "invalid_program",
-                "memory initialization is reserved until LOAD/STORE milestone M1".to_owned(),
-                true,
-            ));
-        }
+        let memory = parse_public_memory(&request.public_input.memory)?;
         if self.physical_executions_used >= self.profile.physical_execution_budget {
             return Err((
                 "budget_exhausted",
@@ -343,6 +339,7 @@ impl Server {
         })?;
         let public_input = PublicInput {
             registers: request.public_input.registers,
+            memory,
         };
         let result = machine.execute(
             &program,
@@ -413,6 +410,50 @@ impl Server {
             true,
         ))
     }
+}
+
+fn parse_public_memory(
+    memory: &BTreeMap<String, u16>,
+) -> Result<Vec<(usize, u16)>, RequestFailure> {
+    if memory.len() > 256 {
+        return Err((
+            "schema_error",
+            "public_input.memory contains more than 256 words".to_owned(),
+            true,
+        ));
+    }
+    let mut parsed = BTreeMap::new();
+    for (key, value) in memory {
+        let address = key.parse::<usize>().map_err(|_| {
+            (
+                "schema_error",
+                format!("public_input.memory key {key:?} is not a decimal address"),
+                true,
+            )
+        })?;
+        if key != &address.to_string() {
+            return Err((
+                "schema_error",
+                format!("public_input.memory key {key:?} is not canonical decimal"),
+                true,
+            ));
+        }
+        if address >= 256 {
+            return Err((
+                "schema_error",
+                format!("public_input.memory address {address} is outside 0..256"),
+                true,
+            ));
+        }
+        if parsed.insert(address, *value).is_some() {
+            return Err((
+                "schema_error",
+                format!("public_input.memory contains duplicate address {address}"),
+                true,
+            ));
+        }
+    }
+    Ok(parsed.into_iter().collect())
 }
 
 fn parse_request(value: Value) -> Result<ParsedRequest, String> {
@@ -589,6 +630,27 @@ mod tests {
     }
 
     #[test]
+    fn applies_sparse_public_memory_and_rejects_noncanonical_addresses() {
+        let mut server = server();
+        let request = r#"{"protocol_version":"1.0","request_id":"r1","kind":"execute","session_id":"s1","reset":"hard","program":"LOAD r0, [r1]\nMIXOUT r0\nHALT\n","public_input":{"registers":[0,7],"memory":{"7":4660}},"logical_batch_id":"b1"}"#;
+        let (line, _) = server.handle_line(request);
+        let value = response_value(&line);
+        assert_eq!(value["kind"], "execute_result");
+        assert_eq!(value["status"], "halted");
+        assert_ne!(value["public_digest"], "0000000000000000");
+        assert_eq!(value["public_metrics"]["static_cycles"], 5);
+
+        for (index, address) in ["01", "256", "not-an-address"].iter().enumerate() {
+            let invalid = format!(
+                "{{\"protocol_version\":\"1.0\",\"request_id\":\"bad{index}\",\"kind\":\"execute\",\"session_id\":\"s1\",\"reset\":\"hard\",\"program\":\"HALT\\n\",\"public_input\":{{\"memory\":{{\"{address}\":1}}}},\"logical_batch_id\":\"bad-batch\"}}"
+            );
+            let (invalid_line, _) = server.handle_line(&invalid);
+            let invalid_value = response_value(&invalid_line);
+            assert_eq!(invalid_value["error"]["code"], "schema_error");
+        }
+    }
+
+    #[test]
     fn rejects_oversized_direct_requests_without_parsing() {
         let mut server = server();
         let oversized = "x".repeat(MAX_REQUEST_LINE_BYTES + 1);
@@ -596,5 +658,40 @@ mod tests {
         let value = response_value(&line);
         assert!(!close);
         assert_eq!(value["error"]["code"], "request_too_large");
+    }
+
+    #[test]
+    fn invalid_program_does_not_mutate_session_or_budgets() {
+        let mut server = server();
+        let invalid = r#"{"protocol_version":"1.0","request_id":"bad","kind":"execute","session_id":"s1","reset":"hard","program":"MOVI r8, 0\nHALT\n","logical_batch_id":"b1"}"#;
+        let (invalid_line, _) = server.handle_line(invalid);
+        assert_eq!(
+            response_value(&invalid_line)["error"]["code"],
+            "invalid_program"
+        );
+
+        let valid = r#"{"protocol_version":"1.0","request_id":"good","kind":"execute","session_id":"s1","reset":"hard","program":"HALT\n","logical_batch_id":"b1"}"#;
+        let (valid_line, _) = server.handle_line(valid);
+        let value = response_value(&valid_line);
+        assert_eq!(value["budget"]["physical_executions_used"], 1);
+        assert_eq!(value["budget"]["logical_queries_used"], 1);
+        assert_eq!(value["budget"]["hard_resets_used"], 1);
+    }
+
+    #[test]
+    fn arbitrary_bounded_protocol_text_never_panics() {
+        let mut server = server();
+        let mut state = 0xa076_1d64_78bd_642f_u64;
+        for length in 0..1024 {
+            let mut line = String::with_capacity(length);
+            for _ in 0..length {
+                state ^= state >> 12;
+                state ^= state << 25;
+                state ^= state >> 27;
+                let byte = 0x20 + u8::try_from(state % 95).unwrap_or_default();
+                line.push(char::from(byte));
+            }
+            let _response = server.handle_line(&line);
+        }
     }
 }

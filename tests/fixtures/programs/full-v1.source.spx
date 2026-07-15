@@ -1,0 +1,31 @@
+# Full version-1 compatibility fixture. Mixed syntax is canonicalized.
+entry: MOVI R0, -1
+       MOVI r1, 0x0007
+       MOV r2, r1
+       ADD r3, r1, r2
+       XOR r3, r3, r2
+       AND r3, r3, r1
+       OR r3, r3, r2
+       SHL r4, r3, 1
+       SHR r4, r4, 1
+       STORE [r0 - 2], r4
+       LOAD r5, [r0 + 2]
+       CMP r4, r5
+       JZ dispatch
+       JNZ unequal
+       JMP dispatch
+unequal:
+       MOVI r7, 65535 ; this path remains architecturally public
+dispatch:
+       CALL function
+       JMP after
+function:
+       MIXOUT r4
+       RET
+after:
+       PROBE 0, 3, 1
+       ANCHOR 2, 1
+       PAD 2
+       FENCE
+       LOOP 2, after
+       HALT

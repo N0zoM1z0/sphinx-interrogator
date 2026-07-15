@@ -11,6 +11,7 @@ from typing import Any
 import jsonschema
 import pytest
 
+from sphinx_interrogator.ast import Program
 from sphinx_interrogator.protocol import VmClient
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -103,3 +104,30 @@ def test_server_recovers_after_malformed_and_oversized_lines() -> None:
     assert responses[1]["error"]["code"] == "request_too_large"
     for response in responses:
         jsonschema.Draft202012Validator(SCHEMA).validate(response)
+
+
+@pytest.mark.integration
+def test_python_canonical_program_and_sparse_memory_execute_in_rust() -> None:
+    """The independent Python representation is accepted by the authoritative parser."""
+    source = (ROOT / "tests/fixtures/programs/full-v1.source.spx").read_text(encoding="utf-8")
+    canonical = Program.parse(source, lanes=4).render()
+    with VmClient.start(vm_binary(), profile=PROFILE, timeout_seconds=2.0) as client:
+        client.hello()
+        golden = client.execute(
+            canonical,
+            session_id="golden-session",
+            logical_batch_id="golden-batch",
+        )
+        memory = client.execute(
+            "LOAD r0, [r1]\nMIXOUT r0\nHALT\n",
+            session_id="memory-session",
+            logical_batch_id="memory-batch",
+            registers=(0, 7),
+            memory={7: 0x1234},
+        )
+
+    assert golden.status == "halted"
+    assert golden.retired_instructions > len(Program.parse(source, lanes=4).instructions)
+    assert memory.status == "halted"
+    assert memory.static_cycles == 5
+    assert memory.public_digest != "0000000000000000"

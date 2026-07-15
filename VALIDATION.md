@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-15 16:17Z**
+Last updated: **2026-07-15 16:58Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -79,10 +79,9 @@ private microarchitectural fields, and recorded the target binary SHA-256. Priva
 challenge permission isolation and one-shot judge controls do not exist until M2 and
 therefore are not claimed here.
 
-## Current limitations
+## Limitations after M0
 
-M0 establishes a reproducible public process boundary, not the finished research
-system. The following remain incomplete:
+At the M0 checkpoint, the following were still incomplete:
 
 - full DSL, validator, architectural state, control flow, and cross-language parser;
 - separate architectural, fault-free, and faulty semantic implementations;
@@ -94,3 +93,47 @@ system. The following remain incomplete:
   benchmarks, TLC evidence, and release audit.
 
 The authoritative completion criteria remain `agent/CODEX_TASK_SPEC.md`.
+
+## M1 language and architecture checkpoint
+
+M1 adds the full 23-opcode Rust ISA, a separate location-aware parser and semantic
+validator, a pure architectural step machine, and an independent frozen Python AST,
+parser, validator, formatter, effect summary, and resource summary. The normative
+full-ISA fixture records source, canonical text, compact typed-AST JSON, and SHA-256 in
+`tests/fixtures/programs/`. Both languages independently produce the same artifacts.
+
+The architectural tests cover 16-bit arithmetic/flags, modulo-256 memory, branches,
+bounded loops, calls/returns, digest output, experiment-instruction silence, structured
+gas exhaustion, typed operand rejection, 512-byte randomized DSL inputs, 1024 bounded
+random protocol lines, and generated programs across four secrets and all 16 tokens.
+Protocol tests prove invalid programs do not mutate sessions/budgets and exercise
+sparse public memory through both unit and live Python-to-Rust paths.
+
+The final M1 command suite used a repository-specific Cargo home/target and two build
+jobs. No other Cargo process was active:
+
+```text
+just fmt             pass
+just lint            pass (Clippy -D warnings, Ruff, strict mypy)
+just test            pass (24 Rust; 62 Python; 3 live process tests)
+just schema-check    pass
+just docs-check      pass
+just verify-formal   scaffold pass (Z3 unsat x3)
+just boundary-audit  pass; binary sha256=771124090adc74163fb06ba80d9d00bb3682f6e61e55e0ab8bae874120732216
+```
+
+`just demo-tutorial` was also run because M1 changes semantics. It printed the
+checked-in `TODO(M5): generate, recover, judge, and report a tutorial challenge` and
+exited 1. This is a real outstanding cross-milestone acceptance gate, not an M1 code
+failure, and no weaker placeholder was substituted. Accordingly this is an M1 code
+checkpoint rather than a claim that the milestone is formally closed.
+
+## Remaining limitations after M1
+
+- architectural, fault-free microarchitectural, and faulty scheduling types still need
+  the full M2 separation, micro-op lowering, concrete/model checks, and fault mutations;
+- public/private profile separation, challenge generation/commitment, permission
+  isolation, seeded noise, and the one-shot non-oracular judge remain M2;
+- relation certificates/extractors, persistence/hypothesis solver, tutorial recovery,
+  CEGIS, standard/noise evaluation, active learning, reducer, TLC, and release evidence
+  remain M3 through M9.

@@ -34,3 +34,12 @@ fault delta, jitter sample, private configuration, or pre-quantized exact cycle 
 
 The JSON Schema in `spec/protocol.schema.json` is normative. Golden fixtures and live
 Rust/Python process tests validate the same response shapes.
+
+## Public inputs and session state
+
+`public_input.registers` supplies a prefix of `r0..r7`. `public_input.memory` is a
+sparse object whose canonical decimal keys are addresses `0..255` and whose values are
+16-bit words. Inputs are applied after the requested reset and before execution. A
+hard or soft reset first clears architectural data; reset `none` preserves prior
+architectural data and overlays only supplied entries. The program itself is parsed
+and fully validated before a session, budget counter, input, or machine state changes.

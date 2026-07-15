@@ -1,4 +1,7 @@
-(* Sphinx Probe DSL, version 1. Whitespace is insignificant except as a separator. *)
+(* Sphinx Probe DSL, version 1.
+   Whitespace is insignificant except as a separator. Opcodes and
+   register prefixes are accepted case-insensitively; canonical text uses uppercase
+   opcodes and lowercase registers. A parser may accept an unterminated final line. *)
 
 program       = { line } ;
 line          = [ label, ":" ], [ instruction ], [ comment ], newline ;
@@ -13,8 +16,9 @@ movi          = "MOVI", register, ",", immediate ;
 mov           = "MOV", register, ",", register ;
 binary        = ("ADD" | "XOR" | "AND" | "OR"), register, ",", register, ",", register ;
 shift         = ("SHL" | "SHR"), register, ",", register, ",", small_immediate ;
-load          = "LOAD", register, ",", "[", register, [ ("+" | "-"), immediate ], "]" ;
-store         = "STORE", "[", register, [ ("+" | "-"), immediate ], "]", ",", register ;
+load          = "LOAD", register, ",", address ;
+store         = "STORE", address, ",", register ;
+address       = "[", register, [ ("+" | "-"), magnitude ], "]" ;
 cmp           = "CMP", register, ",", register ;
 jump          = "JMP", label_ref ;
 branch        = ("JZ" | "JNZ"), label_ref ;
@@ -33,13 +37,14 @@ lane          = number ;                 (* profile-bounded *)
 token         = number ;                 (* 0..15 *)
 epoch         = number ;                 (* 0..1 *)
 bank          = number ;                 (* 0..3 *)
-immediate     = number ;                 (* parsed as 16-bit unsigned or signed syntax *)
-small_immediate = number ;
+immediate     = number ;                 (* validator accepts -32768..65535 *)
+small_immediate = magnitude ;            (* opcode-specific unsigned bound *)
 label_ref     = identifier ;
 identifier    = letter, { letter | digit | "_" } ;
-number        = decimal | hexadecimal ;
-decimal       = [ "-" ], digit, { digit } ;
-hexadecimal   = [ "-" ], "0x", hex_digit, { hex_digit } ;
+number        = [ "-" ], magnitude ;
+magnitude     = decimal | hexadecimal ;
+decimal       = digit, { digit } ;
+hexadecimal   = "0x", hex_digit, { hex_digit } ;
 letter        = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J"
               | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T"
               | "U" | "V" | "W" | "X" | "Y" | "Z"
