@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/transcript.schema.json",
+  "title": "Campaign transcript event",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "event_id",
+    "sequence",
+    "timestamp",
+    "kind"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "campaign_id": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "previous_event_hash": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "event_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

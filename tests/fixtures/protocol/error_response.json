@@ -1,0 +1,11 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "req-bad",
+  "kind": "error",
+  "ok": false,
+  "error": {
+    "code": "invalid_program",
+    "message": "example validation error",
+    "recoverable": true
+  }
+}

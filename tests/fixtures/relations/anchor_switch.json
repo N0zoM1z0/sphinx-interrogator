@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "relation_id": "anchor-switch/v1",
+  "instance_id": "rel-1",
+  "source_query_id": "q-a",
+  "follow_up_query_ids": [
+    "q-b"
+  ],
+  "holes": {
+    "lane": 0,
+    "token": 0,
+    "epoch": 0,
+    "bank_a": 0,
+    "bank_b": 2
+  },
+  "expected_observation_relation": "equal",
+  "certificate": {
+    "certificate_id": "cert-example",
+    "semantic_version": "0.1.0",
+    "proof_method": "smt-bounded-complete",
+    "architectural_claim": "final public architecture is equal",
+    "fault_free_claim": "normalized cycle cost is equal",
+    "artifact_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+    "limitations": [
+      "example fixture only"
+    ]
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/benchmark.schema.json",
+  "title": "Benchmark campaign result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "campaign_id",
+    "profile",
+    "variant",
+    "seed",
+    "status",
+    "cost",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "campaign_id": {
+      "type": "string"
+    },
+    "profile": {
+      "type": "string"
+    },
+    "variant": {
+      "type": "string"
+    },
+    "seed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "status": {
+      "enum": [
+        "unique_exact",
+        "candidate_set",
+        "ranked_soft",
+        "budget_exhausted",
+        "model_inconsistent",
+        "target_error",
+        "blocked"
+      ]
+    },
+    "judge_accepted": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "candidate_count": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_queries",
+        "physical_executions",
+        "hard_resets",
+        "wall_seconds"
+      ],
+      "properties": {
+        "logical_queries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "physical_executions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hard_resets": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "wall_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "solver_seconds": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

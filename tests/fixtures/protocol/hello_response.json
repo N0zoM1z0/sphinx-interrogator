@@ -1,0 +1,25 @@
+{
+  "protocol_version": "1.0",
+  "request_id": "req-1",
+  "kind": "hello_result",
+  "ok": true,
+  "server": {
+    "name": "sphinx-vm",
+    "version": "0.1.0",
+    "build_id": "dev"
+  },
+  "profile": {
+    "name": "tutorial",
+    "semantic_version": "0.1.0",
+    "bucket_width": 1,
+    "lanes": 4,
+    "hard_reset_available": true
+  },
+  "limits": {
+    "max_program_bytes": 65536,
+    "max_instructions": 128,
+    "max_gas": 4096,
+    "logical_queries": 80,
+    "physical_executions": 1000
+  }
+}

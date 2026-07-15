@@ -1,0 +1,52 @@
+(* Sphinx Probe DSL, version 1. Whitespace is insignificant except as a separator. *)
+
+program       = { line } ;
+line          = [ label, ":" ], [ instruction ], [ comment ], newline ;
+label         = identifier ;
+comment       = ("#" | ";"), { character - newline } ;
+
+instruction   = movi | mov | binary | shift | load | store | cmp
+              | jump | branch | call | ret | loop | mixout
+              | probe | anchor | pad | fence | halt ;
+
+movi          = "MOVI", register, ",", immediate ;
+mov           = "MOV", register, ",", register ;
+binary        = ("ADD" | "XOR" | "AND" | "OR"), register, ",", register, ",", register ;
+shift         = ("SHL" | "SHR"), register, ",", register, ",", small_immediate ;
+load          = "LOAD", register, ",", "[", register, [ ("+" | "-"), immediate ], "]" ;
+store         = "STORE", "[", register, [ ("+" | "-"), immediate ], "]", ",", register ;
+cmp           = "CMP", register, ",", register ;
+jump          = "JMP", label_ref ;
+branch        = ("JZ" | "JNZ"), label_ref ;
+call          = "CALL", label_ref ;
+ret           = "RET" ;
+loop          = "LOOP", small_immediate, ",", label_ref ;
+mixout        = "MIXOUT", register ;
+probe         = "PROBE", lane, ",", token, ",", epoch ;
+anchor        = "ANCHOR", bank, ",", epoch ;
+pad           = "PAD", small_immediate ;
+fence         = "FENCE" ;
+halt          = "HALT" ;
+
+register      = "r", digit ;             (* validator restricts r0..r7 *)
+lane          = number ;                 (* profile-bounded *)
+token         = number ;                 (* 0..15 *)
+epoch         = number ;                 (* 0..1 *)
+bank          = number ;                 (* 0..3 *)
+immediate     = number ;                 (* parsed as 16-bit unsigned or signed syntax *)
+small_immediate = number ;
+label_ref     = identifier ;
+identifier    = letter, { letter | digit | "_" } ;
+number        = decimal | hexadecimal ;
+decimal       = [ "-" ], digit, { digit } ;
+hexadecimal   = [ "-" ], "0x", hex_digit, { hex_digit } ;
+letter        = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J"
+              | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T"
+              | "U" | "V" | "W" | "X" | "Y" | "Z"
+              | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j"
+              | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t"
+              | "u" | "v" | "w" | "x" | "y" | "z" | "_" ;
+digit         = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+hex_digit     = digit | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F" ;
+newline       = "\n" ;
+character     = ? any Unicode scalar accepted by UTF-8 input ? ;

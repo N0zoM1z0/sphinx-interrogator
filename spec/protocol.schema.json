@@ -1,0 +1,483 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/protocol.schema.json",
+  "title": "SphinxVM public JSONL protocol message",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/HelloRequest"
+    },
+    {
+      "$ref": "#/$defs/HelloResponse"
+    },
+    {
+      "$ref": "#/$defs/ExecuteRequest"
+    },
+    {
+      "$ref": "#/$defs/ExecuteResponse"
+    },
+    {
+      "$ref": "#/$defs/CloseRequest"
+    },
+    {
+      "$ref": "#/$defs/CloseResponse"
+    },
+    {
+      "$ref": "#/$defs/ErrorResponse"
+    }
+  ],
+  "$defs": {
+    "ProtocolVersion": {
+      "type": "string",
+      "pattern": "^1\\.[0-9]+$"
+    },
+    "Id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "BaseRequest": {
+      "type": "object",
+      "required": [
+        "protocol_version",
+        "request_id",
+        "kind"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "type": "string"
+        }
+      }
+    },
+    "HelloRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "request_id",
+        "kind",
+        "client"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "const": "hello"
+        },
+        "client": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "version": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
+        }
+      }
+    },
+    "HelloResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "request_id",
+        "kind",
+        "ok",
+        "server",
+        "profile",
+        "limits"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "const": "hello_result"
+        },
+        "ok": {
+          "const": true
+        },
+        "server": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version",
+            "build_id"
+          ],
+          "properties": {
+            "name": {
+              "const": "sphinx-vm"
+            },
+            "version": {
+              "type": "string"
+            },
+            "build_id": {
+              "type": "string"
+            }
+          }
+        },
+        "profile": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "semantic_version",
+            "bucket_width",
+            "lanes"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "semantic_version": {
+              "type": "string"
+            },
+            "bucket_width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "lanes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 64
+            },
+            "hard_reset_available": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "limits": {
+          "$ref": "#/$defs/Limits"
+        }
+      }
+    },
+    "Limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_program_bytes",
+        "max_instructions",
+        "max_gas",
+        "logical_queries",
+        "physical_executions"
+      ],
+      "properties": {
+        "max_program_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_instructions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_gas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "logical_queries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "physical_executions": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ExecuteRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "request_id",
+        "kind",
+        "session_id",
+        "reset",
+        "program",
+        "logical_batch_id"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "const": "execute"
+        },
+        "session_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "reset": {
+          "enum": [
+            "hard",
+            "soft",
+            "none"
+          ]
+        },
+        "program": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 65536
+        },
+        "public_input": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "registers": {
+              "type": "array",
+              "maxItems": 8,
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              }
+            },
+            "memory": {
+              "type": "object",
+              "maxProperties": 256,
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 65535
+              }
+            }
+          }
+        },
+        "logical_batch_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "execution_seed_id": {
+          "type": "string",
+          "maxLength": 128
+        }
+      }
+    },
+    "ExecuteResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "request_id",
+        "kind",
+        "ok",
+        "session_id",
+        "status",
+        "public_digest",
+        "observation",
+        "public_metrics",
+        "budget"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "const": "execute_result"
+        },
+        "ok": {
+          "const": true
+        },
+        "session_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "status": {
+          "enum": [
+            "halted",
+            "gas_exhausted"
+          ]
+        },
+        "public_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{16}$"
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cycle_bucket",
+            "bucket_width",
+            "samples_in_vm"
+          ],
+          "properties": {
+            "cycle_bucket": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "bucket_width": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "samples_in_vm": {
+              "type": "integer",
+              "const": 1
+            }
+          }
+        },
+        "public_metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "retired_instructions",
+            "static_cycles"
+          ],
+          "properties": {
+            "retired_instructions": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "static_cycles": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "physical_executions_used",
+            "physical_executions_remaining"
+          ],
+          "properties": {
+            "physical_executions_used": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "physical_executions_remaining": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "CloseRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "request_id",
+        "kind"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "const": "close"
+        }
+      }
+    },
+    "CloseResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "request_id",
+        "kind",
+        "ok"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "const": "close_result"
+        },
+        "ok": {
+          "const": true
+        }
+      }
+    },
+    "ErrorResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_version",
+        "request_id",
+        "kind",
+        "ok",
+        "error"
+      ],
+      "properties": {
+        "protocol_version": {
+          "$ref": "#/$defs/ProtocolVersion"
+        },
+        "request_id": {
+          "$ref": "#/$defs/Id"
+        },
+        "kind": {
+          "const": "error"
+        },
+        "ok": {
+          "const": false
+        },
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "code",
+            "message",
+            "recoverable"
+          ],
+          "properties": {
+            "code": {
+              "enum": [
+                "invalid_json",
+                "schema_error",
+                "unsupported_version",
+                "invalid_program",
+                "budget_exhausted",
+                "internal_error"
+              ]
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 1024
+            },
+            "recoverable": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
+  }
+}

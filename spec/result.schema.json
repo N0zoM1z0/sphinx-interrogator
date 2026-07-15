@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/result.schema.json",
+  "title": "Interrogator recovery result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "campaign_id",
+    "challenge_id",
+    "proof",
+    "budget",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "status": {
+      "enum": [
+        "unique_exact",
+        "candidate_set",
+        "ranked_soft",
+        "budget_exhausted",
+        "model_inconsistent",
+        "target_error",
+        "blocked"
+      ]
+    },
+    "campaign_id": {
+      "type": "string"
+    },
+    "challenge_id": {
+      "type": "string"
+    },
+    "secret_hex": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]+$"
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]+$"
+      }
+    },
+    "proof": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "alternative_model_check",
+        "hard_constraints",
+        "soft_constraints"
+      ],
+      "properties": {
+        "alternative_model_check": {
+          "enum": [
+            "unsat",
+            "sat",
+            "unknown",
+            "not_run"
+          ]
+        },
+        "hard_constraints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "soft_constraints": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "logical_queries",
+        "physical_executions"
+      ],
+      "properties": {
+        "logical_queries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "physical_executions": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

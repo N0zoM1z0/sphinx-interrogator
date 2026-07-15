@@ -1,0 +1,12 @@
+matrix_version = "1.0"
+name = "standard-primary"
+profiles = ["benchmarks/profiles/standard.toml", "benchmarks/profiles/fault_free.toml"]
+seed_file = "benchmarks/seeds/evaluation.txt"
+variants = ["full", "random", "stateless", "kb_no_synthesis", "synthesis_no_kb"]
+resume = true
+report_dir = "artifacts/benchmark-standard"
+
+[limits]
+parallel_campaigns = 1
+campaign_timeout_seconds = 1800
+solver_timeout_milliseconds = 5000

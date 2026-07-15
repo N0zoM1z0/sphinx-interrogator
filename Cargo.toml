@@ -1,0 +1,17 @@
+[workspace]
+members = ["crates/sphinx-vm"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.82"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "warn"
+unwrap_used = "deny"
+expect_used = "deny"

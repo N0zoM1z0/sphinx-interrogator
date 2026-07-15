@@ -1,0 +1,9 @@
+# Architecturally silent tutorial relation source.
+# A follow-up changes ANCHOR 0 to another public bank.
+
+start:
+    PAD 0
+    PROBE 0, 0x0, 0
+    ANCHOR 0, 0
+    FENCE
+    HALT

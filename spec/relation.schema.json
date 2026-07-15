@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/relation.schema.json",
+  "title": "Serialized relation instance and certificate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "relation_id",
+    "instance_id",
+    "source_query_id",
+    "follow_up_query_ids",
+    "certificate"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "relation_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+/v[0-9]+$"
+    },
+    "instance_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_query_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "follow_up_query_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "holes": {
+      "type": "object"
+    },
+    "expected_observation_relation": {
+      "enum": [
+        "equal",
+        "less_equal",
+        "greater_equal",
+        "custom"
+      ]
+    },
+    "certificate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "certificate_id",
+        "semantic_version",
+        "proof_method",
+        "architectural_claim",
+        "fault_free_claim",
+        "artifact_digest"
+      ],
+      "properties": {
+        "certificate_id": {
+          "type": "string"
+        },
+        "semantic_version": {
+          "type": "string"
+        },
+        "proof_method": {
+          "enum": [
+            "theorem",
+            "smt-bounded-complete",
+            "exhaustive-enumeration",
+            "differential-property",
+            "empirical-only"
+          ]
+        },
+        "architectural_claim": {
+          "type": "string"
+        },
+        "fault_free_claim": {
+          "type": "string"
+        },
+        "artifact_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

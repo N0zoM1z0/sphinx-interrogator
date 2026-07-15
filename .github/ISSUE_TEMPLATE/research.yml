@@ -1,0 +1,47 @@
+name: Research experiment
+description: Propose a falsifiable relation, synthesis, learning, or evaluation experiment
+title: "[research] "
+labels: ["type/research"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Research question
+      description: State one question whose outcome could change the design.
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis and competing explanation
+      description: Include the expected result and at least one plausible alternative explanation.
+    validations:
+      required: true
+  - type: textarea
+    id: method
+    attributes:
+      label: Proposed method
+      description: Specify profiles, seeds, baselines, controls, metrics, and statistical stopping rule.
+    validations:
+      required: true
+  - type: textarea
+    id: soundness
+    attributes:
+      label: Formal or oracle obligations
+      description: Identify architectural, fault-free, state, and inference assumptions that must be certified.
+    validations:
+      required: true
+  - type: textarea
+    id: artifacts
+    attributes:
+      label: Expected machine-readable artifacts
+      placeholder: transcript JSONL, result JSON, certificate digest, report table...
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope confirmation
+      options:
+        - label: The experiment remains inside the synthetic SphinxVM threat model.
+          required: true

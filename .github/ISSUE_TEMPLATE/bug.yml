@@ -1,0 +1,51 @@
+name: Bug report
+description: Report behavior that contradicts the current Sphinx Interrogator specification
+title: "[bug] "
+labels: ["type/bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep reports synthetic and self-contained. Do not attach private challenge secrets or data from real targets.
+  - type: textarea
+    id: specification
+    attributes:
+      label: Violated specification or invariant
+      description: Link to the exact document section, schema, relation certificate, or acceptance criterion.
+      placeholder: docs/FORMAL_MODEL.md §...
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include exact commands, profile, seed, program text, and reset history.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and verification evidence
+      description: Include OS, Rust/Python versions, relevant dependency versions, and failing test output.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Scope confirmation
+      options:
+        - label: This report concerns only the generated SphinxVM sandbox and contains no real-target exploitation data.
+          required: true
