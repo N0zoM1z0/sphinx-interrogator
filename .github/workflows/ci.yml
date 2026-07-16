@@ -83,6 +83,7 @@ jobs:
         run: >
           uv run --frozen python scripts/benchmark_standard.py
           --output runs/standard-benchmark-v2
+          --socket-root /tmp/sphinx-standard-sockets
           --smoke
           --bootstrap-samples 100
       - name: Run M8 state-learning smoke
@@ -91,6 +92,7 @@ jobs:
         run: >
           uv run --frozen python scripts/reduce_witnesses.py
           --output runs/reduced-witnesses-m9
+          --socket-root /tmp/sphinx-reducer-sockets
           --require-all-minimized
       - name: Export release evaluation artifacts
         run: uv run --frozen python scripts/export_evaluation_artifacts.py --output runs/release-m9/evaluation-artifacts

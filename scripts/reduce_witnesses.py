@@ -189,6 +189,11 @@ def parse_args() -> argparse.Namespace:
         help="directory for JSON/Markdown witness artifacts",
     )
     parser.add_argument(
+        "--socket-root",
+        type=Path,
+        help="short runtime directory for replay VM Unix sockets",
+    )
+    parser.add_argument(
         "--require-all-minimized",
         action="store_true",
         help="exit nonzero unless every generated family has a smaller witness",
@@ -212,6 +217,8 @@ def main() -> int:
     witnesses_dir.mkdir(parents=True, exist_ok=True)
     trusted_root = ROOT / "runs/.trusted-reducer-m9"
     trusted_root.mkdir(parents=True, exist_ok=True)
+    socket_root = (args.socket_root if args.socket_root is not None else trusted_root).resolve()
+    socket_root.mkdir(parents=True, exist_ok=True)
     private_root = trusted_root / "private-root.bin"
     if not private_root.exists():
         create_private_root(binary, private_root)
@@ -239,7 +246,7 @@ def main() -> int:
         launch_endpoints(
             binary,
             bundle,
-            socket_directory=trusted_root / "sockets",
+            socket_directory=socket_root / "sockets",
             with_judge=False,
         ) as endpoints,
         VmClient.connect_unix(endpoints.vm_socket, timeout_seconds=5.0) as client,

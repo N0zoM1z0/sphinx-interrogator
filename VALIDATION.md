@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 17:26Z**
+Last updated: **2026-07-16 17:32Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -80,6 +80,11 @@ exports evaluation artifacts, builds a release manifest, and asserts that the sm
 manifest is packageable but intentionally `blocked` because it is not the full
 published standard matrix.
 
+The first pushed `release-smoke` job, GitHub run `29519911483`, failed at standard
+smoke because the runner checkout path made VM Unix socket paths exceed `SUN_LEN`.
+The repair keeps challenge/private roots unchanged and adds explicit short
+`--socket-root` runtime directories for standard and reducer smoke commands.
+
 The same command sequence was run in a clean detached worktree at
 `/tmp/sphinx-interrogator-ci-smoke`:
 
@@ -105,6 +110,14 @@ uv run --frozen python scripts/release_manifest.py --output runs/release-m9/rele
 python3 release-smoke assertion snippet
                          pass; tutorial/M8/M9/evaluation checks pass, standard full matrix fails
 ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'
+                         pass
+uv run --frozen ruff format --check scripts/benchmark_standard.py scripts/reduce_witnesses.py
+                         pass
+uv run --frozen ruff check scripts/benchmark_standard.py scripts/reduce_witnesses.py
+                         pass
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/benchmark_standard.py --output runs/ci-standard-smoke-socket-test --socket-root /tmp/sphinx-standard-sockets-local --smoke --bootstrap-samples 100
+                         pass
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/reduce_witnesses.py --output runs/ci-reducer-smoke-socket-test --socket-root /tmp/sphinx-reducer-sockets-local --require-all-minimized
                          pass
 ```
 

@@ -70,6 +70,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--matrix", type=Path, default=DEFAULT_MATRIX)
     parser.add_argument("--seeds", type=Path)
     parser.add_argument("--output", type=Path, default=ROOT / "runs/standard-benchmark-v2")
+    parser.add_argument(
+        "--socket-root",
+        type=Path,
+        help="short runtime directory for VM/judge Unix sockets",
+    )
     parser.add_argument("--upper-bound-artifact", type=Path, default=DEFAULT_UPPER_BOUND_ARTIFACT)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--variants", nargs="+", choices=ALL_VARIANTS)
@@ -137,6 +142,8 @@ def main() -> int:
     (output / "runs").mkdir(parents=True, exist_ok=True)
     trusted_root = ROOT / "runs/.trusted-standard-v2"
     trusted_root.mkdir(parents=True, exist_ok=True)
+    socket_root = (args.socket_root if args.socket_root is not None else trusted_root).resolve()
+    socket_root.mkdir(parents=True, exist_ok=True)
     results: list[dict[str, object]] = []
     campaign_plan = _campaign_plan(
         variants,
@@ -168,7 +175,7 @@ def main() -> int:
             fault=fault,
         )
         started = time.perf_counter()
-        socket_directory = trusted_root / f"sockets-{opaque_campaign}"
+        socket_directory = socket_root / f"sockets-{opaque_campaign}"
         with launch_endpoints(
             binary,
             bundle,

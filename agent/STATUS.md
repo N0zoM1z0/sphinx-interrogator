@@ -12,7 +12,7 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 17:26Z after adding clean release-smoke CI coverage.
+- **Last updated:** 2026-07-16 17:32Z after fixing release-smoke CI socket roots.
 
 ## Current milestone
 
@@ -35,9 +35,10 @@ records mutation aggregate controls with `off=0`, `weak=1`, `signed=1`, and
 `reference=2` while preserving the documented drained-repeat active-variant
 equivalence. The CI workflow now includes a clean `release-smoke` job covering
 tutorial, standard smoke, M8, M9 reducer, evaluation artifact export, and
-release-manifest packaging smoke. No v1.0 or research-complete release should be
-created yet: final P2 documentation/version alignment and release-tag obligations
-remain.
+release-manifest packaging smoke; standard and reducer smoke commands use short
+`/tmp` socket roots to avoid GitHub runner `SUN_LEN` failures without moving
+challenge artifacts. No v1.0 or research-complete release should be created yet:
+final P2 documentation/version alignment and release-tag obligations remain.
 
 ## Verification dashboard
 
@@ -54,7 +55,7 @@ remain.
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
 | release manifest v2 | pass on clean tree | After the mutation-control audit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
 | GitHub CI | pass | Remote `main` has a successful `ci` workflow covering Python, Rust, and integration/boundary jobs |
-| release-smoke CI job | pass locally | Clean `/tmp/sphinx-interrogator-ci-smoke` worktree generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest with expected semantic checks |
+| release-smoke CI job | pass locally | Clean `/tmp/sphinx-interrogator-ci-smoke` worktree generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest; local socket-root regressions for standard and reducer pass |
 
 ## Release blockers
 
