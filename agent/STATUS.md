@@ -12,7 +12,7 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 17:32Z after fixing release-smoke CI socket roots.
+- **Last updated:** 2026-07-16 17:35Z after remote release-smoke CI passed.
 
 ## Current milestone
 
@@ -54,8 +54,8 @@ final P2 documentation/version alignment and release-tag obligations remain.
 | `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
 | release manifest v2 | pass on clean tree | After the mutation-control audit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
-| GitHub CI | pass | Remote `main` has a successful `ci` workflow covering Python, Rust, and integration/boundary jobs |
-| release-smoke CI job | pass locally | Clean `/tmp/sphinx-interrogator-ci-smoke` worktree generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest; local socket-root regressions for standard and reducer pass |
+| GitHub CI | pass | Remote `main` run `29520325888` passed Rust, Python, integration/boundary, and release-smoke jobs |
+| release-smoke CI job | pass | GitHub run `29520325888` generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest; local socket-root regressions for standard and reducer pass |
 
 ## Release blockers
 

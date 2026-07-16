@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 17:32Z**
+Last updated: **2026-07-16 17:35Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -119,6 +119,8 @@ SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/benchmark
                          pass
 SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/reduce_witnesses.py --output runs/ci-reducer-smoke-socket-test --socket-root /tmp/sphinx-reducer-sockets-local --require-all-minimized
                          pass
+GitHub Actions run 29520325888 on main
+                         pass; rust, python, integration, and release-smoke jobs all succeeded
 ```
 
 ## 2026-07-16 acceptance re-audit

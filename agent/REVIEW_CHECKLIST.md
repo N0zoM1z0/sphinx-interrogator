@@ -153,5 +153,6 @@
 - The CI workflow now has a `release-smoke` job that builds the VM from a clean
   checkout, regenerates the standard-profile audit, runs tutorial, standard smoke,
   M8, M9 reducer, evaluation-artifact export, and release-manifest packaging smoke.
+  GitHub Actions run `29520325888` passed with that job enabled.
 - No release tag should be created until every unchecked release criterion is covered
   by regenerated evidence and clean CI.

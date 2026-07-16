@@ -195,7 +195,9 @@ the later superseding observations and evidence list record the current behavior
   and smoke manifest assertions. The same command sequence passed in a clean
   `/tmp/sphinx-interrogator-ci-smoke` worktree. The first pushed job exposed a
   GitHub-runner `SUN_LEN` failure in standard benchmark sockets; standard and reducer
-  commands now accept `--socket-root`, and local socket-root regressions pass.
+  commands now accept `--socket-root`, local socket-root regressions pass, and
+  GitHub Actions run `29520325888` passed the Rust, Python, integration, and
+  release-smoke jobs.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
   and the clean-tree manifest now completes. Current evidence is still short of a
