@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import click
 
 from sphinx_interrogator.ast import Program
+from sphinx_interrogator.campaign import CampaignController, ControllerContext
 from sphinx_interrogator.persistence import CampaignRepository
 from sphinx_interrogator.protocol import VmClient
 from sphinx_interrogator.reducer import (
@@ -28,6 +29,8 @@ from sphinx_interrogator.relations import (
 )
 from sphinx_interrogator.tutorial import recover_tutorial
 
+_CONTROLLER_MODE_CHOICES = [mode.value for mode in CampaignController.MODES]
+
 
 @click.group()
 def main() -> None:
@@ -45,6 +48,7 @@ def doctor() -> None:
                 "black_box_boundary": "public-jsonl-process-only",
                 "synthetic_only": True,
                 "commands": [
+                    "controller-plan",
                     "doctor",
                     "recover",
                     "replay",
@@ -60,6 +64,82 @@ def doctor() -> None:
             sort_keys=True,
         )
     )
+
+
+@main.command("controller-plan")
+@click.option(
+    "--secret-cells",
+    type=click.IntRange(min=1),
+    default=1,
+    show_default=True,
+    help="Public secret-domain cell count used for selector scoring.",
+)
+@click.option(
+    "--mode",
+    "modes",
+    type=click.Choice(_CONTROLLER_MODE_CHOICES),
+    multiple=True,
+    help="Restrict the plan to one or more controller modes.",
+)
+@click.option(
+    "--state-model-id",
+    default=None,
+    help="Public learned-state model identifier, if one is active.",
+)
+@click.option(
+    "--high-influence-group",
+    "high_influence_groups",
+    multiple=True,
+    help="Public solver group ID that should be replayed.",
+)
+@click.option(
+    "--known-family",
+    "known_families",
+    multiple=True,
+    help="Public relation family already known to the campaign.",
+)
+@click.option(
+    "--uncovered-family",
+    "uncovered_families",
+    multiple=True,
+    help="Public relation family to prioritize for diversification.",
+)
+@click.option(
+    "--noise-profile",
+    default="bounded",
+    show_default=True,
+    help="Public noise profile label used by calibration planning.",
+)
+@click.option(
+    "--reducer-family",
+    default="repeat-amplify/v1",
+    show_default=True,
+    help="Public relation family used by reduce planning.",
+)
+def controller_plan(
+    secret_cells: int,
+    modes: tuple[str, ...],
+    state_model_id: str | None,
+    high_influence_groups: tuple[str, ...],
+    known_families: tuple[str, ...],
+    uncovered_families: tuple[str, ...],
+    noise_profile: str,
+    reducer_family: str,
+) -> None:
+    """Print the integrated public selector plan for the current context."""
+    context = ControllerContext(
+        secret_cells=secret_cells,
+        state_model_id=state_model_id,
+        high_influence_group_ids=high_influence_groups,
+        noise_profile=noise_profile,
+        reducer_family=reducer_family,
+    )
+    if known_families:
+        context = replace(context, known_relation_families=known_families)
+    if uncovered_families:
+        context = replace(context, uncovered_relation_families=uncovered_families)
+    report = CampaignController().plan_report(context, allowed=modes or None)
+    click.echo(json.dumps(report, indent=2, sort_keys=True))
 
 
 @main.command("render-anchor-switch")

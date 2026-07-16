@@ -128,6 +128,7 @@ challenge directory plus VM/judge socket paths.
 
 ```text
 sphinx-interrogate doctor
+sphinx-interrogate controller-plan --secret-cells <n>
 sphinx-interrogate hello --vm-socket <vm.sock>
 sphinx-interrogate render-cell --lane <n> --token <n> --epoch <n> --anchor <n>
 sphinx-interrogate render-anchor-switch --lane <n> --token <n> --epoch <n> \
@@ -140,6 +141,7 @@ sphinx-interrogate reduce --family repeat-amplify/v1
 sphinx-interrogate benchmark --report runs/standard-benchmark-v2/standard-benchmark-report.json
 ```
 
+`controller-plan` prints the integrated public selector plan for the current context.
 `benchmark` inspects an existing generated report. The published standard matrix is
 still executed through `just benchmark-standard`, which builds and launches the VM
 process through the same public JSONL boundary as campaigns.

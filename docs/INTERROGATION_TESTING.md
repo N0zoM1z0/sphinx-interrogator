@@ -110,6 +110,14 @@ Selection is a contextual bandit-like policy with explicit research modes rather
 - `reduce`: minimize an existing high-value witness.
 - `diversify`: fill uncovered grammar/relation/state regions.
 
+The implemented public facade is `sphinx_interrogator.campaign.CampaignController`.
+It exposes the six modes above as deterministic, JSON-serializable
+`ControllerAction` records and is inspectable through
+`sphinx-interrogate controller-plan`. The facade logs score components and
+provenance while delegating execution to the existing inference, state-learning,
+calibration, replay, reducer, and frontier components; it does not read private
+challenge files or VM internals.
+
 ### 4.2 Source score
 
 A source-node score can combine:

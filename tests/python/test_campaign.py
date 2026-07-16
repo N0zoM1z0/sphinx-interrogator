@@ -5,7 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import cast
 
-from sphinx_interrogator.campaign import TutorialCampaign
+from sphinx_interrogator.campaign import (
+    CampaignController,
+    CampaignMode,
+    ControllerContext,
+    TutorialCampaign,
+)
 from sphinx_interrogator.model import ExecutionObservation, ExecutionResult
 from sphinx_interrogator.protocol import VmClient
 from sphinx_interrogator.solver import bank_of
@@ -96,3 +101,55 @@ def test_tutorial_campaign_recovers_two_ordered_nibbles() -> None:
     assert campaign.run(maximum_steps=64) == (3, 13)
     assert campaign.domain.candidate_count() == 1
     assert campaign.knowledge_base.relations
+
+
+def test_campaign_controller_exposes_all_public_modes() -> None:
+    """The integrated selector surface covers all required interrogation modes."""
+    controller = CampaignController()
+    context = ControllerContext(secret_cells=2)
+    report = controller.plan_report(context)
+
+    assert controller.available_modes() == (
+        CampaignMode.INFER,
+        CampaignMode.LEARN_STATE,
+        CampaignMode.CALIBRATE,
+        CampaignMode.REPLAY,
+        CampaignMode.REDUCE,
+        CampaignMode.DIVERSIFY,
+    )
+    assert report["modes"] == [
+        "infer",
+        "learn-state",
+        "calibrate",
+        "replay",
+        "reduce",
+        "diversify",
+    ]
+    assert report["private_artifacts_included"] is False
+    assert report["black_box_boundary"] == "public-jsonl-process-only"
+    actions = {action["mode"]: action for action in report["actions"]}
+    assert set(actions) == set(report["modes"])
+    assert actions["infer"]["payload"]["status"] == "ready"
+    assert actions["infer"]["payload"]["relation_family"] == "anchor-switch/v1"
+    encoded_report = repr(report).lower()
+    assert "private_root" not in encoded_report
+    assert "private_path" not in encoded_report
+    assert "secret.bin" not in encoded_report
+
+
+def test_campaign_controller_can_select_replay_from_public_group_ids() -> None:
+    """Mode restriction should route to replay without reading private evidence."""
+    controller = CampaignController()
+    context = ControllerContext(
+        high_influence_group_ids=("group:relation:7",),
+        uncovered_relation_families=("soft-history-contrast/v1",),
+    )
+
+    selected = controller.select(context, allowed=(CampaignMode.REPLAY,))
+    assert selected.mode is CampaignMode.REPLAY
+    assert selected.payload["status"] == "ready"
+    assert selected.payload["group_ids"] == ("group:relation:7",)
+
+    diversified = controller.select(context, allowed=("diversify",))
+    assert diversified.mode is CampaignMode.DIVERSIFY
+    assert diversified.payload["target_family"] == "soft-history-contrast/v1"

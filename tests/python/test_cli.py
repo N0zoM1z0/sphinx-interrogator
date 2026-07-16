@@ -54,6 +54,7 @@ def test_doctor_and_reduce_commands_are_noninteractive(tmp_path: Path) -> None:
     assert doctor.exit_code == 0, doctor.output
     doctor_report = json.loads(doctor.output)
     assert doctor_report["black_box_boundary"] == "public-jsonl-process-only"
+    assert "controller-plan" in doctor_report["commands"]
     assert "reduce" in doctor_report["commands"]
 
     output = tmp_path / "reduced.json"
@@ -93,3 +94,35 @@ def test_benchmark_command_reads_nested_acceptance_contract(tmp_path: Path) -> N
     report = json.loads(result.output)
     assert report["targets_met"] is True
     assert report["full_published_matrix"] is True
+
+
+def test_controller_plan_command_reports_integrated_selector_modes() -> None:
+    """CLI exposes the public controller plan without requiring a VM launch."""
+    result = CliRunner().invoke(
+        main,
+        [
+            "controller-plan",
+            "--secret-cells",
+            "2",
+            "--mode",
+            "replay",
+            "--high-influence-group",
+            "group:relation:7",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert report["controller_version"] == "1.0"
+    assert report["private_artifacts_included"] is False
+    assert report["modes"] == [
+        "infer",
+        "learn-state",
+        "calibrate",
+        "replay",
+        "reduce",
+        "diversify",
+    ]
+    assert report["eligible_modes"] == ["replay"]
+    assert report["selected"]["mode"] == "replay"
+    assert report["selected"]["payload"]["group_ids"] == ["group:relation:7"]

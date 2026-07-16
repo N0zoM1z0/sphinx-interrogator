@@ -165,6 +165,11 @@ the later superseding observations and evidence list record the current behavior
   `just export-evaluation-artifacts` writes campaign, query, relation, state-learning,
   and reducer CSVs plus deterministic SVG plots; release manifest v2 now hashes and
   semantically checks the evaluation artifact manifest.
+- [x] (2026-07-16 16:42Z) Add the integrated public campaign controller surface:
+  `CampaignController` exposes deterministic `infer`, `learn-state`, `calibrate`,
+  `replay`, `reduce`, and `diversify` actions with score components and provenance;
+  `sphinx-interrogate controller-plan` returns the public JSON plan without VM-private
+  paths or target internals.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
   and the clean-tree manifest now completes. Current evidence is still short of a
@@ -977,6 +982,13 @@ Populate during implementation:
 - Post-full-benchmark root checks, 2026-07-16: `just fmt`, `just lint`, `just test`,
   `just schema-check`, `just docs-check`, and `git diff --check` passed; `just test`
   covered 46 Rust tests and 175 Python tests.
+- Integrated controller surface validation, 2026-07-16:
+  `uv run --frozen pytest tests/python/test_campaign.py tests/python/test_cli.py`
+  passed 7 tests; `uv run --frozen sphinx-interrogate controller-plan --secret-cells
+  2 --mode replay --high-influence-group group:relation:7` returned a public replay
+  plan with all six modes listed and `private_artifacts_included=false`; `just fmt`,
+  `just lint`, `just test`, `just docs-check`, and `git diff --check` passed, with
+  `just test` covering 46 Rust tests and 186 Python tests.
 - Historical clean-checkout negative evidence, 2026-07-16: before the bootstrap
   repair, a detached HEAD with no `.tools/` failed formal verification. The current
   justfile and CI workflow fetch and verify the pinned TLC jar; remote `main` CI now
@@ -995,7 +1007,7 @@ Stable public interfaces:
 - schemas under `spec/` and semantic protocol version;
 - probe DSL canonical text;
 - `sphinx-vm` server/challenge/judge CLI;
-- `sphinx-interrogate` doctor/recover/replay/inspect/reduce/benchmark CLI;
+- `sphinx-interrogate` doctor/controller-plan/recover/replay/inspect/reduce/benchmark CLI;
 - root `just` commands;
 - result/run manifest schemas.
 
@@ -1029,6 +1041,8 @@ paths. Campaign manifests for tutorial and the full standard benchmark matrix no
 record v1.2 runtime reproducibility metadata and artifact hashes. The repository is
 nevertheless not release-complete: formal/differential obligations,
 documentation/version, expanded clean-CI release smoke, and release-tag evidence remain
-partial. The generated release manifest has passing root-gate evidence and completes
-from a clean tree. Work resumes from the open P1/P2 items above.
+partial. The integrated public controller selector surface is now implemented, but
+the deeper formal/differential and release-CI obligations remain open. The generated
+release manifest has passing root-gate evidence and completes from a clean tree. Work
+resumes from the open P1/P2 items above.
 ```

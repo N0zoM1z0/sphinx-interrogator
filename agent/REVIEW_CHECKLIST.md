@@ -53,7 +53,7 @@
 - [x] Replay is deterministic where promised.
 - [x] Unsat-core repair/quarantine is tested.
 - [x] Every tutorial/standard benchmark result links to profile, challenge commitment, seed, revision, and evidence.
-- [ ] One integrated selector exposes infer, learn-state, calibrate, replay, reduce, and diversify modes.
+- [x] One integrated selector exposes infer, learn-state, calibrate, replay, reduce, and diversify modes.
 
 ## Noise/statistics
 
@@ -136,5 +136,9 @@
   interface. Broader release/version/schema/example alignment remains open.
 - The release generator now fails closed; the clean-tree manifest completes with all
   five semantic artifacts and all 12 root-gate evidence records passing.
+- `CampaignController` now exposes a typed public selector facade for `infer`,
+  `learn-state`, `calibrate`, `replay`, `reduce`, and `diversify`, with
+  `sphinx-interrogate controller-plan` returning the selected action, score
+  components, provenance, and black-box boundary declaration.
 - No release tag should be created until every unchecked release criterion is covered
   by regenerated evidence and clean CI.
