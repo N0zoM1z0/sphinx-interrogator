@@ -1,0 +1,229 @@
+{
+  "alphabet": {
+    "abstraction_version": "research-soft-reset-phase/v1",
+    "discretizer_version": "research-bucket-threshold/v1",
+    "input_symbols": [
+      "step",
+      "measure"
+    ],
+    "output_symbols": [
+      "STEP_OK",
+      "MEASURE_HIGH",
+      "MEASURE_LOW"
+    ]
+  },
+  "campaigns": {
+    "no-learner": {
+      "calibrations": [
+        {
+          "anchor_bank": 2,
+          "observations": [],
+          "threshold_bucket": 109
+        }
+      ],
+      "public_campaigns": [
+        {
+          "campaign_index": 1,
+          "challenge_id": "challenge-0001",
+          "commitment": "1111111111111111111111111111111111111111111111111111111111111111",
+          "public_directory": "public",
+          "public_profile_sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    }
+  },
+  "cost": {
+    "challenge_campaigns": 1,
+    "hard_resets": 2,
+    "logical_queries": 3,
+    "membership_words": 2,
+    "physical_executions": 3
+  },
+  "elapsed_seconds": 0.01,
+  "fixture": "real-sphinxvm-research-soft-reset",
+  "held_out_evidence": {
+    "cost": {
+      "challenge_campaigns": 1,
+      "hard_resets": 1,
+      "logical_queries": 2,
+      "membership_words": 1,
+      "physical_executions": 2
+    },
+    "traces": [
+      {
+        "outputs": [
+          "STEP_OK",
+          "MEASURE_LOW"
+        ],
+        "request_ids": [
+          "held-out-word-000001-00",
+          "held-out-word-000001-01"
+        ],
+        "sequence": [
+          "step",
+          "measure"
+        ],
+        "steps": [
+          {
+            "cycle_bucket": 0,
+            "output": "STEP_OK",
+            "request_id": "held-out-word-000001-00",
+            "reset": "hard",
+            "static_cycles": 2,
+            "symbol": "step"
+          },
+          {
+            "cycle_bucket": 105,
+            "output": "MEASURE_LOW",
+            "request_id": "held-out-word-000001-01",
+            "reset": "none",
+            "static_cycles": 841,
+            "symbol": "measure"
+          }
+        ]
+      }
+    ]
+  },
+  "held_out_sequences": 1,
+  "macro": {
+    "epoch": 0,
+    "expected_fault_amplification_cycles": 60,
+    "lane": 0,
+    "macro_version": "research-soft-reset-phase/v1",
+    "measure_repeats": 60,
+    "programs": {
+      "measure": {
+        "instructions": 241,
+        "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+        "static_cycles": 841
+      },
+      "step": {
+        "instructions": 2,
+        "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+        "static_cycles": 2
+      }
+    },
+    "token": 0
+  },
+  "private_artifacts_included": false,
+  "profile_name": "research",
+  "report_version": "2.0",
+  "state_conditioned_inference": {
+    "constraint_groups": [
+      {
+        "effective_nibble_candidates_after": 4,
+        "effective_nibble_candidates_before": 16,
+        "group_id": "constraint:m8-learned-state-bank",
+        "ir_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "retractable_by": "state-model:research-aalpy-lstar",
+        "source_request_ids": [
+          "held-out-word-000001-01"
+        ],
+        "state_label": "s0"
+      }
+    ],
+    "nontrivial_constraints": 1,
+    "projection_scope": "effective_nibble_lane_0",
+    "status": "complete"
+  },
+  "retraction_demo": {
+    "retracted_groups": [
+      "constraint:m8-state-conditioned-evidence"
+    ],
+    "status": "retracted"
+  },
+  "shared_private_root": false,
+  "targets_met": {
+    "exact_history_accuracy_eq_1": true,
+    "learned_state_accuracy_ge_0_95": true,
+    "learned_state_beats_no_learner": true,
+    "state_model_counterexample_retracted": true
+  },
+  "variants": [
+    {
+      "algorithm": "one-state-hard-reset/v1",
+      "artifact_digest": "5555555555555555555555555555555555555555555555555555555555555555",
+      "counterexample_examples": [
+        {
+          "expected": [
+            "STEP_OK",
+            "MEASURE_HIGH"
+          ],
+          "input": [
+            "step",
+            "measure"
+          ],
+          "observed": [
+            "STEP_OK",
+            "MEASURE_LOW"
+          ],
+          "request_ids": [
+            "held-out-word-000001-00",
+            "held-out-word-000001-01"
+          ]
+        }
+      ],
+      "counterexamples": 1,
+      "exact_matches": 0,
+      "held_out_accuracy": 0,
+      "mode": "no_learner",
+      "model_id": "research-no-learner",
+      "states": 1,
+      "status": "active",
+      "tested_sequences": 1,
+      "training_cost": {
+        "challenge_campaigns": 1,
+        "hard_resets": 2,
+        "logical_queries": 2,
+        "membership_words": 2,
+        "physical_executions": 2
+      },
+      "training_membership_cache_digest": "6666666666666666666666666666666666666666666666666666666666666666",
+      "transition_coverage": 1
+    },
+    {
+      "algorithm": "exact-history/v1-depth-6",
+      "artifact_digest": "7777777777777777777777777777777777777777777777777777777777777777",
+      "counterexample_examples": [],
+      "counterexamples": 0,
+      "exact_matches": 1,
+      "held_out_accuracy": 1,
+      "mode": "exact_history",
+      "model_id": "research-exact-history",
+      "states": 127,
+      "status": "active",
+      "tested_sequences": 1,
+      "training_cost": {
+        "challenge_campaigns": 1,
+        "hard_resets": 1,
+        "logical_queries": 1,
+        "membership_words": 1,
+        "physical_executions": 1
+      },
+      "training_membership_cache_digest": "8888888888888888888888888888888888888888888888888888888888888888",
+      "transition_coverage": 1
+    },
+    {
+      "algorithm": "aalpy-lstar-mealy/v1",
+      "artifact_digest": "9999999999999999999999999999999999999999999999999999999999999999",
+      "counterexample_examples": [],
+      "counterexamples": 0,
+      "exact_matches": 1,
+      "held_out_accuracy": 1,
+      "mode": "learned_state",
+      "model_id": "research-aalpy-lstar",
+      "states": 4,
+      "status": "active",
+      "tested_sequences": 1,
+      "training_cost": {
+        "challenge_campaigns": 1,
+        "hard_resets": 1,
+        "logical_queries": 1,
+        "membership_words": 1,
+        "physical_executions": 1
+      },
+      "training_membership_cache_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "transition_coverage": 1
+    }
+  ]
+}

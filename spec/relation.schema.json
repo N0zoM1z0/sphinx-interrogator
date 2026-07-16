@@ -111,6 +111,8 @@
         "architectural_claim",
         "fault_free_claim",
         "preconditions",
+        "proof_artifact_id",
+        "proof_artifact_sha256",
         "artifact_digest"
       ],
       "properties": {
@@ -118,7 +120,7 @@
           "type": "string"
         },
         "certificate_schema_version": {
-          "const": "1.0"
+          "const": "2.0"
         },
         "semantic_version": {
           "type": "string"
@@ -157,6 +159,13 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "proof_artifact_id": {
+          "const": "relation-contracts-v1"
+        },
+        "proof_artifact_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         },
         "artifact_digest": {
           "type": "string",

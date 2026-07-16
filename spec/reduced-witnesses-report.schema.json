@@ -35,7 +35,19 @@
         "signature_kind": { "enum": ["exact-residual", "sign", "zero-nonzero"] },
         "model_scope": { "const": "finite-public-family-committee" },
         "uses_true_secret": { "const": false },
-        "result_label": { "type": "string", "minLength": 1 }
+        "result_label": { "type": "string", "minLength": 1 },
+        "measured_replay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["profile_name", "challenge_id", "commitment", "profile_sha256", "public_directory"],
+          "properties": {
+            "profile_name": { "const": "reducer" },
+            "challenge_id": { "type": "string", "minLength": 1 },
+            "commitment": { "$ref": "#/$defs/sha256" },
+            "profile_sha256": { "$ref": "#/$defs/sha256" },
+            "public_directory": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     },
     "families": {
@@ -49,14 +61,22 @@
       "required": [
         "family_count",
         "minimized_count",
+        "partial_count",
+        "blocked_count",
         "unchanged_count",
-        "all_minimized"
+        "all_minimized",
+        "all_replay_paths_valid",
+        "reset_policy_honored"
       ],
       "properties": {
         "family_count": { "type": "integer", "minimum": 0 },
         "minimized_count": { "type": "integer", "minimum": 0 },
+        "partial_count": { "type": "integer", "minimum": 0 },
+        "blocked_count": { "type": "integer", "minimum": 0 },
         "unchanged_count": { "type": "integer", "minimum": 0 },
-        "all_minimized": { "type": "boolean" }
+        "all_minimized": { "type": "boolean" },
+        "all_replay_paths_valid": { "type": "boolean" },
+        "reset_policy_honored": { "type": "boolean" }
       }
     }
   },
@@ -80,7 +100,7 @@
       ],
       "properties": {
         "family": { "type": "string", "pattern": "/v[0-9]+$" },
-        "status": { "enum": ["minimized", "unchanged"] },
+        "status": { "enum": ["minimized", "unchanged", "partial", "blocked"] },
         "artifact_sha256": { "$ref": "#/$defs/sha256" },
         "path": { "type": "string" },
         "preservation": {

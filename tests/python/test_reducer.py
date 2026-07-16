@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from itertools import pairwise
+
 from sphinx_interrogator.ast import Program
 from sphinx_interrogator.reducer import (
+    MeasuredReplay,
     ReductionConfig,
     ReductionKind,
     ReductionMode,
     RelationReducer,
+    ReplayComparison,
     SignatureKind,
     default_model_committee,
 )
@@ -19,6 +23,41 @@ from sphinx_interrogator.relations import (
     SoftHistoryContrastTemplate,
 )
 from sphinx_interrogator.target_model import FaultVariant
+
+
+class RejectingReplayOracle:
+    """Replay oracle that rejects every candidate with measured provenance."""
+
+    def compare(
+        self,
+        original: object,
+        candidate: object,
+    ) -> ReplayComparison:
+        """Return a deterministic mismatch."""
+        original_hash = original.instance_hash
+        candidate_hash = candidate.instance_hash
+        return ReplayComparison(
+            accepted=False,
+            original=MeasuredReplay(
+                relation_hash=original_hash,
+                decision="exact_greater",
+                confidence=1.0,
+                request_ids=("original-source", "original-follow-up"),
+                reset_policy="hard",
+                resets=("hard", "hard"),
+                provenance=("fixture",),
+            ),
+            candidate=MeasuredReplay(
+                relation_hash=candidate_hash,
+                decision="exact_equal",
+                confidence=1.0,
+                request_ids=("candidate-source", "candidate-follow-up"),
+                reset_policy="hard",
+                resets=("hard", "hard"),
+                provenance=("fixture",),
+            ),
+            reason="decision changed from exact_greater to exact_equal",
+        )
 
 
 def _config() -> ReductionConfig:
@@ -55,11 +94,17 @@ def test_repeat_and_padding_reduction_preserves_sign_consequence() -> None:
     assert result.reduced_relation.holes["repeats"] == 2
     assert result.reduced_relation.holes["pad"] == 0
     assert result.reduced_cost < result.original_cost
+    hashes = [result.steps[0].from_hash, *(step.to_hash for step in result.steps)]
+    assert hashes[0] == result.original_relation.instance_hash
+    assert hashes[-1] == result.reduced_relation.instance_hash
+    assert all(left.to_hash == right.from_hash for left, right in pairwise(result.steps))
     assert {step.kind for step in result.steps} >= {
         ReductionKind.REPEAT_SHRINK,
         ReductionKind.PADDING_SIMPLIFICATION,
     }
-    assert result.to_data()["preservation"]["uses_true_secret"] is False
+    data = result.to_data()
+    assert data["preservation"]["uses_true_secret"] is False
+    assert data["replay_path"]["continuous"] is True
 
 
 def test_context_lift_can_collapse_to_known_base_relation() -> None:
@@ -188,3 +233,63 @@ def test_reducer_reuses_signature_cache_on_repeated_run() -> None:
 
     assert first.status == second.status == "minimized"
     assert second.cache_hits > first.cache_hits
+
+
+def test_measured_replay_mismatch_rejects_candidate() -> None:
+    """A public-model-preserving candidate is rejected when real replay disagrees."""
+    relation = RepeatAmplifyTemplate().instantiate(
+        instance_id="repeat-replay",
+        lane=0,
+        token=0,
+        epoch=0,
+        anchor=2,
+        pad=4,
+        repeats=3,
+    )
+    reducer = RelationReducer(
+        models=default_model_committee(
+            relation.involved_lanes,
+            fault_variants=(FaultVariant.REFERENCE,),
+        ),
+        config=_config(),
+        replay_oracle=RejectingReplayOracle(),
+    )
+
+    result = reducer.reduce(relation)
+
+    assert result.status == "unchanged"
+    assert not result.improved
+    assert result.measured_replay
+    assert result.measured_replay[0].accepted is False
+    assert any("measured replay rejected" in reason for reason in result.blocked_reasons)
+
+
+def test_budget_exhaustion_reports_partial_status() -> None:
+    """A reduced but not exhaustively searched witness is reported as partial."""
+    relation = RepeatAmplifyTemplate().instantiate(
+        instance_id="repeat-budget",
+        lane=0,
+        token=0,
+        epoch=0,
+        anchor=2,
+        pad=8,
+        repeats=6,
+    )
+    reducer = RelationReducer(
+        models=default_model_committee(
+            relation.involved_lanes,
+            fault_variants=(FaultVariant.REFERENCE,),
+        ),
+        config=ReductionConfig(
+            mode=ReductionMode.IMPLIES_CORE,
+            signature_kind=SignatureKind.SIGN,
+            max_predicate_evaluations=256,
+            max_generated_candidates=1,
+        ),
+    )
+
+    result = reducer.reduce(relation)
+
+    assert result.status == "partial"
+    assert result.improved
+    assert "candidate generation budget exhausted" in result.blocked_reasons

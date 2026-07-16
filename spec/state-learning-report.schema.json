@@ -1,0 +1,640 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/state-learning-report.schema.json",
+  "title": "Sphinx Interrogator state-learning evaluation report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version",
+    "profile_name",
+    "fixture",
+    "elapsed_seconds",
+    "private_artifacts_included",
+    "shared_private_root",
+    "macro",
+    "alphabet",
+    "held_out_sequences",
+    "held_out_evidence",
+    "variants",
+    "campaigns",
+    "cost",
+    "state_conditioned_inference",
+    "retraction_demo",
+    "targets_met"
+  ],
+  "properties": {
+    "report_version": {
+      "const": "2.0"
+    },
+    "profile_name": {
+      "const": "research"
+    },
+    "fixture": {
+      "const": "real-sphinxvm-research-soft-reset"
+    },
+    "elapsed_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "private_artifacts_included": {
+      "const": false
+    },
+    "shared_private_root": {
+      "type": "boolean"
+    },
+    "macro": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "macro_version",
+        "lane",
+        "token",
+        "epoch",
+        "measure_repeats",
+        "expected_fault_amplification_cycles",
+        "programs"
+      ],
+      "properties": {
+        "macro_version": {
+          "const": "research-soft-reset-phase/v1"
+        },
+        "lane": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "token": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "epoch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "measure_repeats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "expected_fault_amplification_cycles": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "programs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "step",
+            "measure"
+          ],
+          "properties": {
+            "step": {
+              "$ref": "#/$defs/program"
+            },
+            "measure": {
+              "$ref": "#/$defs/program"
+            }
+          }
+        }
+      }
+    },
+    "alphabet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "abstraction_version",
+        "input_symbols",
+        "output_symbols",
+        "discretizer_version"
+      ],
+      "properties": {
+        "abstraction_version": {
+          "const": "research-soft-reset-phase/v1"
+        },
+        "input_symbols": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "step",
+              "measure"
+            ]
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "output_symbols": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "STEP_OK",
+              "MEASURE_HIGH",
+              "MEASURE_LOW"
+            ]
+          },
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "discretizer_version": {
+          "const": "research-bucket-threshold/v1"
+        }
+      }
+    },
+    "held_out_sequences": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "held_out_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cost",
+        "traces"
+      ],
+      "properties": {
+        "cost": {
+          "$ref": "#/$defs/cost"
+        },
+        "traces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/trace"
+          }
+        }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/variant"
+      }
+    },
+    "campaigns": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/campaign_group"
+      }
+    },
+    "cost": {
+      "$ref": "#/$defs/cost"
+    },
+    "state_conditioned_inference": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "complete",
+            "blocked"
+          ]
+        },
+        "nontrivial_constraints": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "projection_scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "constraint_groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "group_id",
+              "state_label",
+              "source_request_ids",
+              "effective_nibble_candidates_before",
+              "effective_nibble_candidates_after",
+              "retractable_by",
+              "ir_sha256"
+            ],
+            "properties": {
+              "group_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "state_label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_request_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "effective_nibble_candidates_before": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "effective_nibble_candidates_after": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "retractable_by": {
+                "type": "string",
+                "minLength": 1
+              },
+              "ir_sha256": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        }
+      }
+    },
+    "retraction_demo": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "retracted",
+            "blocked"
+          ]
+        },
+        "retracted_groups": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "targets_met": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exact_history_accuracy_eq_1",
+        "learned_state_accuracy_ge_0_95",
+        "learned_state_beats_no_learner",
+        "state_model_counterexample_retracted"
+      ],
+      "properties": {
+        "exact_history_accuracy_eq_1": {
+          "type": "boolean"
+        },
+        "learned_state_accuracy_ge_0_95": {
+          "type": "boolean"
+        },
+        "learned_state_beats_no_learner": {
+          "type": "boolean"
+        },
+        "state_model_counterexample_retracted": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "program": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "static_cycles",
+        "instructions",
+        "sha256"
+      ],
+      "properties": {
+        "static_cycles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "instructions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "membership_words",
+        "logical_queries",
+        "physical_executions",
+        "hard_resets",
+        "challenge_campaigns"
+      ],
+      "properties": {
+        "membership_words": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "logical_queries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "physical_executions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hard_resets": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "challenge_campaigns": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "trace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "outputs",
+        "request_ids",
+        "steps"
+      ],
+      "properties": {
+        "sequence": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "step",
+              "measure"
+            ]
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "STEP_OK",
+              "MEASURE_HIGH",
+              "MEASURE_LOW"
+            ]
+          }
+        },
+        "request_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/step"
+          }
+        }
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "symbol",
+        "output",
+        "request_id",
+        "reset",
+        "cycle_bucket",
+        "static_cycles"
+      ],
+      "properties": {
+        "symbol": {
+          "enum": [
+            "step",
+            "measure"
+          ]
+        },
+        "output": {
+          "enum": [
+            "STEP_OK",
+            "MEASURE_HIGH",
+            "MEASURE_LOW"
+          ]
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reset": {
+          "enum": [
+            "hard",
+            "none"
+          ]
+        },
+        "cycle_bucket": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "static_cycles": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "model_id",
+        "algorithm",
+        "status",
+        "states",
+        "held_out_accuracy",
+        "tested_sequences",
+        "exact_matches",
+        "counterexamples",
+        "counterexample_examples",
+        "transition_coverage",
+        "artifact_digest",
+        "training_cost",
+        "training_membership_cache_digest"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "no_learner",
+            "exact_history",
+            "learned_state"
+          ]
+        },
+        "model_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "algorithm": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "states": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "held_out_accuracy": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "tested_sequences": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "exact_matches": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "counterexamples": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "counterexample_examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "input",
+              "expected",
+              "observed",
+              "request_ids"
+            ],
+            "properties": {
+              "input": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "expected": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "observed": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "request_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "transition_coverage": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "artifact_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "training_cost": {
+          "$ref": "#/$defs/cost"
+        },
+        "training_membership_cache_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "campaign_group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "public_campaigns",
+        "calibrations"
+      ],
+      "properties": {
+        "public_campaigns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "campaign_index",
+              "challenge_id",
+              "commitment",
+              "public_profile_sha256",
+              "public_directory"
+            ],
+            "properties": {
+              "campaign_index": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "challenge_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "commitment": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "public_profile_sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "public_directory": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "calibrations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "anchor_bank",
+              "threshold_bucket",
+              "observations"
+            ],
+            "properties": {
+              "anchor_bank": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 3
+              },
+              "threshold_bucket": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "observations": {
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

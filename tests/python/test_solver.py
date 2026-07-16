@@ -159,6 +159,68 @@ def test_finite_relation_constraint_enumerates_exact_correlated_models() -> None
     assert snapshot.unique_model is None
 
 
+def test_wrong_symbolic_model_evidence_is_unsat_not_false_exact() -> None:
+    """A contradictory symbolic-model mutation is inconsistency, not a false singleton."""
+    true_constraint = FiniteModelConstraint(
+        constraint_version="1.0",
+        constraint_id="constraint:true-symbolic-model",
+        lanes=(0,),
+        allowed_models=(FiniteModelAssignment((9,), "reference"),),
+        approximation=ApproximationKind.EXACT,
+        relation_instance_id="relation-true",
+        certificate_id="cert-true",
+        decision_kind="exact_greater",
+        source_request_ids=("request-source", "request-follow-up"),
+        assumptions=("reference symbolic model",),
+    )
+    wrong_constraint = FiniteModelConstraint(
+        constraint_version="1.0",
+        constraint_id="constraint:wrong-symbolic-model",
+        lanes=(0,),
+        allowed_models=(FiniteModelAssignment((10,), "reference"),),
+        approximation=ApproximationKind.EXACT,
+        relation_instance_id="relation-mutated",
+        certificate_id="cert-mutated",
+        decision_kind="exact_greater",
+        source_request_ids=("request-source", "request-follow-up"),
+        assumptions=("deliberately mutated symbolic bank model",),
+    )
+    store = HypothesisStore()
+    store.add(
+        ConstraintGroup(
+            true_constraint.constraint_id,
+            finite_model_program(true_constraint, secret_cells=1),
+            provenance=("public-observation:true",),
+        )
+    )
+    store.add(
+        ConstraintGroup(
+            wrong_constraint.constraint_id,
+            finite_model_program(wrong_constraint, secret_cells=1),
+            provenance=("mutation:wrong-symbolic-model",),
+        )
+    )
+
+    inconsistent = store.solve()
+    assert inconsistent.status is SolverStatus.UNSAT
+    assert {entry.group_id for entry in inconsistent.unsat_core} == {
+        true_constraint.constraint_id,
+        wrong_constraint.constraint_id,
+    }
+    uniqueness = store.check_uniqueness(("secret_0",))
+    assert uniqueness.status is SolverStatus.UNSAT
+    assert uniqueness.unique is None
+    assert uniqueness.candidate is None
+    assert uniqueness.reason == "hypothesis is unsatisfiable"
+
+    store.quarantine(wrong_constraint.constraint_id)
+    repaired = store.check_uniqueness(("secret_0",))
+    assert repaired.status is SolverStatus.UNSAT
+    assert repaired.unique is True
+    assert repaired.candidate is not None
+    assert repaired.candidate.get("secret_0") == 9
+
+
 def test_exact_uniqueness_requires_alternative_model_unsat() -> None:
     """A singleton claim is backed by a second query excluding the selected nibble."""
     store = HypothesisStore()

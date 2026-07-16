@@ -10,6 +10,7 @@ from pathlib import Path
 import jsonschema
 import pytest
 
+import sphinx_interrogator.certificates as certificates
 from sphinx_interrogator.ast import Program
 from sphinx_interrogator.certificates import CertificateRegistry, ProofMethod, RelationCertificate
 from sphinx_interrogator.constraints import ExtractionStatus
@@ -319,9 +320,29 @@ def test_certificate_artifact_binding_rejects_semantic_or_claim_tampering() -> N
         with pytest.raises(ValueError, match="artifact digest"):
             RelationCertificate.from_data(data)
     data = certificate.to_data()
+    data["proof_artifact_sha256"] = "0" * 64
+    with pytest.raises(ValueError, match="proof artifact digest"):
+        RelationCertificate.from_data(data)
+    data = certificate.to_data()
     data["future_field"] = True
     with pytest.raises(ValueError, match="unknown fields"):
         RelationCertificate.from_data(data)
+
+
+def test_certificate_proof_artifact_binds_supporting_file_contents(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The proof manifest is invalid if a claimed SMT/test/semantic file digest is stale."""
+    artifact = json.loads(certificates._PROOF_ARTIFACT_PATH.read_text(encoding="utf-8"))
+    first_support = artifact["supporting_artifacts"][0]
+    artifact["supporting_artifact_hashes"][first_support] = "0" * 64
+    tampered_path = tmp_path / "relation-contracts-v1.json"
+    tampered_path.write_text(json.dumps(artifact), encoding="utf-8")
+
+    monkeypatch.setattr(certificates, "_PROOF_ARTIFACT_PATH", tampered_path)
+    with pytest.raises(ValueError, match="supporting artifact digest mismatch"):
+        certificates._load_proof_artifact()
 
 
 def test_reduced_domain_architecture_and_fault_free_normalization() -> None:
@@ -676,6 +697,60 @@ def test_equal_quantized_buckets_remain_an_interval_not_false_equality() -> None
     assert extraction.hard_constraints == ()
 
 
+def test_broken_normalizer_static_cost_mutation_is_invalid() -> None:
+    """A normalizer using the wrong public static cost cannot emit hard evidence."""
+    relation = AnchorSwitchTemplate().instantiate(
+        instance_id="broken-normalizer",
+        lane=0,
+        token=0,
+        epoch=0,
+        bank_a=0,
+        bank_b=2,
+        pad=0,
+    )
+    source = _result(
+        relation,
+        follow_up=False,
+        secret=(0,),
+        variant=FaultVariant.REFERENCE,
+        noise=0,
+        width=1,
+        request_id="broken-normalizer:s",
+    )
+    follow_up = _result(
+        relation,
+        follow_up=True,
+        secret=(0,),
+        variant=FaultVariant.REFERENCE,
+        noise=0,
+        width=1,
+        request_id="broken-normalizer:f",
+    )
+    mutated_decision = decide_pair(
+        source,
+        follow_up,
+        expected_source_static=relation.source_program.static_cycles() + 1,
+        expected_follow_up_static=relation.follow_up_programs[0].static_cycles(),
+        noise_bound=0,
+        assumptions=("mutation:wrong-static-normalizer",),
+    )
+
+    assert mutated_decision.kind is DecisionKind.INVALID
+    assert (
+        mutated_decision.reason
+        == "source public static metric disagrees with its certified program"
+    )
+    extraction = extract_finite_models(
+        relation,
+        source,
+        follow_up,
+        mutated_decision,
+        noise_bound=0,
+    )
+    assert extraction.status is ExtractionStatus.INVALID
+    assert extraction.hard_constraints == ()
+
+
 def test_invalid_inconclusive_control_and_policy_paths_emit_nothing() -> None:
     """Architecture failures, apparatus relations, and weak certificates stay out of hard state."""
     anchor, *_, register, replay = _sample_relations()
@@ -721,6 +796,22 @@ def test_invalid_inconclusive_control_and_policy_paths_emit_nothing() -> None:
     )
     assert rejected.status is ExtractionStatus.POLICY_REJECTED
     assert rejected.hard_constraints == ()
+
+    mutated = replace(
+        anchor,
+        source_program=Program.parse("MOVI r0, 1\nMIXOUT r0\nHALT\n", lanes=1),
+    )
+    assert not mutated.instance_binding_valid()
+    assert not mutated.architectural_precheck()
+    failed_precheck = extract_finite_models(
+        mutated,
+        source,
+        follow_up,
+        exact,
+        noise_bound=0,
+    )
+    assert failed_precheck.status is ExtractionStatus.INVALID
+    assert failed_precheck.hard_constraints == ()
 
 
 def test_off_control_constraints_never_exclude_the_true_off_model() -> None:

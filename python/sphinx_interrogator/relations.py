@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import hashlib
+import itertools
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from functools import lru_cache
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Protocol
 
@@ -129,6 +131,8 @@ class RelationInstance:
 
     def architectural_precheck(self) -> bool:
         """Check the construction theorem associated with this template family."""
+        if not self.instance_binding_valid():
+            return False
         if all(program_has_silent_architecture(program) for program in self.programs):
             return True
         if self.relation_id == RegisterRenameTemplate.relation_id:
@@ -150,9 +154,28 @@ class RelationInstance:
         return False
 
     def fault_free_precheck(self) -> bool:
-        """Check that public static normalization leaves zero for every arm."""
-        return all(
-            program.static_cycles() - program.static_cycles() == 0 for program in self.programs
+        """Exhaustively check zero fault residual over the bounded public model."""
+        if not self.instance_binding_valid():
+            return False
+        return _fault_free_model_precheck(
+            self.programs,
+            self.involved_lanes,
+            self.reset_policy,
+        )
+
+    def instance_binding_valid(self) -> bool:
+        """Recompute the canonical hash bound into the certificate."""
+        recomputed = _instance_hash(
+            self.relation_id,
+            self.source_program,
+            self.follow_up_programs,
+            self.holes,
+            self.reset_policy,
+            self.involved_lanes,
+        )
+        return (
+            recomputed == self.instance_hash
+            and self.certificate.relation_instance_hash == recomputed
         )
 
     @property
@@ -920,6 +943,45 @@ def program_has_silent_architecture(program: Program) -> bool:
     """Return whether only documented architecture-silent experiments and HALT occur."""
     silent = {Op.PROBE, Op.ANCHOR, Op.PAD, Op.FENCE, Op.HALT}
     return all(instruction.op in silent for instruction in program.instructions)
+
+
+@lru_cache(maxsize=4096)
+def _fault_free_model_precheck(
+    programs: tuple[Program, ...],
+    involved_lanes: tuple[int, ...],
+    reset_policy: str,
+) -> bool:
+    from sphinx_interrogator.target_model import (
+        FaultVariant,
+        MicroState,
+        execute_experiment_program,
+    )
+
+    states: tuple[MicroState, ...] = (MicroState(),)
+    if reset_policy != "hard":
+        states = tuple(
+            MicroState(phase=phase, last_bank=last_bank, replay_credit=replay_credit)
+            for phase in range(4)
+            for last_bank in (None, 0, 1, 2, 3)
+            for replay_credit in range(4)
+        )
+    assignments = itertools.product(range(16), repeat=len(involved_lanes))
+    for values in assignments:
+        secret_by_lane = dict(zip(involved_lanes, values, strict=True))
+        for state in states:
+            for program in programs:
+                try:
+                    model = execute_experiment_program(
+                        program,
+                        secret_by_lane,
+                        initial_state=state,
+                        variant=FaultVariant.OFF,
+                    )
+                except ValueError:
+                    return False
+                if model.static_cycles != program.static_cycles() or model.fault_cycles != 0:
+                    return False
+    return True
 
 
 def _build_instance(

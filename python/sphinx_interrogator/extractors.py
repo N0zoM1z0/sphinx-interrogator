@@ -61,6 +61,24 @@ def extract_finite_models(
             (),
             "relation is an apparatus/control check and emits no secret constraints",
         )
+    if not relation.instance_binding_valid():
+        return ConstraintExtraction(
+            ExtractionStatus.INVALID,
+            (),
+            "relation programs/holes do not match the certified instance hash",
+        )
+    if not relation.architectural_precheck():
+        return ConstraintExtraction(
+            ExtractionStatus.INVALID,
+            (),
+            "relation architectural precheck failed",
+        )
+    if not relation.fault_free_precheck():
+        return ConstraintExtraction(
+            ExtractionStatus.INVALID,
+            (),
+            "relation fault-free observation precheck failed",
+        )
     if not relation.certificate.meets(minimum_certificate):
         return ConstraintExtraction(
             ExtractionStatus.POLICY_REJECTED,

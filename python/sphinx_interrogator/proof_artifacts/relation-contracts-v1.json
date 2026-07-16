@@ -1,0 +1,29 @@
+{
+  "artifact_id": "relation-contracts-v1",
+  "artifact_version": "1.0",
+  "maximum_proof_method": "exhaustive-enumeration",
+  "obligations": [
+    "recompute the canonical relation instance hash",
+    "check architectural equivalence for the concrete transformed programs",
+    "exhaustively check fault-free normalized residuals over involved nibble lanes",
+    "validate public execution and decision provenance before extraction"
+  ],
+  "verifier": {
+    "module": "sphinx_interrogator.relations",
+    "entry_points": [
+      "RelationInstance.instance_binding_valid",
+      "RelationInstance.architectural_precheck",
+      "RelationInstance.fault_free_precheck"
+    ]
+  },
+  "supporting_artifacts": [
+    "formal/relation_contracts.smt2",
+    "tests/python/test_certified_relations.py",
+    "crates/sphinx-vm/src/machine.rs"
+  ],
+  "supporting_artifact_hashes": {
+    "formal/relation_contracts.smt2": "9b8f79992e49783a8775a2aa9ae79fe2581d7533cf0fe83388044fb85711220e",
+    "tests/python/test_certified_relations.py": "14367234ffc81e86f3f2fba3606f88497aac29adbaeaae2aa32908695c024b90",
+    "crates/sphinx-vm/src/machine.rs": "122b77f9c7d32e3021a7fa02bf78a92d7fc4732aa121b142bc97bedbc30b9714"
+  }
+}

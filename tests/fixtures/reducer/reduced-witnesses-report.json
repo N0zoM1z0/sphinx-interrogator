@@ -39,6 +39,16 @@
         "relation": {}
       },
       "status": "minimized",
+      "replay_path": {
+        "continuous": true,
+        "ends_at_reduced": true,
+        "hashes": [
+          "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ],
+        "starts_at_original": true,
+        "step_count": 1
+      },
       "steps": [
         {
           "from_cost": {
@@ -66,17 +76,21 @@
   "kind": "reduced-witnesses",
   "preservation": {
     "mode": "implies-core",
-    "model_scope": "finite-public-family-committee",
-    "result_label": "bounded public-model implication, not a hidden-secret comparison",
-    "signature_kind": "sign",
-    "uses_true_secret": false
+      "model_scope": "finite-public-family-committee",
+      "result_label": "bounded public-model implication, not a hidden-secret comparison",
+      "signature_kind": "sign",
+      "uses_true_secret": false
   },
   "report_version": "1.0",
   "schema_version": "1.0",
   "summary": {
-    "all_minimized": true,
-    "family_count": 1,
-    "minimized_count": 1,
-    "unchanged_count": 0
+      "all_minimized": true,
+      "all_replay_paths_valid": true,
+      "blocked_count": 0,
+      "family_count": 1,
+      "minimized_count": 1,
+      "partial_count": 0,
+      "reset_policy_honored": true,
+      "unchanged_count": 0
   }
 }

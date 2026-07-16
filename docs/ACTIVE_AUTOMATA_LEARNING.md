@@ -155,11 +155,15 @@ M8 wraps AALpy behind project interfaces in
 - `state_model_provenance(model_id, state_id)` markers used by the hypothesis store
   to retract state-conditioned groups after a counterexample.
 
-`just evaluate-state-learning` runs a deterministic soft-reset fixture comparing
-no-learner, exact-history, and learned-state variants. It writes
-`runs/state-learning-m8/state-learning-report.json` and requires exact-history
-accuracy 1.0, learned-state accuracy at least 0.95, and learned-state accuracy greater
-than the one-state baseline.
+`just evaluate-state-learning` launches real research-profile SphinxVM campaigns through
+trusted local orchestration. System B receives only public directories and VM sockets.
+The evaluation calibrates a public repeated `PROBE/ANCHOR/FENCE/PAD` measurement macro,
+then compares no-learner, exact-history, and AALpy learned-state variants on shared
+held-out public membership traces. It writes
+`runs/state-learning-m8/state-learning-report.json` and requires exact-history accuracy
+1.0, learned-state accuracy at least 0.95, learned-state accuracy greater than the
+one-state baseline, and a real public counterexample that retracts state-conditioned
+evidence.
 
 ## 12. Research variants
 

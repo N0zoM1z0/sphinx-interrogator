@@ -449,13 +449,22 @@ class OneStateLearner:
         model_id: str,
         alphabet: MacroAlphabet,
         output: str = OutputSymbol.PUBLIC_OK.value,
+        outputs_by_symbol: Mapping[str, str] | None = None,
     ) -> LearnedMealyMachine:
         """Return a one-state model with self-loops on every input."""
-        if output not in alphabet.output_symbols:
-            raise ValueError("one-state output must be in the output alphabet")
+        if outputs_by_symbol is None:
+            if output not in alphabet.output_symbols:
+                raise ValueError("one-state output must be in the output alphabet")
+            resolved_outputs = {symbol: output for symbol in alphabet.input_symbols}
+        else:
+            if set(outputs_by_symbol) != set(alphabet.input_symbols):
+                raise ValueError("per-symbol outputs must cover the input alphabet exactly")
+            if any(value not in alphabet.output_symbols for value in outputs_by_symbol.values()):
+                raise ValueError("one-state output must be in the output alphabet")
+            resolved_outputs = dict(outputs_by_symbol)
         transitions = {
             "q0": {
-                symbol: MealyEdge(output=output, next_state="q0")
+                symbol: MealyEdge(output=resolved_outputs[symbol], next_state="q0")
                 for symbol in alphabet.input_symbols
             }
         }
@@ -466,7 +475,7 @@ class OneStateLearner:
             initial_state="q0",
             transitions=transitions,
             algorithm="one-state-hard-reset/v1",
-            membership_cache_digest=_digest({"one_state": output}),
+            membership_cache_digest=_digest({"one_state": resolved_outputs}),
             conformance={"held_out_accuracy": 1.0, "tested_sequences": 0},
         )
 

@@ -16,7 +16,9 @@ from collections import deque
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from itertools import pairwise
 from types import MappingProxyType
+from typing import Protocol
 
 from sphinx_interrogator.ast import Instruction, Op, Program
 from sphinx_interrogator.relations import (
@@ -68,6 +70,80 @@ class ReductionKind(StrEnum):
     TOKEN_ANCHOR_SIMPLIFICATION = "token-anchor-simplification"
     CONTEXT_HISTORY_SHORTENING = "context-history-shortening"
     RELATION_COMPOSITION_COLLAPSE = "relation-composition-collapse"
+
+
+@dataclass(frozen=True, slots=True)
+class MeasuredReplay:
+    """Measured public replay decision for one relation candidate."""
+
+    relation_hash: str
+    decision: str
+    confidence: float
+    request_ids: tuple[str, ...]
+    reset_policy: str
+    resets: tuple[str, ...]
+    provenance: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if not self.relation_hash or not self.decision:
+            raise ValueError("measured replay requires relation hash and decision")
+        if not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("measured replay confidence must be in [0, 1]")
+        if not self.request_ids or any(not item for item in self.request_ids):
+            raise ValueError("measured replay requires public request IDs")
+        if self.reset_policy not in {"hard", "soft", "none"}:
+            raise ValueError("measured replay reset policy is invalid")
+        if len(self.resets) != len(self.request_ids) or any(
+            reset not in {"hard", "soft", "none"} for reset in self.resets
+        ):
+            raise ValueError("measured replay resets must align with request IDs")
+
+    def to_data(self) -> dict[str, object]:
+        """Return stable report data."""
+        return {
+            "relation_hash": self.relation_hash,
+            "decision": self.decision,
+            "confidence": self.confidence,
+            "request_ids": list(self.request_ids),
+            "reset_policy": self.reset_policy,
+            "resets": list(self.resets),
+            "provenance": list(self.provenance),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ReplayComparison:
+    """Measured replay comparison used to accept or reject one reduction."""
+
+    accepted: bool
+    original: MeasuredReplay
+    candidate: MeasuredReplay | None
+    reason: str
+
+    def __post_init__(self) -> None:
+        if not self.reason:
+            raise ValueError("replay comparison requires a reason")
+
+    def to_data(self) -> dict[str, object]:
+        """Return stable report data."""
+        return {
+            "accepted": self.accepted,
+            "reason": self.reason,
+            "original": self.original.to_data(),
+            "candidate": None if self.candidate is None else self.candidate.to_data(),
+        }
+
+
+class MeasuredReplayOracle(Protocol):
+    """Public measured replay boundary for reducer acceptance checks."""
+
+    def compare(
+        self,
+        original: RelationInstance,
+        candidate: RelationInstance,
+    ) -> ReplayComparison:
+        """Replay original and candidate and decide whether measured evidence is preserved."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,6 +240,7 @@ class ReductionResult:
     elapsed_ms: int
     model_count: int
     blocked_reasons: tuple[str, ...] = ()
+    measured_replay: tuple[ReplayComparison, ...] = ()
 
     @property
     def improved(self) -> bool:
@@ -172,6 +249,11 @@ class ReductionResult:
 
     def to_data(self) -> dict[str, object]:
         """Return a stable machine-readable witness document."""
+        replay_path = _path_diagnostics(
+            self.original_relation.instance_hash,
+            self.reduced_relation.instance_hash,
+            self.steps,
+        )
         return {
             "reducer_version": "1.0",
             "status": self.status,
@@ -181,6 +263,11 @@ class ReductionResult:
                 "model_scope": "finite-public-family-committee",
                 "model_count": self.model_count,
                 "uses_true_secret": False,
+                "measured_replay": {
+                    "enabled": bool(self.measured_replay),
+                    "evidence_count": len(self.measured_replay),
+                    "uses_private_state": False,
+                },
             },
             "original": {
                 "relation": self.original_relation.to_data(),
@@ -193,12 +280,14 @@ class ReductionResult:
                 "programs": _programs_data(self.reduced_relation),
             },
             "steps": [step.to_data() for step in self.steps],
+            "replay_path": replay_path,
             "metrics": {
                 "predicate_evaluations": self.predicate_evaluations,
                 "cache_hits": self.cache_hits,
                 "generated_candidates": self.generated_candidates,
                 "elapsed_ms": self.elapsed_ms,
             },
+            "measured_replay": [item.to_data() for item in self.measured_replay],
             "blocked_reasons": list(self.blocked_reasons),
         }
 
@@ -212,18 +301,22 @@ class RelationReducer:
         models: Sequence[PublicModel],
         known_relations: Mapping[str, RelationInstance] | None = None,
         config: ReductionConfig | None = None,
+        replay_oracle: MeasuredReplayOracle | None = None,
     ) -> None:
         if not models:
             raise ValueError("reducer requires at least one public model")
         self.models = tuple(models)
         self.known_relations = {} if known_relations is None else dict(known_relations)
         self.config = ReductionConfig() if config is None else config
+        self.replay_oracle = replay_oracle
         self._signature_cache: dict[tuple[str, SignatureKind], _SignatureMap] = {}
         self._predicate_cache: dict[str, bool] = {}
         self.cache_hits = 0
         self.predicate_evaluations = 0
         self.generated_candidates = 0
         self.blocked_reasons: list[str] = []
+        self.replay_comparisons: list[ReplayComparison] = []
+        self._budget_exhausted = False
 
     def reduce(self, relation: RelationInstance) -> ReductionResult:
         """Minimize a relation while preserving the configured consequence."""
@@ -232,11 +325,13 @@ class RelationReducer:
         self.predicate_evaluations = 0
         self.generated_candidates = 0
         self.blocked_reasons = []
+        self.replay_comparisons = []
+        self._budget_exhausted = False
         original_signature = self._signature(relation)
         original_cost = relation_cost(relation)
         best = relation
         best_cost = original_cost
-        steps: list[ReductionStep] = []
+        parents: dict[str, tuple[str, ReductionStep]] = {}
         pending: deque[RelationInstance] = deque([relation])
         seen = {relation.instance_hash}
 
@@ -248,6 +343,7 @@ class RelationReducer:
             )
             for kind, candidate, reason in candidates:
                 if self.generated_candidates >= self.config.max_generated_candidates:
+                    self._budget_exhausted = True
                     break
                 self.generated_candidates += 1
                 if candidate.instance_hash in seen:
@@ -264,27 +360,38 @@ class RelationReducer:
                 if not self._preserves(relation, original_signature, candidate):
                     self.blocked_reasons.append(f"{kind.value}: consequence predicate failed")
                     continue
-                steps.append(
-                    ReductionStep(
-                        kind=kind,
-                        from_hash=current.instance_hash,
-                        to_hash=candidate.instance_hash,
-                        from_cost=current_cost,
-                        to_cost=candidate_cost,
-                        reason=reason,
-                    )
+                step = ReductionStep(
+                    kind=kind,
+                    from_hash=current.instance_hash,
+                    to_hash=candidate.instance_hash,
+                    from_cost=current_cost,
+                    to_cost=candidate_cost,
+                    reason=reason,
                 )
+                parents[candidate.instance_hash] = (current.instance_hash, step)
                 pending.append(candidate)
                 if candidate_cost < best_cost:
                     best = candidate
                     best_cost = candidate_cost
                 if self.predicate_evaluations >= self.config.max_predicate_evaluations:
                     self.blocked_reasons.append("predicate evaluation budget exhausted")
+                    self._budget_exhausted = True
                     pending.clear()
                     break
 
+        if pending and self.generated_candidates >= self.config.max_generated_candidates:
+            self.blocked_reasons.append("candidate generation budget exhausted")
+            self._budget_exhausted = True
         elapsed_ms = int((time.monotonic() - start) * 1000)
-        status = "minimized" if best_cost < original_cost else "unchanged"
+        if self._budget_exhausted:
+            status = "partial" if best_cost < original_cost else "blocked"
+        else:
+            status = "minimized" if best_cost < original_cost else "unchanged"
+        steps = _reconstruct_path_steps(
+            original_hash=relation.instance_hash,
+            reduced_hash=best.instance_hash,
+            parents=parents,
+        )
         return ReductionResult(
             status=status,
             original_relation=relation,
@@ -293,13 +400,14 @@ class RelationReducer:
             signature_kind=self.config.signature_kind,
             original_cost=original_cost,
             reduced_cost=best_cost,
-            steps=tuple(steps),
+            steps=steps,
             predicate_evaluations=self.predicate_evaluations,
             cache_hits=self.cache_hits,
             generated_candidates=self.generated_candidates,
             elapsed_ms=elapsed_ms,
             model_count=len(self.models),
             blocked_reasons=tuple(dict.fromkeys(self.blocked_reasons)),
+            measured_replay=tuple(self.replay_comparisons),
         )
 
     def _preserves(
@@ -314,6 +422,7 @@ class RelationReducer:
             self.cache_hits += 1
             return cached
         if self.predicate_evaluations >= self.config.max_predicate_evaluations:
+            self._budget_exhausted = True
             return False
         self.predicate_evaluations += 1
         candidate_signature = self._signature(candidate)
@@ -321,6 +430,14 @@ class RelationReducer:
             result = candidate_signature == original_signature
         else:
             result = _partition_refines(candidate_signature, original_signature)
+        if result and self.replay_oracle is not None:
+            comparison = self.replay_oracle.compare(original, candidate)
+            self.replay_comparisons.append(comparison)
+            if not comparison.accepted:
+                result = False
+                self.blocked_reasons.append(
+                    "measured replay rejected candidate: " + comparison.reason
+                )
         self._predicate_cache[key] = result
         return result
 
@@ -393,6 +510,58 @@ class RelationReducer:
             yield from _soft_history_neighbors(relation, self.known_relations)
         else:
             self.blocked_reasons.append(f"{relation_id}: no reducer rules registered")
+
+
+def _reconstruct_path_steps(
+    *,
+    original_hash: str,
+    reduced_hash: str,
+    parents: Mapping[str, tuple[str, ReductionStep]],
+) -> tuple[ReductionStep, ...]:
+    """Return the continuous accepted path from original to final best."""
+    if reduced_hash == original_hash:
+        return ()
+    reversed_steps: list[ReductionStep] = []
+    current = reduced_hash
+    seen: set[str] = set()
+    while current != original_hash:
+        if current in seen:
+            raise RuntimeError("reducer parent path contains a cycle")
+        seen.add(current)
+        parent = parents.get(current)
+        if parent is None:
+            raise RuntimeError("reducer parent path is missing an accepted edge")
+        parent_hash, step = parent
+        if step.to_hash != current or step.from_hash != parent_hash:
+            raise RuntimeError("reducer parent path has inconsistent edge hashes")
+        reversed_steps.append(step)
+        current = parent_hash
+    return tuple(reversed(reversed_steps))
+
+
+def _path_diagnostics(
+    original_hash: str,
+    reduced_hash: str,
+    steps: tuple[ReductionStep, ...],
+) -> dict[str, object]:
+    """Build machine-checkable replay-path continuity evidence."""
+    if not steps:
+        continuous = original_hash == reduced_hash
+        hashes = [original_hash]
+    else:
+        hashes = [steps[0].from_hash, *(step.to_hash for step in steps)]
+        continuous = (
+            steps[0].from_hash == original_hash
+            and steps[-1].to_hash == reduced_hash
+            and all(left.to_hash == right.from_hash for left, right in pairwise(steps))
+        )
+    return {
+        "continuous": continuous,
+        "starts_at_original": hashes[0] == original_hash,
+        "ends_at_reduced": hashes[-1] == reduced_hash,
+        "step_count": len(steps),
+        "hashes": hashes,
+    }
 
 
 def default_model_committee(
