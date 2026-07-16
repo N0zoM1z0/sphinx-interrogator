@@ -29,6 +29,13 @@ The paired 100-seed off-fault control produced 100/100 inconclusive results, no 
 declarations, and no judge submissions. See `docs/TUTORIAL_RECOVERY.md` and
 `VALIDATION.md`; generated per-campaign artifacts remain under ignored `runs/` paths.
 
+M6 selector calibration (2026-07-16): across 20 fixed PRNG seeds, each defining an
+eight-model surviving nibble committee without a designated true secret, bounded CEGIS
+selection achieved mean worst predicted bucket 3.00 versus 7.15 for one seeded uniform
+random grammar assignment and was strictly better on 19/20 subsets. This unit-scale
+committee result tests synthesis contribution only; it is not substituted for the
+standard campaign targets below.
+
 ### 2.2 Standard
 
 - At least 100 generated 32-bit secrets, with a fixed published seed list.

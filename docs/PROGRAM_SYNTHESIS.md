@@ -256,3 +256,41 @@ Optimize worst-case executions and tree size. Verify every leaf by symbolic enum
 - Deterministic tie-break tests.
 - Negative test where no grammar query separates two observationally equivalent configurations.
 - Fault-free profile test where predicted signatures are secret-independent.
+
+## 15. Implemented M6 contract
+
+The version-1 implementation in `python/sphinx_interrogator/synthesis.py` has two
+bounded certified productions: `anchor-switch/v1` and drained
+`repeat-amplify/v1`. Each production declares named finite hole sorts for lane, token,
+epoch, bank, phase padding, and (where applicable) repetition count. Enumeration
+lowers assignments only through the typed relation constructors, so architecture,
+fault-free behavior, certificates, and public resource summaries exist before a
+candidate can be scored.
+
+The main backend performs these explicit stages:
+
+1. obtain a deterministic diverse secret/fault/state committee from the exact M4
+   hypothesis store or an explicit public model set;
+2. choose a maximum-distance surviving pair;
+3. use Z3 to fill the named finite holes while enforcing all accumulated pair
+   separation constraints and lexicographically minimizing public resources;
+4. score every satisfying bounded assignment by worst committee bucket, conservative
+   closed-interval margin, physical executions, resets, AST/static cost, and canonical
+   key;
+5. take a new maximum-distance pair from an oversized predicted bucket and refine; and
+6. cache by hypothesis, committee, profile/semantics, state-model, grammar, certificate,
+   resource, bucket, noise, margin, and balance configuration.
+
+The score says `exact-information` only when the committee is a complete finite model
+set. A bounded solver-derived committee is labeled `committee-proxy`; it is not called
+a posterior sample or an exact information estimate. Solver timeout remains `unknown`,
+and an off-fault committee returns `unsat`/no discriminator rather than a false secret
+query. Successful results adapt directly to the durable M4 frontier, where all score
+components, CEGIS counterexamples, candidate holes, and certified relation metadata
+are persisted.
+
+The deterministic 20-seed calibration test samples eight surviving nibble models per
+seed and never selects or consults a true target secret. With the same bounded
+anchor-switch grammar, synthesized holes had mean worst bucket 3.00 versus 7.15 for
+one seeded uniform random hole, and won strictly on 19/20 subsets. This is a small M6
+selector calibration, not the M7 standard-profile recovery benchmark.

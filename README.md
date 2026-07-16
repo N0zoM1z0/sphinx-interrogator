@@ -95,8 +95,9 @@ just benchmark-standard # reproducible standard-profile campaign suite
 `just benchmark-standard` remains a later-milestone acceptance command. The language,
 architecture, microcode/fault model, isolated challenges,
 public process server, one-shot judge, certified hard-reset relations, write-ahead
-campaign persistence, exact solver, and tutorial recovery are implemented; synthesis,
-standard/noise handling, learning, and release evaluation are the remaining research layers. Exact status and executed evidence are maintained in
+campaign persistence, exact solver, tutorial recovery, and grammar-guided CEGIS query
+synthesis are implemented; standard/noise handling, learning, and release evaluation
+are the remaining research layers. Exact status and executed evidence are maintained in
 [`agent/STATUS.md`](agent/STATUS.md) and [`VALIDATION.md`](VALIDATION.md).
 
 ## Local target lifecycle

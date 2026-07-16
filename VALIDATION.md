@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 02:34Z**
+Last updated: **2026-07-16 03:00Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -401,3 +401,75 @@ secret projections, emitted no exact result, and never called the judge.
   hole filling, pair separation, deterministic committee scoring, and CEGIS refinement.
 - Stochastic calibration/MaxSMT repair, persistent-state learning/retraction,
   relation-aware reduction, standard benchmarks, and release evidence remain M7–M9.
+
+## M6 grammar-guided CEGIS synthesis checkpoint
+
+M6 replaces the earlier entropy-only finite selector with versioned typed relation
+skeletons for `anchor-switch/v1` and drained `repeat-amplify/v1`. Named finite holes
+cover lane, token, epoch, bank, phase padding, and repetition count. Every enumerated
+assignment lowers through the existing certified constructors and is rejected before
+scoring if its exact combined AST/static resources exceed the grammar bound. Z3 fills
+the actual named holes from a finite public signature truth table, enforces all current
+model-pair separation requirements, and lexicographically minimizes resources and the
+canonical assignment key under a configured timeout.
+
+The CEGIS verifier starts with a maximum-distance secret/fault/state pair from a
+deterministic diverse committee. It scores every satisfying bounded assignment by
+worst predicted bucket, conservative closed-interval margin, physical executions,
+hard resets, combined static/AST cost, and canonical key. An oversized bucket supplies
+a new maximum-distance unseparated pair; the regression requires multiple iterations
+and records five genuine refinements before proving that its deliberately impossible
+balance target cannot be met. A solver timeout remains `unknown`, while a complete
+off-fault committee is `unsat`/no discriminator.
+
+Committees can be generated directly from M4 `HypothesisStore.diverse_models` while
+preserving the correlated latent fault member. Complete finite committees label their
+entropy `exact-information`; bounded diverse subsets label it `committee-proxy` and
+make no uniform/posterior claim. The cache key binds hypothesis and committee
+fingerprints, profile/semantic/state-model/grammar versions, certificate policy,
+resource bounds, and observation/margin/balance configuration. Successful results
+adapt to the persistent M4 frontier with every score component, typed hole assignment,
+certificate-bound relation, and CEGIS counterexample in its data.
+
+Focused M6 evidence includes:
+
+- a four-model domain whose SMT/CEGIS result exactly matches exhaustive lexicographic
+  scoring and selects the known two-way signed-margin optimum;
+- a positive-noise-margin case that changes the selected grammar production from a
+  cheap anchor switch to an eight-fold drained repeat;
+- exhaustive symbolic-versus-concrete signature agreement for representative
+  candidates, all 16 nibbles, all four public fault-family members, bounded noise, and
+  quantization width two;
+- a live Rust-process test that executes the synthesized typed pair, confirms both
+  public architectural digests match, and obtains a valid exact relation decision;
+- cache identity and durable frontier materialization with all score components; and
+- explicit no-discriminator and injected-solver-unknown failure paths.
+
+The deterministic contribution calibration used 20 PRNG seeds. Each seed selects an
+eight-model surviving nibble committee; no model is designated or consulted as a true
+target secret. Under the same bounded anchor grammar, CEGIS selection achieved mean
+worst bucket 3.00 (sum 60) versus 7.15 (sum 143) for one seeded uniform random hole and
+won strictly on 19/20 subsets. This establishes an M6 selector contribution on a tiny
+domain; it does not claim the M7 standard recovery target.
+
+The final M6 suite used the repository-local Cargo home/target, two build jobs, and no
+concurrent Cargo/rustc process:
+
+```text
+just fmt             pass (49 Python/script files and Rustfmt clean)
+just lint            pass (Clippy -D warnings, Ruff, strict mypy over 24 modules)
+just test            pass (42 Rust lib + 2 Rust binary; 141 Python; 11 live process tests)
+just schema-check    pass
+just docs-check      pass
+just verify-formal   pass (Z3 unsat x3; TLC 70,557 generated/2,276 distinct;
+                          131,072 guarded-replay cells; mutation rejected)
+just boundary-audit  pass; binary sha256=628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b
+just demo-tutorial   pass; unique_exact e905; judge accepted; 16 logical/32 physical
+```
+
+## Remaining limitations after M6
+
+- M7 must calibrate robust bounded/stochastic decisions, grouped soft weights,
+  contradiction quarantine/repair, and execute the standard/reference/control matrix.
+- Persistent-state learning/retraction, relation-aware reduction, baselines/ablations,
+  and final release evidence remain M8–M9.

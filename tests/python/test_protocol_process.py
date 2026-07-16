@@ -29,6 +29,15 @@ from sphinx_interrogator.relations import (
     RepeatAmplifyTemplate,
     TokenSwitchTemplate,
 )
+from sphinx_interrogator.synthesis import (
+    BoundedRelationGrammar,
+    CegisSynthesizer,
+    DiverseCommittee,
+    QueryCandidate,
+    SynthesisContext,
+    SynthesisModel,
+    SynthesisStatus,
+)
 from sphinx_interrogator.tutorial import recover_tutorial
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -609,3 +618,50 @@ def test_fault_free_tutorial_control_never_declares_exact_recovery(tmp_path: Pat
     assert result.report["unique_secret_hex"] is None
     assert result.report["uniqueness"]["alternative_model_unsat"] is False
     assert result.report["judge"] is None
+
+
+@pytest.mark.integration
+def test_synthesized_typed_relation_executes_through_public_process(challenge: Path) -> None:
+    """M6 committee synthesis lowers to a certified pair accepted by the real VM."""
+    models = tuple(SynthesisModel(f"survivor-{value:02d}", (value,)) for value in range(16))
+    committee = DiverseCommittee.select(models, limit=16, complete=True)
+    grammar = BoundedRelationGrammar(
+        lanes=(0,),
+        tokens=(0, 1),
+        epochs=(0, 1),
+        pads=(0, 1, 2, 3),
+        include_repeat_amplify=False,
+    )
+    synthesized = CegisSynthesizer(grammar).synthesize(
+        committee,
+        SynthesisContext(hypothesis_fingerprint=committee.fingerprint(), maximum_bucket_size=8),
+    )
+    assert synthesized.status is SynthesisStatus.SAT
+    assert synthesized.score is not None
+    assert isinstance(synthesized.score.candidate, QueryCandidate)
+    relation = synthesized.score.candidate.lower("live-synthesized")
+    assert relation.architectural_precheck()
+    assert relation.fault_free_precheck()
+
+    with VmClient.start(vm_binary(), challenge=challenge, timeout_seconds=2.0) as client:
+        hello = client.hello()
+        source = client.execute(
+            relation.source_program.render(),
+            session_id="m6-source",
+            logical_batch_id="m6-synthesized",
+            reset="hard",
+            execution_seed_id="m6-correlated",
+        )
+        follow_up = client.execute(
+            relation.follow_up_programs[0].render(),
+            session_id="m6-follow-up",
+            logical_batch_id="m6-synthesized",
+            reset="hard",
+            execution_seed_id="m6-correlated",
+        )
+    assert hello.profile_name == "tutorial"
+    assert source.public_digest == follow_up.public_digest
+    assert source.static_cycles == relation.source_program.static_cycles()
+    assert follow_up.static_cycles == relation.follow_up_programs[0].static_cycles()
+    decision = AnchorSwitchTemplate().decide(relation, source, follow_up, noise_bound=0)
+    assert decision.kind.value.startswith("exact_")

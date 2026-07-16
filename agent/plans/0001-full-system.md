@@ -57,7 +57,10 @@ The verified M4 checkpoint adds raw-wire write-ahead, hash-chained events, rebui
 SQLite views, deterministic scheduling/frontier logic, and exact Z3 hypothesis
 management with durable provenance. The verified M5 checkpoint adds deterministic
 public-only tutorial recovery, exact secret-projection uniqueness, one-shot judging,
-accepted-report resume, and a blind fault-free negative control. M6–M9 remain
+accepted-report resume, and a blind fault-free negative control. The verified M6
+checkpoint adds typed bounded relation skeletons, Z3 finite-hole
+filling, diverse exact/proxy committees, pair-separating CEGIS, conservative margin and
+resource objectives, cache identity, and durable frontier score logs. M7–M9 remain
 outstanding.
 
 ## Progress
@@ -70,7 +73,7 @@ outstanding.
 - [x] (2026-07-16 02:34Z) Close M3 after all certified relation/extractor evidence and the real downstream tutorial gate both pass.
 - [x] (2026-07-16 02:34Z) Close M4 after durable campaign/exact-solver evidence, database migration 2, and the real downstream tutorial gate all pass.
 - [x] (2026-07-16 02:34Z) Complete M5 deterministic tutorial recovery and blind fault-free negative control: 100/100 exact accepted reference seeds and 100/100 inconclusive off-fault seeds at 16 logical families each.
-- [ ] (date) Complete M6 grammar-guided CEGIS query synthesis and integrate it into selection.
+- [x] (2026-07-16 03:00Z) Complete M6 grammar-guided CEGIS: typed anchor/repeat skeletons, bounded enumeration, Z3 hole filling, diverse hypothesis-store committees, real counterexample refinement, interval/resource objectives, deterministic cache/ties, frontier integration, live Rust execution, and 20-seed random-hole calibration.
 - [ ] (date) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance.
 - [ ] (date) Complete M8 soft-reset state, exact-history mode, AALpy learner, and retraction semantics.
 - [ ] (date) Complete M9 relational reducer, baselines/ablations, formal/boundary audit, and release evidence.
@@ -122,6 +125,12 @@ outstanding.
 - Observation: A fixed complete tutorial design is both cheaper and easier to audit than adaptive early stopping at this milestone.
   Evidence: every reference and off-fault campaign uses exactly 16 logical relation families and 32 physical executions; the reference matrix is 100/100 exact and the off-fault matrix is 100/100 inconclusive.
 
+- Observation: Committee scoring materially improves candidate balance even before a full standard campaign exists.
+  Evidence: on 20 deterministic eight-model nibble subsets with no designated true secret, M6 achieved mean worst bucket 3.00 versus 7.15 for seeded uniform random holes and won strictly on 19/20 subsets.
+
+- Observation: Quantization/noise margin changes the grammar optimum, not merely its numeric score.
+  Evidence: the exact committee selects a cheap anchor switch, while independent `[-1,1]` nuisance intervals with required positive separation select an eight-fold certified drained repeat; symbolic and concrete signatures agree exhaustively for every nibble/fault member.
+
 Add dated observations here. Include failed assumptions, benchmark results, solver behavior, tool limitations, and concise command/artifact evidence.
 
 ## Decision Log
@@ -167,6 +176,12 @@ Add dated observations here. Include failed assumptions, benchmark results, solv
   Alternatives considered: pure brute force; direct SyGuS solver; learned policy.
   Date/author: 2026-07-15, design package.
   Consequences: The grammar and relation certificates are central APIs; optional SyGuS export can follow.
+
+- Decision: Use complete finite partition entropy only for enumerated committees and label bounded diverse-model scores as committee proxies.
+  Rationale: Z3's deterministic diverse models improve coverage but are not posterior samples or uniform model counts; using an exact-information label would overstate the evidence.
+  Alternatives considered: call every committee score information gain; add an uncalibrated Bayesian prior; delay synthesis until exact model counting exists.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: the same lexicographic worst-bucket/margin/resource objective operates in both modes, but every durable score records `exact-information` or `committee-proxy`, committee size, and cache inputs.
 
 - Decision: Use AALpy behind a project-owned interface only after hard-reset and exact-history modes work.
   Rationale: State-learning abstractions should not obscure core inference correctness.
@@ -535,6 +550,7 @@ Populate during implementation:
 - M3 relation/extractor evidence: `VALIDATION.md`, `tests/python/test_certified_relations.py`, `tests/python/test_constraint_ir.py`, `tests/fixtures/relations/`, and `docs/RELATION_ORACLES.md`, 2026-07-16; 99 Python tests include every stateless relation, all bounded noise/fault generators, strict certificate/IR persistence, and live Rust relation arms.
 - M4 persistence/solver evidence: `VALIDATION.md`, `docs/CAMPAIGN_PERSISTENCE.md`, `tests/python/test_persistence.py`, `test_harness.py`, `test_hypothesis_persistence.py`, `test_frontier.py`, `test_solver.py`, and `test_symbolic_solver_model.py`, 2026-07-16; 125 Python tests cover real/fake write-ahead, replay, provenance, Z3 exactness, rollback, and CLI inspection.
 - M5 tutorial acceptance report: `runs/tutorial-evaluation-v2/summary.json`, `runs/tutorial-demo-v2-seed-7/report.json`, `docs/TUTORIAL_RECOVERY.md`, and `VALIDATION.md`, 2026-07-16; 100/100 reference seeds are exact and judge accepted at 16 logical families.
+- M6 synthesis evidence: `python/sphinx_interrogator/synthesis.py`, `tests/python/test_synthesis.py`, `tests/python/test_protocol_process.py`, `docs/PROGRAM_SYNTHESIS.md`, and `VALIDATION.md`, 2026-07-16; known-optimum, refinement, no-discriminator, unknown, margin, cache/frontier, exhaustive differential, live-process, and 20-seed random-hole calibration all pass.
 - Standard full-system report: pending.
 - Baseline/ablation report: pending.
 - M5 fault-free control report: `runs/tutorial-fault-free-v2/summary.json`, 2026-07-16; 100/100 blind off-fault campaigns are inconclusive with zero judge submissions.
@@ -579,7 +595,7 @@ At completion, summarize:
 - remaining non-blocking research questions;
 - any specification changes and why.
 
-Current outcome: M0–M5 are complete and reproducible, including the accepted tutorial
-flow and fault-free negative control. M6–M9 implementation and empirical results remain
-active.
+Current outcome: M0–M6 are complete and reproducible, including the accepted tutorial
+flow, blind fault-free control, and grammar-guided CEGIS synthesis. M7–M9 implementation
+and empirical results remain active.
 ```
