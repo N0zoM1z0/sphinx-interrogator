@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "scripts/release_manifest.py"
@@ -106,3 +107,30 @@ def test_absolute_output_path_writes_blocked_manifest(tmp_path: Path) -> None:
     manifest = json.loads(output.read_text(encoding="utf-8"))
     assert manifest["status"] == "blocked"
     assert manifest["summary"]["validation_gates_pass"] is False
+
+
+def test_empty_git_status_means_clean_repository(monkeypatch: Any) -> None:
+    """A clean `git status --short` emits an empty string, not an unavailable state."""
+    release_manifest = _load_script()
+
+    def fake_run(
+        command: tuple[str, ...],
+        *,
+        stderr: bool = False,
+        first_line: bool = False,
+        allow_empty: bool = False,
+    ) -> str:
+        _ = (stderr, first_line, allow_empty)
+        if command == ("git", "status", "--short"):
+            return ""
+        if command == ("git", "rev-parse", "HEAD"):
+            return "a" * 40
+        if command == ("git", "branch", "--show-current"):
+            return "main"
+        raise AssertionError(command)
+
+    monkeypatch.setattr(release_manifest, "_run", fake_run)
+
+    state = release_manifest._git_state()
+    assert state["dirty"] is False
+    assert state["status_short"] == []

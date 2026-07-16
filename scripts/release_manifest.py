@@ -611,7 +611,7 @@ def _maybe_mapping(value: object) -> dict[str, object] | None:
 
 
 def _git_state() -> dict[str, object]:
-    status = _run(("git", "status", "--short"))
+    status = _run(("git", "status", "--short"), allow_empty=True)
     head = _run(("git", "rev-parse", "HEAD"))
     return {
         "revision": head,
@@ -649,7 +649,13 @@ def _artifact_kind(path: Path) -> str:
     return "public-artifact"
 
 
-def _run(command: tuple[str, ...], *, stderr: bool = False, first_line: bool = False) -> str:
+def _run(
+    command: tuple[str, ...],
+    *,
+    stderr: bool = False,
+    first_line: bool = False,
+    allow_empty: bool = False,
+) -> str:
     try:
         completed = subprocess.run(
             command,
@@ -664,6 +670,8 @@ def _run(command: tuple[str, ...], *, stderr: bool = False, first_line: bool = F
     if completed.returncode != 0 and not output:
         output = completed.stderr
     if not output:
+        if allow_empty:
+            return ""
         return "unavailable"
     stripped = output.strip()
     return stripped.splitlines()[0] if first_line else stripped
