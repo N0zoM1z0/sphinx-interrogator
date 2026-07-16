@@ -24,7 +24,7 @@
 - [x] Fault changes only microarchitectural observation/state.
 - [ ] Formal checks cover all required reset, architectural-confinement, gas/progress, and normalized-cost invariants.
 - [x] Rust concrete and Python symbolic bank/fault/state functions agree exhaustively on reduced domains.
-- [ ] Differential tests compare exact cycles on small programs and relation-extractor outputs.
+- [x] Differential tests compare exact cycles on small programs and relation-extractor outputs.
 
 ## Relations
 
@@ -140,5 +140,8 @@
   `learn-state`, `calibrate`, `replay`, `reduce`, and `diversify`, with
   `sphinx-interrogate controller-plan` returning the selected action, score
   components, provenance, and black-box boundary declaration.
+- Differential coverage now includes a live Rust/Python exact-cycle comparison for
+  small programs and extractor finite-model output checks against independently
+  enumerated concrete bucket-reproduction models.
 - No release tag should be created until every unchecked release criterion is covered
   by regenerated evidence and clean CI.

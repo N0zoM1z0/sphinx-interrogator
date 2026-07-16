@@ -13,7 +13,7 @@ import pytest
 import sphinx_interrogator.certificates as certificates
 from sphinx_interrogator.ast import Program
 from sphinx_interrogator.certificates import CertificateRegistry, ProofMethod, RelationCertificate
-from sphinx_interrogator.constraints import ExtractionStatus
+from sphinx_interrogator.constraints import ExtractionStatus, FiniteModelAssignment
 from sphinx_interrogator.extractors import extract_finite_models
 from sphinx_interrogator.model import ExecutionObservation, ExecutionResult
 from sphinx_interrogator.normalization import DecisionKind, decide_pair
@@ -164,6 +164,58 @@ def _decision(
         expected_follow_up_static=relation.follow_up_programs[0].static_cycles(),
         noise_bound=noise_bound,
         assumptions=("test profile",),
+    )
+
+
+def _concrete_allowed_models(
+    relation: RelationInstance,
+    source: ExecutionResult,
+    follow_up: ExecutionResult,
+    *,
+    noise_bound: int,
+    fault_variants: tuple[FaultVariant, ...] = tuple(FaultVariant),
+) -> tuple[FiniteModelAssignment, ...]:
+    allowed = []
+    lanes = relation.involved_lanes
+    for secret_values in itertools.product(range(16), repeat=len(lanes)):
+        secret_by_lane = dict(zip(lanes, secret_values, strict=True))
+        for variant in fault_variants:
+            source_model = execute_experiment_program(
+                relation.source_program,
+                secret_by_lane,
+                variant=variant,
+            )
+            follow_model = execute_experiment_program(
+                relation.follow_up_programs[0],
+                secret_by_lane,
+                variant=variant,
+            )
+            if _bucket_feasible(
+                source,
+                static_cycles=source_model.static_cycles,
+                fault_cycles=source_model.fault_cycles,
+                noise_bound=noise_bound,
+            ) and _bucket_feasible(
+                follow_up,
+                static_cycles=follow_model.static_cycles,
+                fault_cycles=follow_model.fault_cycles,
+                noise_bound=noise_bound,
+            ):
+                allowed.append(FiniteModelAssignment(secret_values, variant.value))
+    return tuple(sorted(allowed))
+
+
+def _bucket_feasible(
+    result: ExecutionResult,
+    *,
+    static_cycles: int,
+    fault_cycles: int,
+    noise_bound: int,
+) -> bool:
+    return any(
+        max(0, static_cycles + fault_cycles + noise) // result.observation.bucket_width
+        == result.observation.cycle_bucket
+        for noise in range(-noise_bound, noise_bound + 1)
     )
 
 
@@ -427,6 +479,91 @@ def test_exact_extractors_keep_the_true_secret_and_fault(
         )
     else:
         assert extraction.status is ExtractionStatus.UNINFORMATIVE
+
+
+@pytest.mark.parametrize(
+    ("relation", "secret", "width", "noise_bound", "source_noise", "follow_noise"),
+    (
+        (
+            AnchorSwitchTemplate().instantiate(
+                instance_id="differential-anchor",
+                lane=0,
+                token=0,
+                epoch=0,
+                bank_a=0,
+                bank_b=2,
+                pad=0,
+            ),
+            (0,),
+            1,
+            0,
+            0,
+            0,
+        ),
+        (
+            RepeatAmplifyTemplate().instantiate(
+                instance_id="differential-repeat",
+                lane=0,
+                token=0,
+                epoch=0,
+                anchor=2,
+                pad=0,
+                repeats=16,
+            ),
+            (0,),
+            4,
+            1,
+            -1,
+            1,
+        ),
+    ),
+    ids=("exact-anchor", "bounded-repeat"),
+)
+def test_extractor_allowed_models_match_concrete_bucket_enumeration(
+    relation: RelationInstance,
+    secret: tuple[int, ...],
+    width: int,
+    noise_bound: int,
+    source_noise: int,
+    follow_noise: int,
+) -> None:
+    """Extractor output equals the concrete model set that reproduces the observations."""
+    source = _result(
+        relation,
+        follow_up=False,
+        secret=secret,
+        variant=FaultVariant.REFERENCE,
+        noise=source_noise,
+        width=width,
+        request_id=f"{relation.instance_id}:source",
+    )
+    follow_up = _result(
+        relation,
+        follow_up=True,
+        secret=secret,
+        variant=FaultVariant.REFERENCE,
+        noise=follow_noise,
+        width=width,
+        request_id=f"{relation.instance_id}:follow-up",
+    )
+    decision = _decision(relation, source, follow_up, noise_bound=noise_bound)
+    extraction = extract_finite_models(
+        relation,
+        source,
+        follow_up,
+        decision,
+        noise_bound=noise_bound,
+    )
+    expected = _concrete_allowed_models(
+        relation,
+        source,
+        follow_up,
+        noise_bound=noise_bound,
+    )
+
+    assert expected
+    assert extraction.status is ExtractionStatus.EMITTED
+    assert extraction.hard_constraints[0].allowed_models == expected
 
 
 def test_all_bounded_noise_generators_preserve_the_true_model() -> None:

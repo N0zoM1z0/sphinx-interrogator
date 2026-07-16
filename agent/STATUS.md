@@ -12,8 +12,8 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 16:48Z after adding the integrated public campaign
-  controller surface and rerunning root format/lint/test checks.
+- **Last updated:** 2026-07-16 16:57Z after adding exact-cycle and extractor
+  differential coverage and rerunning root format/lint/test checks.
 
 ## Current milestone
 
@@ -27,15 +27,17 @@ contradictory symbolic model and a broken static-cost normalizer. Release-bound 
 and SVG artifacts now cover campaign, query, relation, state-learning, and reducer
 evidence. The clean-tree release manifest now completes, and `main` has a successful
 GitHub Actions CI run. The public `CampaignController` now exposes the required
-`infer`, `learn-state`, `calibrate`, `replay`, `reduce`, and `diversify` modes. No
-v1.0 or research-complete release should be created yet: broader P1/P2 formal,
-differential, documentation/version, and release-tag obligations remain.
+`infer`, `learn-state`, `calibrate`, `replay`, `reduce`, and `diversify` modes.
+Differential tests now compare live Rust exact cycles for small programs against the
+independent Python model and compare extractor outputs against concrete bucket-model
+enumeration. No v1.0 or research-complete release should be created yet: broader
+P1/P2 formal, documentation/version, and release-tag obligations remain.
 
 ## Verification dashboard
 
 | Check | Last result | Evidence |
 |---|---|---|
-| `just fmt`, `just lint`, `just test` | pass | 2026-07-16 controller pass: Rust 46 tests and Python 186 tests pass |
+| `just fmt`, `just lint`, `just test` | pass | 2026-07-16 differential pass: Rust 46 tests and Python 189 tests pass |
 | `just schema-check`, `just docs-check` | pass | Current fixtures, release-manifest schema, and links pass their implemented checks |
 | `just verify-formal` | pass, scope incomplete | Z3 `unsat` x3; TLC 70,557 generated/2,276 distinct; 131,072 guarded-replay cells |
 | `just boundary-audit` | pass | Recursive schema checks and separate-UID/FD-broker isolation; binary SHA-256 `c094fff9561f0997dd8c307940dba991b80c920792c07095113f979d430da6cd` |
@@ -58,9 +60,10 @@ differential, documentation/version, and release-tag obligations remain.
 
 ### P1
 
-- Implement the missing architectural, reset, gas/progress, normalized-cost,
-  exact-cycle, and extractor differential obligations. Relation certificate proof
-  bundles now fail closed if claimed proof/test/semantic artifact contents change.
+- Implement the remaining architectural, reset, gas/progress, and normalized-cost
+  formal obligations. Exact-cycle and extractor-output differential tests are now in
+  place. Relation certificate proof bundles fail closed if claimed proof/test/semantic
+  artifact contents change.
 - Campaign manifest v1.2 and tutorial/standard/B0 reports now record normative
   result statuses, revision, dirty state, versions, command, timing, and artifact
   hashes for tutorial and all 700 standard benchmark runs. The integrated controller

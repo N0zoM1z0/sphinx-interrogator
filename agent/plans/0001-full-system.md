@@ -170,6 +170,11 @@ the later superseding observations and evidence list record the current behavior
   `replay`, `reduce`, and `diversify` actions with score components and provenance;
   `sphinx-interrogate controller-plan` returns the public JSON plan without VM-private
   paths or target internals.
+- [x] (2026-07-16 16:57Z) Add differential exact-cycle and extractor-output
+  evidence: a white-box integration test compares live Rust exact buckets on small
+  programs with the independent Python target-family model, and relation extractor
+  tests compare emitted finite model sets with independently enumerated concrete
+  bucket-reproduction models.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
   and the clean-tree manifest now completes. Current evidence is still short of a
@@ -892,7 +897,7 @@ Populate during implementation:
   `python/sphinx_interrogator/proof_artifacts/relation-contracts-v1.json`,
   `python/sphinx_interrogator/certificates.py`, and
   `tests/python/test_certified_relations.py`, 2026-07-16; proof artifact SHA-256
-  `24e7b87fbf8d1a0122e701bcfc5ff813b4da860942f9a83505c37be93b80765b`; focused
+  `01ead5cb3453ee2c463f4b3b18585f76d51d47c05a4bc74305800ffd30df9fc8`; focused
   relation/certificate tests pass 30/30, reject stale supporting artifact hashes, and
   include wrong-symbolic-model plus broken-normalizer mutation regressions.
 - M4 persistence/solver evidence: `VALIDATION.md`, `docs/CAMPAIGN_PERSISTENCE.md`, `tests/python/test_persistence.py`, `test_harness.py`, `test_hypothesis_persistence.py`, `test_frontier.py`, `test_solver.py`, and `test_symbolic_solver_model.py`, 2026-07-16; 125 Python tests cover real/fake write-ahead, replay, provenance, Z3 exactness, rollback, and CLI inspection.
@@ -989,6 +994,14 @@ Populate during implementation:
   plan with all six modes listed and `private_artifacts_included=false`; `just fmt`,
   `just lint`, `just test`, `just docs-check`, and `git diff --check` passed, with
   `just test` covering 46 Rust tests and 186 Python tests.
+- Differential relation/model validation, 2026-07-16:
+  `uv run --frozen pytest tests/python/test_certified_relations.py` passed 30 tests;
+  `SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen pytest
+  tests/python/test_protocol_process.py::test_live_exact_cycles_match_independent_symbolic_model_on_small_programs`
+  passed; `just fmt`, `just lint`, and `just test` passed, with `just test` covering
+  46 Rust tests and 189 Python tests. The proof artifact hash for
+  `tests/python/test_certified_relations.py` was updated because relation
+  certificates intentionally fail closed when supporting tests change.
 - Historical clean-checkout negative evidence, 2026-07-16: before the bootstrap
   repair, a detached HEAD with no `.tools/` failed formal verification. The current
   justfile and CI workflow fetch and verify the pinned TLC jar; remote `main` CI now
@@ -1039,10 +1052,12 @@ isolation tests; the current standard matrix passes; and M8/M9 semantic artifact
 checks now pass with non-trivial state-conditioned inference and replayable reducer
 paths. Campaign manifests for tutorial and the full standard benchmark matrix now
 record v1.2 runtime reproducibility metadata and artifact hashes. The repository is
-nevertheless not release-complete: formal/differential obligations,
-documentation/version, expanded clean-CI release smoke, and release-tag evidence remain
-partial. The integrated public controller selector surface is now implemented, but
-the deeper formal/differential and release-CI obligations remain open. The generated
-release manifest has passing root-gate evidence and completes from a clean tree. Work
-resumes from the open P1/P2 items above.
+nevertheless not release-complete: formal obligations, documentation/version,
+expanded clean-CI release smoke, and release-tag evidence remain partial. The
+integrated public controller selector surface is now implemented, but the deeper
+formal and release-CI obligations remain open. Exact-cycle and
+extractor-output differential tests now cover small-program Rust/Python agreement and
+finite-model extraction agreement. The generated release manifest has passing
+root-gate evidence and completes from a clean tree. Work resumes from the open P1/P2
+items above.
 ```

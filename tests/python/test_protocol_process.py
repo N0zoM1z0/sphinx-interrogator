@@ -42,6 +42,7 @@ from sphinx_interrogator.synthesis import (
     SynthesisModel,
     SynthesisStatus,
 )
+from sphinx_interrogator.target_model import FaultVariant, execute_experiment_program
 from sphinx_interrogator.tutorial import recover_tutorial
 from sphinx_trusted_runtime import (
     ChallengeBundle,
@@ -128,6 +129,24 @@ def _vm_client(challenge: Path) -> Iterator[VmClient]:
         VmClient.connect_unix(endpoints.vm_socket, timeout_seconds=2.0) as client,
     ):
         yield client
+
+
+def _white_box_differential_material(
+    challenge: Path,
+) -> tuple[dict[int, int], dict[int, int], FaultVariant]:
+    """Read test-only private material for Rust/Python semantic differential checks."""
+    secret = tuple((challenge / "private/secret.bin").read_bytes())
+    with (challenge / "private/config.toml").open("rb") as handle:
+        private_config = tomllib.load(handle)
+    permutation = tuple(private_config["permutation"])
+    salts = tuple(private_config["salts"])
+    if permutation != tuple(range(len(secret))):
+        raise AssertionError("differential helper currently expects identity lane mapping")
+    return (
+        {lane: secret[lane] for lane in range(len(secret))},
+        {lane: salts[lane] for lane in range(len(salts))},
+        FaultVariant(private_config["fault_variant"]),
+    )
 
 
 def _run_tutorial(
@@ -304,6 +323,44 @@ def test_python_canonical_program_and_sparse_memory_execute_in_rust(challenge: P
     assert memory.status == "halted"
     assert memory.static_cycles == 5
     assert memory.public_digest != "0000000000000000"
+
+
+@pytest.mark.integration
+def test_live_exact_cycles_match_independent_symbolic_model_on_small_programs(
+    challenge: Path,
+) -> None:
+    """White-box differential test: Rust exact buckets equal the independent Python model."""
+    secret_by_lane, salt_by_lane, variant = _white_box_differential_material(challenge)
+    programs = (
+        Program.parse("HALT\n", lanes=4),
+        Program.parse("PAD 3\nPROBE 0, 0, 0\nANCHOR 2, 0\nHALT\n", lanes=4),
+        Program.parse(
+            "MOVI r0, 7\nMIXOUT r0\nPROBE 1, 1, 1\nANCHOR 3, 1\nFENCE\nHALT\n",
+            lanes=4,
+        ),
+        Program.experiment_cell(lane=2, token=3, epoch=1, anchor=1, pad=2, repeats=3),
+    )
+
+    with _vm_client(challenge) as client:
+        client.hello()
+        for index, program in enumerate(programs):
+            result = client.execute(
+                program.render(),
+                session_id=f"exact-cycle-{index}",
+                logical_batch_id="white-box-differential",
+                reset="hard",
+                execution_seed_id=f"exact-cycle-{index}",
+            )
+            model = execute_experiment_program(
+                program,
+                secret_by_lane,
+                variant=variant,
+                salt_by_lane=salt_by_lane,
+            )
+            assert result.status == "halted"
+            assert result.observation.bucket_width == 1
+            assert result.static_cycles == model.static_cycles == program.static_cycles()
+            assert result.observation.cycle_bucket == model.static_cycles + model.fault_cycles
 
 
 @pytest.mark.integration
