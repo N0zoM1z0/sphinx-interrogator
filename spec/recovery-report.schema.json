@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/recovery-report.schema.json",
+  "title": "Sphinx Interrogator exact tutorial recovery report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version", "campaign_id", "challenge_id", "profile_name",
+    "semantic_version", "campaign_seed", "status", "unique_secret_hex",
+    "uniqueness", "solver", "cost", "judge", "artifacts"
+  ],
+  "properties": {
+    "report_version": {"const": "1.0"},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "challenge_id": {"type": "string", "minLength": 1},
+    "profile_name": {"const": "tutorial"},
+    "semantic_version": {"type": "string", "minLength": 1},
+    "campaign_seed": {"type": "integer", "minimum": 0},
+    "status": {
+      "enum": [
+        "unique_exact", "unique_exact_unjudged", "inconclusive",
+        "inconsistent", "judge_rejected"
+      ]
+    },
+    "unique_secret_hex": {"type": ["string", "null"], "pattern": "^[0-9a-f]+$"},
+    "uniqueness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "solver_status", "unique", "alternative_model_unsat",
+        "candidate_secret_hex", "reason"
+      ],
+      "properties": {
+        "solver_status": {"enum": ["sat", "unsat", "unknown"]},
+        "unique": {"type": ["boolean", "null"]},
+        "alternative_model_unsat": {"type": "boolean"},
+        "candidate_secret_hex": {"type": ["string", "null"], "pattern": "^[0-9a-f]+$"},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "solver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "candidate_approximation", "exact_full_model_count",
+        "sampled_model_count"
+      ],
+      "properties": {
+        "status": {"enum": ["sat", "unsat", "unknown"]},
+        "candidate_approximation": {"enum": ["exact", "sampled", "unknown"]},
+        "exact_full_model_count": {"type": ["integer", "null"], "minimum": 0},
+        "sampled_model_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_relation_families", "physical_executions", "hard_resets",
+        "last_public_physical_remaining"
+      ],
+      "properties": {
+        "logical_relation_families": {"type": "integer", "minimum": 0},
+        "physical_executions": {"type": "integer", "minimum": 0},
+        "hard_resets": {"type": "integer", "minimum": 0},
+        "last_public_physical_remaining": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "judge": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "judge_version", "challenge_id", "campaign_token",
+            "submission_recorded", "accepted"
+          ],
+          "properties": {
+            "judge_version": {"const": "1.0"},
+            "challenge_id": {"type": "string"},
+            "campaign_token": {"type": "string"},
+            "submission_recorded": {"type": "boolean"},
+            "accepted": {"type": "boolean"}
+          }
+        }
+      ]
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest", "events", "database", "raw_directory", "materialized_digest"
+      ],
+      "properties": {
+        "manifest": {"const": "manifest.json"},
+        "events": {"const": "events.jsonl"},
+        "database": {"const": "campaign.sqlite3"},
+        "raw_directory": {"const": "raw"},
+        "materialized_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

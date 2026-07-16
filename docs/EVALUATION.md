@@ -23,6 +23,12 @@ All numerical thresholds below are design acceptance targets. They become empiri
 - Maximum logical query-pair target: 80.
 - No false hard constraints across exhaustive reduced-domain extractor tests.
 
+M5 measured result (2026-07-16): the published 100-seed reference matrix achieved
+100/100 exact unique, judge-accepted recoveries with median/max 16 logical families.
+The paired 100-seed off-fault control produced 100/100 inconclusive results, no exact
+declarations, and no judge submissions. See `docs/TUTORIAL_RECOVERY.md` and
+`VALIDATION.md`; generated per-campaign artifacts remain under ignored `runs/` paths.
+
 ### 2.2 Standard
 
 - At least 100 generated 32-bit secrets, with a fixed published seed list.

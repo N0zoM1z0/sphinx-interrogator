@@ -1,7 +1,8 @@
 {
-  "manifest_version": "1.0",
+  "manifest_version": "1.1",
   "campaign_id": "fixture-campaign",
   "challenge_id": "fixture-challenge",
+  "challenge_commitment": "2222222222222222222222222222222222222222222222222222222222222222",
   "profile_name": "tutorial",
   "semantic_version": "0.1.0",
   "public_profile_sha256": "1111111111111111111111111111111111111111111111111111111111111111",

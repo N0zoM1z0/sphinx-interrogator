@@ -22,6 +22,7 @@ def _manifest() -> CampaignManifest:
     return CampaignManifest(
         campaign_id="campaign-test",
         challenge_id="challenge-public",
+        challenge_commitment="0" * 64,
         profile_name="tutorial",
         semantic_version="0.1.0",
         public_profile_sha256="1" * 64,
@@ -115,6 +116,31 @@ def test_manifest_is_immutable_and_event_log_detects_tampering(tmp_path: Path) -
     event_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     with pytest.raises(PersistenceError, match="event hash"):
         EventLog(event_path)
+
+
+def test_manifest_reads_version_one_runs_without_inventing_a_commitment(
+    tmp_path: Path,
+) -> None:
+    """Version 1.0 remains inspectable, including the short-lived bound variant."""
+    legacy_root = tmp_path / "legacy"
+    legacy_root.mkdir()
+    legacy = _manifest().to_data()
+    legacy["manifest_version"] = "1.0"
+    legacy.pop("challenge_commitment")
+    (legacy_root / "manifest.json").write_text(json.dumps(legacy), encoding="utf-8")
+    repository = CampaignRepository.open(legacy_root)
+    assert repository.manifest.challenge_commitment is None
+    assert repository.manifest.to_data() == legacy
+    repository.close()
+
+    transitional_root = tmp_path / "transitional"
+    transitional_root.mkdir()
+    transitional = _manifest().to_data()
+    transitional["manifest_version"] = "1.0"
+    (transitional_root / "manifest.json").write_text(json.dumps(transitional), encoding="utf-8")
+    reopened = CampaignRepository.open(transitional_root)
+    assert reopened.manifest == _manifest()
+    reopened.close()
 
 
 def test_crash_after_raw_response_resumes_without_duplicate_evidence(tmp_path: Path) -> None:
@@ -269,11 +295,17 @@ def test_empty_and_existing_v1_databases_migrate_but_future_version_fails(
     tmp_path: Path,
 ) -> None:
     """Schema migration is idempotent and never guesses about future formats."""
-    repository = CampaignRepository.create(tmp_path / "run", _manifest())
-    assert repository.database.connection.execute("PRAGMA user_version").fetchone()[0] == 1
+    run = tmp_path / "run"
+    repository = CampaignRepository.create(run, _manifest())
+    assert repository.database.connection.execute("PRAGMA user_version").fetchone()[0] == 2
     repository.close()
-    reopened = CampaignRepository.open(tmp_path / "run")
+    prior = sqlite3.connect(run / "campaign.sqlite3")
+    prior.execute("DROP TABLE judge_submissions")
+    prior.execute("PRAGMA user_version = 1")
+    prior.close()
+    reopened = CampaignRepository.open(run)
     assert reopened.database.table_count("events") == 0
+    assert reopened.database.table_count("judge_submissions") == 0
     reopened.close()
 
     future_root = tmp_path / "future"

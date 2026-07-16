@@ -1,0 +1,43 @@
+{
+  "report_version": "1.0",
+  "campaign_id": "tutorial-fixture-17",
+  "challenge_id": "fixture",
+  "profile_name": "tutorial",
+  "semantic_version": "0.1.0",
+  "campaign_seed": 17,
+  "status": "unique_exact",
+  "unique_secret_hex": "e905",
+  "uniqueness": {
+    "solver_status": "unsat",
+    "unique": true,
+    "alternative_model_unsat": true,
+    "candidate_secret_hex": "e905",
+    "reason": "alternative-model query is unsat"
+  },
+  "solver": {
+    "status": "sat",
+    "candidate_approximation": "exact",
+    "exact_full_model_count": 3,
+    "sampled_model_count": 3
+  },
+  "cost": {
+    "logical_relation_families": 16,
+    "physical_executions": 32,
+    "hard_resets": 32,
+    "last_public_physical_remaining": 969
+  },
+  "judge": {
+    "judge_version": "1.0",
+    "challenge_id": "fixture",
+    "campaign_token": "campaign-fixture",
+    "submission_recorded": true,
+    "accepted": true
+  },
+  "artifacts": {
+    "manifest": "manifest.json",
+    "events": "events.jsonl",
+    "database": "campaign.sqlite3",
+    "raw_directory": "raw",
+    "materialized_digest": "1111111111111111111111111111111111111111111111111111111111111111"
+  }
+}

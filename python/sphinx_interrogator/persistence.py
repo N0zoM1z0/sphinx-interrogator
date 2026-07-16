@@ -15,9 +15,9 @@ from typing import cast
 from sphinx_interrogator.certificates import ProofMethod
 
 _EVENT_VERSION = "1.0"
-_MANIFEST_VERSION = "1.0"
+_MANIFEST_VERSION = "1.1"
 _RAW_VERSION = "1.0"
-_DATABASE_VERSION = 1
+_DATABASE_VERSION = 2
 _MATERIALIZED_TABLES = (
     "events",
     "queries",
@@ -31,6 +31,7 @@ _MATERIALIZED_TABLES = (
     "state_models",
     "witnesses",
     "frontier",
+    "judge_submissions",
 )
 
 
@@ -44,6 +45,7 @@ class CampaignManifest:
 
     campaign_id: str
     challenge_id: str
+    challenge_commitment: str | None
     profile_name: str
     semantic_version: str
     public_profile_sha256: str
@@ -64,6 +66,8 @@ class CampaignManifest:
             if not value:
                 raise ValueError(f"{name} must not be empty")
         _require_digest(self.public_profile_sha256, "public_profile_sha256")
+        if self.challenge_commitment is not None:
+            _require_digest(self.challenge_commitment, "challenge_commitment")
         try:
             ProofMethod(self.minimum_certificate_strength)
         except ValueError as error:
@@ -82,8 +86,10 @@ class CampaignManifest:
 
     def to_data(self) -> dict[str, object]:
         """Return the strict public campaign manifest document."""
-        return {
-            "manifest_version": _MANIFEST_VERSION,
+        document: dict[str, object] = {
+            "manifest_version": (
+                _MANIFEST_VERSION if self.challenge_commitment is not None else "1.0"
+            ),
             "campaign_id": self.campaign_id,
             "challenge_id": self.challenge_id,
             "profile_name": self.profile_name,
@@ -97,6 +103,9 @@ class CampaignManifest:
                 "hard_resets": self.hard_reset_budget,
             },
         }
+        if self.challenge_commitment is not None:
+            document["challenge_commitment"] = self.challenge_commitment
+        return document
 
     @classmethod
     def from_data(cls, data: Mapping[str, object]) -> CampaignManifest:
@@ -107,6 +116,7 @@ class CampaignManifest:
                 "manifest_version",
                 "campaign_id",
                 "challenge_id",
+                "challenge_commitment",
                 "profile_name",
                 "semantic_version",
                 "public_profile_sha256",
@@ -116,8 +126,14 @@ class CampaignManifest:
             },
             "campaign manifest",
         )
-        if _string(data, "manifest_version") != _MANIFEST_VERSION:
+        manifest_version = _string(data, "manifest_version")
+        if manifest_version not in {"1.0", _MANIFEST_VERSION}:
             raise PersistenceError("unsupported campaign manifest version")
+        if manifest_version == _MANIFEST_VERSION and "challenge_commitment" not in data:
+            raise PersistenceError("campaign manifest 1.1 requires challenge_commitment")
+        commitment = (
+            _string(data, "challenge_commitment") if "challenge_commitment" in data else None
+        )
         budgets = _mapping(data, "budgets")
         _reject_extra(
             budgets,
@@ -127,6 +143,7 @@ class CampaignManifest:
         return cls(
             campaign_id=_string(data, "campaign_id"),
             challenge_id=_string(data, "challenge_id"),
+            challenge_commitment=commitment,
             profile_name=_string(data, "profile_name"),
             semantic_version=_string(data, "semantic_version"),
             public_profile_sha256=_string(data, "public_profile_sha256"),
@@ -554,7 +571,12 @@ class CampaignDatabase:
         if version == 0:
             with self.connection:
                 self.connection.executescript(_SCHEMA_V1)
-                self.connection.execute(f"PRAGMA user_version = {_DATABASE_VERSION}")
+                self.connection.execute("PRAGMA user_version = 1")
+            version = 1
+        if version == 1:
+            with self.connection:
+                self.connection.executescript(_SCHEMA_V2)
+                self.connection.execute("PRAGMA user_version = 2")
         version = cast("int", self.connection.execute("PRAGMA user_version").fetchone()[0])
         if version != _DATABASE_VERSION:
             raise PersistenceError(f"database migration stopped at version {version}")
@@ -711,6 +733,17 @@ class CampaignDatabase:
                     _canonical_json(_mapping(payload, "candidate")),
                 ),
             )
+        elif event.kind == "judge_recorded":
+            self.connection.execute(
+                "INSERT INTO judge_submissions VALUES (?, ?, ?, ?, ?)",
+                (
+                    _string(payload, "submission_id"),
+                    _string(payload, "challenge_id"),
+                    int(_boolean(payload, "submission_recorded")),
+                    int(_boolean(payload, "accepted")),
+                    _canonical_json(_mapping(payload, "response")),
+                ),
+            )
         else:
             raise PersistenceError(f"cannot materialize unknown event kind {event.kind}")
 
@@ -859,6 +892,7 @@ class CampaignRepository:
             "relation_count": self.database.table_count("relations"),
             "active_constraint_count": len(self.database.active_constraint_ids()),
             "candidate_snapshot_count": self.database.table_count("candidate_snapshots"),
+            "judge_submission_count": self.database.table_count("judge_submissions"),
             "materialized_digest": self.database.digest(),
         }
 
@@ -969,6 +1003,16 @@ CREATE TABLE frontier (
 CREATE INDEX frontier_live ON frontier(active, expires_after, score, candidate_id);
 """
 
+_SCHEMA_V2 = """
+CREATE TABLE judge_submissions (
+    submission_id TEXT PRIMARY KEY,
+    challenge_id TEXT NOT NULL,
+    submission_recorded INTEGER NOT NULL CHECK(submission_recorded IN (0, 1)),
+    accepted INTEGER NOT NULL CHECK(accepted IN (0, 1)),
+    response_json TEXT NOT NULL
+);
+"""
+
 
 def _event_hash(data: Mapping[str, object]) -> str:
     return hashlib.sha256(_canonical_json(dict(data)).encode("utf-8")).hexdigest()
@@ -1075,6 +1119,13 @@ def _number(data: Mapping[str, object], key: str) -> float:
     if not math.isfinite(result):
         raise PersistenceError(f"{key} must be finite")
     return result
+
+
+def _boolean(data: Mapping[str, object], key: str) -> bool:
+    value = data.get(key)
+    if not isinstance(value, bool):
+        raise PersistenceError(f"{key} must be Boolean")
+    return value
 
 
 def _mapping(data: Mapping[str, object], key: str) -> Mapping[str, object]:

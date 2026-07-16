@@ -4,8 +4,11 @@
 
 An Interrogator run has four deliberately separate layers:
 
-1. `manifest.json` freezes the public challenge/profile identity, semantic version,
-   seed, certificate policy, and budgets.
+1. `manifest.json` freezes the public challenge/profile identity and challenge
+   commitment, semantic version, seed, certificate policy, and budgets. Manifest
+   version 1.1 added the commitment binding used by accepted-report resume. Readers
+   retain strict support for version 1.0 inspection; an unbound version-1.0 run cannot
+   be resumed as a bound challenge campaign.
 2. `raw/` contains immutable, content-hashed public JSONL request/response pairs. The
    response is atomically written and `fsync`ed before protocol decoding or relation
    analysis.
@@ -37,6 +40,10 @@ execution references, certificates, relation edges, decisions, constraints, cand
 snapshots, state-model versions, witnesses, and the active frontier. Foreign keys and
 pre-append validation require every constraint to reference an existing relation,
 certificate, and raw request IDs.
+
+Migration version 2 adds the one-shot judge submission view. Judge output is appended
+only after secret-projection uniqueness is proven; accepted report resume verifies the
+challenge commitment, manifest, materialized digest, and exactly one judge event.
 
 Frontier rows carry independent structural, relation, state, observation, partition,
 and semantic keys plus TTL. Selection is ordered by score and then stable candidate ID.

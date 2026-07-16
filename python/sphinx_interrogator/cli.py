@@ -12,6 +12,7 @@ from sphinx_interrogator.ast import Program
 from sphinx_interrogator.persistence import CampaignRepository
 from sphinx_interrogator.protocol import VmClient
 from sphinx_interrogator.relations import AnchorSwitchTemplate
+from sphinx_interrogator.tutorial import recover_tutorial
 
 
 @click.group()
@@ -111,6 +112,32 @@ def replay_run(run_directory: Path) -> None:
     click.echo(json.dumps(report, indent=2, sort_keys=True))
     if not report["matched"]:
         raise click.ClickException("materialized replay digest mismatch")
+
+
+@main.command("recover")
+@click.option("--vm", type=click.Path(path_type=Path, exists=True), required=True)
+@click.option("--challenge", type=click.Path(path_type=Path, exists=True), required=True)
+@click.option("--run", "run_directory", type=click.Path(path_type=Path), required=True)
+@click.option("--seed", type=click.IntRange(min=0), required=True)
+@click.option("--submit-judge/--no-submit-judge", default=True, show_default=True)
+def recover(
+    vm: Path,
+    challenge: Path,
+    run_directory: Path,
+    seed: int,
+    submit_judge: bool,
+) -> None:
+    """Run exact tutorial recovery through the public black-box protocol."""
+    result = recover_tutorial(
+        vm_binary=vm,
+        challenge=challenge,
+        run_directory=run_directory,
+        campaign_seed=seed,
+        submit_judge=submit_judge,
+    )
+    click.echo(json.dumps(result.report, indent=2, sort_keys=True))
+    if result.status not in {"unique_exact", "unique_exact_unjudged"}:
+        raise click.ClickException(f"tutorial recovery ended with {result.status}")
 
 
 if __name__ == "__main__":

@@ -29,12 +29,16 @@ from sphinx_interrogator.relations import (
     RepeatAmplifyTemplate,
     TokenSwitchTemplate,
 )
+from sphinx_interrogator.tutorial import recover_tutorial
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = ROOT / "benchmarks/profiles/tutorial.toml"
 SCHEMA = json.loads((ROOT / "spec/protocol.schema.json").read_text(encoding="utf-8"))
 CHALLENGE_SCHEMA = json.loads((ROOT / "spec/challenge.schema.json").read_text(encoding="utf-8"))
 JUDGE_SCHEMA = json.loads((ROOT / "spec/judge.schema.json").read_text(encoding="utf-8"))
+RECOVERY_REPORT_SCHEMA = json.loads(
+    (ROOT / "spec/recovery-report.schema.json").read_text(encoding="utf-8")
+)
 
 
 def vm_binary() -> Path:
@@ -459,6 +463,9 @@ def test_durable_harness_records_real_wire_bytes_before_materialization(
         CampaignManifest(
             campaign_id="live-durable",
             challenge_id="pytest-challenge",
+            challenge_commitment=json.loads(
+                (challenge / "public/challenge.json").read_text(encoding="utf-8")
+            )["commitment"],
             profile_name="tutorial",
             semantic_version="0.1.0",
             public_profile_sha256=hashlib.sha256(profile_bytes).hexdigest(),
@@ -524,3 +531,81 @@ def test_durable_harness_records_real_wire_bytes_before_materialization(
     digest = repository.database.digest()
     assert repository.rebuild() == digest
     repository.close()
+
+
+@pytest.mark.integration
+def test_tutorial_campaign_recovers_uniquely_judges_once_and_resumes(
+    challenge: Path,
+    tmp_path: Path,
+) -> None:
+    """The complete M5 flow recovers through relations and reuses its accepted report."""
+    run = tmp_path / "tutorial-run"
+    first = recover_tutorial(
+        vm_binary=vm_binary(),
+        challenge=challenge,
+        run_directory=run,
+        campaign_seed=53,
+        submit_judge=True,
+    )
+    assert first.status == "unique_exact"
+    jsonschema.Draft202012Validator(RECOVERY_REPORT_SCHEMA).validate(first.report)
+    assert first.report["uniqueness"]["alternative_model_unsat"] is True
+    assert first.report["cost"]["logical_relation_families"] == 16
+    assert first.report["cost"]["physical_executions"] == 32
+    assert first.report["judge"]["submission_recorded"] is True
+    assert first.report["judge"]["accepted"] is True
+    repository = CampaignRepository.open(run)
+    assert repository.database.table_count("judge_submissions") == 1
+    digest = repository.database.digest()
+    assert repository.rebuild() == digest
+    repository.close()
+
+    resumed = recover_tutorial(
+        vm_binary=vm_binary(),
+        challenge=challenge,
+        run_directory=run,
+        campaign_seed=53,
+        submit_judge=True,
+    )
+    assert resumed.report == first.report
+
+
+@pytest.mark.integration
+def test_fault_free_tutorial_control_never_declares_exact_recovery(tmp_path: Path) -> None:
+    """All equal off-fault observations retain every secret and never invoke the judge."""
+    challenge = tmp_path / "fault-free-challenge"
+    created = subprocess.run(
+        [
+            str(vm_binary()),
+            "challenge",
+            "create",
+            "--profile",
+            str(PROFILE),
+            "--output",
+            str(challenge),
+            "--challenge-id",
+            "tutorial-fault-free",
+            "--seed",
+            "59",
+            "--fault",
+            "off",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=5,
+    )
+    assert created.returncode == 0, created.stderr
+    result = recover_tutorial(
+        vm_binary=vm_binary(),
+        challenge=challenge,
+        run_directory=tmp_path / "fault-free-run",
+        campaign_seed=61,
+        submit_judge=False,
+    )
+    jsonschema.Draft202012Validator(RECOVERY_REPORT_SCHEMA).validate(result.report)
+    assert result.status == "inconclusive"
+    assert result.report["unique_secret_hex"] is None
+    assert result.report["uniqueness"]["alternative_model_unsat"] is False
+    assert result.report["judge"] is None

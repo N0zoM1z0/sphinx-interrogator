@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 01:54Z**
+Last updated: **2026-07-16 02:34Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -328,3 +328,76 @@ until generated recovery, uniqueness, judge, persistence, and reporting are real
   fault-free negative control cannot declare exact recovery.
 - CEGIS, stochastic calibration and full MaxSMT repair policy, stateful learning,
   relation-aware reduction, standard benchmarks, and release evidence remain M6–M9.
+
+## M5 deterministic tutorial recovery checkpoint
+
+M5 replaces the semantic demo TODO with a complete generated-challenge campaign that
+uses only `challenge/public/challenge.json`, `challenge/public/profile.toml`, and typed
+responses from the separately launched Rust process. For each of four lanes and two
+epochs it compares two certified anchor pairs at the public token zero, producing 16
+logical relation families and 32 physical executions. All relation instances,
+certificates, balanced batches, executions, decisions, and finite constraints are
+stored through the M4 event log and SQLite materialization.
+
+The final exactness claim is deliberately about the 16-bit secret projection. Three
+full satisfying assignments can remain because reference, weak, and signed fault
+members produce the same tutorial evidence, but they all share one secret. The report
+declares `unique_exact` only after the solver excludes every assignment with a
+different secret and returns `unsat`. Only then is the Rust one-shot judge invoked.
+The accepted report records the manifest, challenge commitment, materialized digest,
+costs, uniqueness artifact, and sole public judge event. A second invocation verifies
+and returns that report without launching a second submission.
+
+Campaign manifest version 1.1 adds the public challenge commitment. SQLite migration
+version 2 adds `judge_submissions`; the prior-version test constructs a version-1
+database, reopens it, applies the migration, and proves deterministic rebuild. Recovery
+report version 1.0 has a strict Draft 2020-12 schema and checked-in fixture.
+
+The published deterministic matrices were run against the authoritative Rust binary:
+
+```text
+SPHINX_VM_BINARY="$PWD/.cache/sphinx-target/debug/sphinx-vm" \
+  uv run --frozen python scripts/tutorial_matrix.py \
+  --output runs/tutorial-evaluation-v2 --fault reference
+
+100/100 unique_exact; 100/100 judge accepted
+median logical relation families: 16; maximum: 16
+artifact: runs/tutorial-evaluation-v2/summary.json
+
+SPHINX_VM_BINARY="$PWD/.cache/sphinx-target/debug/sphinx-vm" \
+  uv run --frozen python scripts/tutorial_matrix.py \
+  --output runs/tutorial-fault-free-v2 --fault off
+
+100/100 inconclusive; 0 exact declarations; 0 judge submissions
+median logical relation families: 16; maximum: 16
+artifact: runs/tutorial-fault-free-v2/summary.json
+```
+
+The final M5 suite used the repository-local Cargo home/target, two build jobs, and no
+concurrent Cargo/rustc process:
+
+```text
+just fmt             pass (49 Python/script files and Rustfmt clean)
+just lint            pass (Clippy -D warnings, Ruff, strict mypy over 24 modules)
+just test            pass (42 Rust lib + 2 Rust binary; 128 Python; 10 live process tests)
+just schema-check    pass (including manifest 1.1 and recovery report 1.0)
+just docs-check      pass
+just verify-formal   pass (Z3 unsat x3; TLC 70,557 generated/2,276 distinct;
+                          131,072 guarded-replay cells; mutation rejected)
+just boundary-audit  pass; binary sha256=628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b
+just demo-tutorial   pass; unique_exact e905; judge accepted; 16 logical/32 physical
+```
+
+`just demo-tutorial` was also run a second consecutive time against
+`runs/tutorial-demo-v2-seed-7`. It returned the verified accepted report with the same
+result and exactly one materialized judge event. A live reference integration test
+independently checked schema validation, alternative-model `unsat`, database rebuild,
+and accepted-report resume; its otherwise-identical off-fault test retained all 65,536
+secret projections, emitted no exact result, and never called the judge.
+
+## Remaining limitations after M5
+
+- M6 must replace fixed candidate choice with grammar-guided skeleton enumeration, SMT
+  hole filling, pair separation, deterministic committee scoring, and CEGIS refinement.
+- Stochastic calibration/MaxSMT repair, persistent-state learning/retraction,
+  relation-aware reduction, standard benchmarks, and release evidence remain M7–M9.

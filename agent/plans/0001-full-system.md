@@ -45,10 +45,8 @@ introduced live cross-process/schema/boundary tests. The only recovery path rema
 hand-invoked exact tutorial campaign against a fixed scaffold secret. There is no
 complete DSL/architecture, production challenge/judge, persistence, Z3 hypothesis
 store, bounded-noise extractor, CEGIS loop, state learner, or release evidence yet.
-The M1 implementation now replaces the partial language/interpreter with complete
-Rust and independent Python models plus cross-language golden evidence. Its functional
-acceptance checks pass, but the mandatory semantic `demo-tutorial` gate remains the
-real M5 flow and is not yet available, so M1 is not declared closed.
+The M1 implementation replaces the partial language/interpreter with complete Rust and
+independent Python models plus cross-language golden evidence.
 The M2 checkpoint now supplies the production challenge/judge, explicit microcode,
 fault-free and faulty timing composition, typed hidden state/reset semantics, seeded
 noise, independent Python target-family model, concrete differential vectors, and
@@ -57,7 +55,9 @@ hard-reset templates, artifact-bound certificates, conservative interval decisio
 latent-fault finite extractors, and the typed serializable constraint expression IR.
 The verified M4 checkpoint adds raw-wire write-ahead, hash-chained events, rebuildable
 SQLite views, deterministic scheduling/frontier logic, and exact Z3 hypothesis
-management with durable provenance. Tutorial recovery and M5–M9 research layers remain
+management with durable provenance. The verified M5 checkpoint adds deterministic
+public-only tutorial recovery, exact secret-projection uniqueness, one-shot judging,
+accepted-report resume, and a blind fault-free negative control. M6–M9 remain
 outstanding.
 
 ## Progress
@@ -65,11 +65,11 @@ outstanding.
 - [x] (2026-07-15 00:00Z) Create project brief, formal model, architecture, research basis, evaluation design, safety policy, task specification, and initial ExecPlan.
 - [x] (2026-07-15 16:10Z) Verify and import the 106-file research handoff as commit `ab30e28`; inspect the full tree and record the real scaffold baseline.
 - [x] (2026-07-15 16:17Z) Complete M0 locks, fail-closed checks, bounded/correlated JSONL protocol, live process/schema tests, and initial boundary audit; evidence is recorded in `VALIDATION.md`.
-- [ ] (2026-07-15 16:58Z) M1 implementation and milestone-specific acceptance pass: full DSL/AST/validator/interpreter, canonical text/JSON/hash fixtures, sparse memory, malformed-input checks, and generated noninterference tests. Closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
-- [ ] (2026-07-15 17:29Z) M2 implementation and milestone-specific acceptance pass: microcode/state/fault/noise separation, strict public/private profiles, committed challenge packages, one-shot judge, live fault confinement/replay, exhaustive Rust/Python vectors, TLC, and mutation detection. Formal closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
-- [ ] (2026-07-16 01:33Z) M3 implementation and milestone-specific acceptance pass: nine typed stateless templates, strict cached certificates, exact/bounded interval decisions, latent-fault extractors, recursive expression IR, schemas, and reduced/live soundness evidence. Closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
-- [ ] (2026-07-16 01:54Z) M4 implementation and milestone-specific acceptance pass: balanced public process harness, raw-response write-ahead, hash-chained events, SQLite migration/rebuild, complete materialized graph, TTL/multidimensional frontier, Z3 translation, named cores, exact enumeration/uniqueness/implication, rollback, manifests, reports, and CLI replay. Closure is deferred only because the real `just demo-tutorial` M5 gate still exits 1.
-- [ ] (date) Complete M5 tutorial recovery and fault-free negative control.
+- [x] (2026-07-16 02:34Z) Close M1 after its complete DSL/architecture evidence and the real downstream tutorial gate both pass.
+- [x] (2026-07-16 02:34Z) Close M2 after its semantic/challenge/formal evidence and the real downstream tutorial gate both pass.
+- [x] (2026-07-16 02:34Z) Close M3 after all certified relation/extractor evidence and the real downstream tutorial gate both pass.
+- [x] (2026-07-16 02:34Z) Close M4 after durable campaign/exact-solver evidence, database migration 2, and the real downstream tutorial gate all pass.
+- [x] (2026-07-16 02:34Z) Complete M5 deterministic tutorial recovery and blind fault-free negative control: 100/100 exact accepted reference seeds and 100/100 inconclusive off-fault seeds at 16 logical families each.
 - [ ] (date) Complete M6 grammar-guided CEGIS query synthesis and integrate it into selection.
 - [ ] (date) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance.
 - [ ] (date) Complete M8 soft-reset state, exact-history mode, AALpy learner, and retraction semantics.
@@ -116,6 +116,12 @@ outstanding.
 - Observation: Syntactically new candidates do not establish semantic novelty when an implication query times out.
   Evidence: the M4 frontier test returns `unknown`, appends no candidate event, and only accepts the same candidate after a `not_implied` result supplies a countermodel status.
 
+- Observation: Exact tutorial recovery does not require identifying the latent fault-family member.
+  Evidence: each reference campaign has three satisfying full models (reference, weak, and signed) with one shared secret projection; excluding that 16-bit projection is `unsat` for all 100 published seeds.
+
+- Observation: A fixed complete tutorial design is both cheaper and easier to audit than adaptive early stopping at this milestone.
+  Evidence: every reference and off-fault campaign uses exactly 16 logical relation families and 32 physical executions; the reference matrix is 100/100 exact and the off-fault matrix is 100/100 inconclusive.
+
 Add dated observations here. Include failed assumptions, benchmark results, solver behavior, tool limitations, and concise command/artifact evidence.
 
 ## Decision Log
@@ -149,6 +155,12 @@ Add dated observations here. Include failed assumptions, benchmark results, solv
   Alternatives considered: Write SQLite first; store only typed responses; pickle live Z3 objects.
   Date/author: 2026-07-16, Codex implementation.
   Consequences: Stable execution/event IDs make retries idempotent, constraints require raw/certificate provenance, and replay digest mismatch is a hard error.
+
+- Decision: Declare tutorial uniqueness over the secret projection and submit the judge only after alternative-secret exclusion is unsatisfiable.
+  Rationale: Fault assignment is deliberately private and reference, weak, and signed can remain observationally equivalent in this bounded tutorial; requiring a unique full model would reject an otherwise exact secret recovery.
+  Alternatives considered: assume the reference member; judge a candidate before uniqueness; require a unique `(secret, fault)` tuple.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: reports preserve the three-model ambiguity, contain an explicit projection-level `unsat` artifact, and off-fault campaigns remain inconclusive with no judge call.
 
 - Decision: Start query synthesis with typed relation skeleton enumeration plus SMT-filled holes and CEGIS model counterexamples.
   Rationale: It is easier to verify and debug than synthesizing arbitrary instruction streams, while still exercising syntax-guided synthesis.
@@ -518,14 +530,14 @@ Record command excerpts and artifact hashes/paths in `Artifacts and Evidence` ra
 Populate during implementation:
 
 - M0 baseline and validation record: `VALIDATION.md`, 2026-07-15; locked toolchains, quality checks, live protocol tests, and initial boundary audit pass.
-- M1 language/architecture evidence: `VALIDATION.md`, `tests/fixtures/programs/`, and `docs/DSL_AND_ARCHITECTURE.md`, 2026-07-15; all milestone-specific tests and repository checks pass, while the required M5 tutorial gate remains explicitly pending.
+- M1 language/architecture evidence: `VALIDATION.md`, `tests/fixtures/programs/`, and `docs/DSL_AND_ARCHITECTURE.md`, 2026-07-15; all milestone-specific tests pass, and M5 closes the previously deferred real tutorial gate.
 - M2 target/challenge evidence: `VALIDATION.md`, `tests/fixtures/model/`, `tests/fixtures/challenge/`, and `docs/SYSTEM_A_SPHINX_VM.md`, 2026-07-15; 44 Rust and 68 Python tests cover the semantic split, live fault confinement, deterministic replay, permissions, and judge policy.
 - M3 relation/extractor evidence: `VALIDATION.md`, `tests/python/test_certified_relations.py`, `tests/python/test_constraint_ir.py`, `tests/fixtures/relations/`, and `docs/RELATION_ORACLES.md`, 2026-07-16; 99 Python tests include every stateless relation, all bounded noise/fault generators, strict certificate/IR persistence, and live Rust relation arms.
 - M4 persistence/solver evidence: `VALIDATION.md`, `docs/CAMPAIGN_PERSISTENCE.md`, `tests/python/test_persistence.py`, `test_harness.py`, `test_hypothesis_persistence.py`, `test_frontier.py`, `test_solver.py`, and `test_symbolic_solver_model.py`, 2026-07-16; 125 Python tests cover real/fake write-ahead, replay, provenance, Z3 exactness, rollback, and CLI inspection.
-- Tutorial acceptance report: pending.
+- M5 tutorial acceptance report: `runs/tutorial-evaluation-v2/summary.json`, `runs/tutorial-demo-v2-seed-7/report.json`, `docs/TUTORIAL_RECOVERY.md`, and `VALIDATION.md`, 2026-07-16; 100/100 reference seeds are exact and judge accepted at 16 logical families.
 - Standard full-system report: pending.
 - Baseline/ablation report: pending.
-- Fault-free control report: pending.
+- M5 fault-free control report: `runs/tutorial-fault-free-v2/summary.json`, 2026-07-16; 100/100 blind off-fault campaigns are inconclusive with zero judge submissions.
 - One-shot leakage audit: pending.
 - Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; statistical M7/M9 calibration remains pending.
 - Formal/TLA+/SMT report: M2 scheduler, M3 relation, and M4 concrete-versus-Z3 bank/fault/state evidence in `VALIDATION.md`; final mutation/release obligations remain M9.
@@ -567,5 +579,7 @@ At completion, summarize:
 - remaining non-blocking research questions;
 - any specification changes and why.
 
-Current outcome: design and handoff package complete; implementation and empirical results pending.
+Current outcome: M0–M5 are complete and reproducible, including the accepted tutorial
+flow and fault-free negative control. M6–M9 implementation and empirical results remain
+active.
 ```

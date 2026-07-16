@@ -24,6 +24,7 @@ def _repository(tmp_path: Path) -> CampaignRepository:
         CampaignManifest(
             campaign_id="harness-test",
             challenge_id="challenge",
+            challenge_commitment="0" * 64,
             profile_name="tutorial",
             semantic_version="0.1.0",
             public_profile_sha256="2" * 64,

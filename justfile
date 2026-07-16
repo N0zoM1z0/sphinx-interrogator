@@ -56,8 +56,16 @@ boundary-audit:
     SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/boundary_audit.py
 
 demo-tutorial:
-    @echo "TODO(M5): generate, recover, judge, and report a tutorial challenge"
-    @exit 1
+    cargo build --locked --bin sphinx-vm
+    SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/demo_tutorial.py
+
+test-tutorial-matrix:
+    cargo build --locked --bin sphinx-vm
+    SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/tutorial_matrix.py --output runs/tutorial-evaluation-v2 --fault reference
+
+test-tutorial-fault-free:
+    cargo build --locked --bin sphinx-vm
+    SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/tutorial_matrix.py --output runs/tutorial-fault-free-v2 --fault off
 
 benchmark-standard:
     @echo "TODO(M7/M9): execute and report the reproducible standard benchmark matrix"

@@ -8,6 +8,7 @@
     "manifest_version",
     "campaign_id",
     "challenge_id",
+    "challenge_commitment",
     "profile_name",
     "semantic_version",
     "public_profile_sha256",
@@ -16,9 +17,10 @@
     "budgets"
   ],
   "properties": {
-    "manifest_version": {"const": "1.0"},
+    "manifest_version": {"const": "1.1"},
     "campaign_id": {"type": "string", "minLength": 1},
     "challenge_id": {"type": "string", "minLength": 1},
+    "challenge_commitment": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
     "profile_name": {"type": "string", "minLength": 1},
     "semantic_version": {"type": "string", "minLength": 1},
     "public_profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},

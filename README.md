@@ -75,6 +75,7 @@ The numerical budgets in `docs/EVALUATION.md` are project acceptance targets, no
 8. Use [`docs/GITHUB_SETUP.md`](docs/GITHUB_SETUP.md) for repository metadata, labels, milestones, and first issues.
 9. See [`VALIDATION.md`](VALIDATION.md) for the current verification record and explicit limitations.
 10. Read [`docs/CAMPAIGN_PERSISTENCE.md`](docs/CAMPAIGN_PERSISTENCE.md) for write-ahead, replay, SQLite, and solver-state contracts.
+11. Read [`docs/TUTORIAL_RECOVERY.md`](docs/TUTORIAL_RECOVERY.md) for the exact black-box recovery proof and measured M5 matrix.
 
 ## Build and verification commands
 
@@ -85,14 +86,17 @@ just lint               # clippy + ruff + static checks
 just test               # all unit/property/integration tests
 just verify-formal      # TLC and SMT contract checks when available
 just demo-tutorial      # recover a seeded 16-bit challenge
+just test-tutorial-matrix      # run 100 published reference-fault tutorial seeds
+just test-tutorial-fault-free  # run the paired 100-seed negative control
 just benchmark-standard # reproducible standard-profile campaign suite
 ```
 
-`just demo-tutorial` and `just benchmark-standard` remain later-milestone acceptance
-commands. The language, architecture, microcode/fault model, isolated challenges,
+`just demo-tutorial` is the accepted M5 generated challenge/recovery/judge/report flow;
+`just benchmark-standard` remains a later-milestone acceptance command. The language,
+architecture, microcode/fault model, isolated challenges,
 public process server, one-shot judge, certified hard-reset relations, write-ahead
-campaign persistence, and the exact solver layer are implemented; recovery, synthesis,
-learning, and evaluation are the remaining research layers. Exact status and executed evidence are maintained in
+campaign persistence, exact solver, and tutorial recovery are implemented; synthesis,
+standard/noise handling, learning, and release evaluation are the remaining research layers. Exact status and executed evidence are maintained in
 [`agent/STATUS.md`](agent/STATUS.md) and [`VALIDATION.md`](VALIDATION.md).
 
 ## Local target lifecycle

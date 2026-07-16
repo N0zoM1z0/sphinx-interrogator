@@ -19,6 +19,7 @@ def test_inspect_and_replay_commands_report_public_materialized_state(tmp_path: 
         CampaignManifest(
             campaign_id="cli-campaign",
             challenge_id="public-challenge",
+            challenge_commitment="0" * 64,
             profile_name="tutorial",
             semantic_version="0.1.0",
             public_profile_sha256="5" * 64,

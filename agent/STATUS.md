@@ -5,21 +5,21 @@ This file is a concise, living project checkpoint. The active ExecPlan contains 
 ## Overall state
 
 - **Specification/design package:** complete.
-- **Executable system:** M0–M4 are implemented through durable black-box execution, certified constraints, replayable campaign state, and exact Z3 hypotheses; recovery and later research layers remain incomplete.
-- **Implementation:** active; M3 is committed as `40d63d7`, and the verified M4 checkpoint is ready to commit.
+- **Executable system:** M0–M5 are implemented through deterministic black-box tutorial recovery, one-shot judging, replay, and the blind fault-free negative control; M6–M9 research layers remain incomplete.
+- **Implementation:** active; M4 is committed as `2a9af4a`, and the verified M5 checkpoint is ready to commit.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
 - **Last updated:** 2026-07-16.
 
 ## Current milestone
 
-Milestone 4 checkpoint — public response lines are write-ahead persisted before decode,
-derived events form an idempotent hash chain, and a versioned SQLite view rebuilds from
-that log. The durable graph covers queries, balanced batches, executions, certificates,
-relations, decisions, constraints, snapshots, state models, witnesses, and TTL frontier
-candidates. Project IR translates to Z3 with named cores, exact enumeration,
-alternative-model uniqueness, implication, quarantine/retraction, diverse models, and
-capped grouped MaxSMT. Formal closure remains deferred because `just demo-tutorial` is
-the real M5 recovery flow and still exits 1.
+Milestone 5 complete — the public-only tutorial campaign uses 16 certified relation
+families and 32 physical executions to recover the 16-bit secret projection. Exact
+status requires an alternative-secret exclusion query to return `unsat`; the one-shot
+Rust judge is invoked only after that proof. The published reference matrix recovered
+and judged 100/100 deterministic seeds, while 100/100 otherwise-identical off-fault
+controls remained inconclusive and never invoked the judge. Accepted runs resume from
+their manifest, hash-chained events, SQLite view, and schema-valid report without a
+second submission. Milestone 6 grammar-guided CEGIS is now next.
 
 ## Verification dashboard
 
@@ -27,24 +27,26 @@ the real M5 recovery flow and still exits 1.
 |---|---|---|
 | `just fmt` | pass | Rustfmt and Ruff; 2026-07-16 |
 | `just lint` | pass | Clippy `-D warnings`, Ruff, strict mypy; 2026-07-16 |
-| `just test` | pass | 44 Rust + 125 Python, including 8 live process tests; 2026-07-16 |
-| `just schema-check` | pass | Relation/constraint/expression-IR schemas, public protocol/challenge/judge fixtures, and profiles |
+| `just test` | pass | 44 Rust + 128 Python, including 10 live process tests; 2026-07-16 |
+| `just schema-check` | pass | All public fixtures, including campaign manifest 1.1 and recovery report 1.0 |
 | `just verify-formal` | pass | Z3 `unsat` x3; TLC 70,557 generated/2,276 distinct states; 131,072-cell exhaustive check; mutation rejected |
-| `just demo-tutorial` | fail as specified TODO | exit 1: generate/recover/judge/report belongs to M5 |
-| `just boundary-audit` | pass | M4 System B modules plus typed public process responses; binary SHA-256 starts `628cf0df` |
+| `just demo-tutorial` | pass | `unique_exact`, secret `e905`, judge accepted, 16 logical/32 physical executions; verified idempotent rerun |
+| `just boundary-audit` | pass | System B public-boundary audit; binary SHA-256 `628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b` |
+| tutorial reference matrix | pass | 100/100 exact and accepted; median/max 16 logical families |
+| tutorial off-fault matrix | pass | 100/100 inconclusive, zero exact declarations, zero judge submissions |
 | standard benchmark | intentionally not implemented | — |
 
 ## Active blockers
 
 None. Sphinx builds remain isolated to this repository and limited to two jobs. No
-other Cargo process was active during the M4 command suite.
+other Cargo process was active during the M5 command suite.
 
 ## Next concrete actions
 
-1. Preserve the M4 implementation and evidence in a detailed English Git commit without pushing.
-2. Replace the M5 tutorial TODO with a generated-challenge, persisted relation campaign, exact uniqueness proof, one-shot judge, and report.
-3. Run every required tutorial seed and the fault-free negative-control matrix without selector access to private state.
-4. Update CLI/docs/schemas and close the deferred M1–M4 tutorial gate only after the real flow passes.
+1. Preserve the M5 implementation and evidence in a detailed English Git commit without pushing.
+2. Implement M6 typed grammar skeletons, SMT hole filling, model-pair separation, deterministic committee scoring, and CEGIS refinement.
+3. Prove M6 on tiny optimum/no-discriminator cases and through a live integration campaign without changing architecture or accepting fault-free false discriminators.
+4. Continue into M7 robust noise calibration and the standard benchmark after the synthesis checkpoint passes all repository gates.
 
 ## Decision summary
 
@@ -65,6 +67,9 @@ other Cargo process was active during the M4 command suite.
 - Raw public wire bytes precede every analysis event; stable execution IDs make crash resume idempotent.
 - `events.jsonl` is authoritative and hash-chained; SQLite is a versioned disposable materialized view.
 - Exact recovery requires an explicit alternative-model `unsat`; `unknown` never means unique, implied, or novel.
+- Tutorial uniqueness is over the 16-bit secret projection, not the still-ambiguous latent fault member; three full models can share the one exact secret.
+- Campaign manifest 1.1 binds the public challenge commitment, and SQLite migration 2 materializes the sole judge submission.
+- The fixed tutorial schedule is intentionally deterministic: 16 logical relation families and 32 physical executions for every seed and both fault assignments.
 - The repository remains synthetic-only; no real-target adapters.
 
 ## How to update
