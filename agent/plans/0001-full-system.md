@@ -52,8 +52,11 @@ real M5 flow and is not yet available, so M1 is not declared closed.
 The M2 checkpoint now supplies the production challenge/judge, explicit microcode,
 fault-free and faulty timing composition, typed hidden state/reset semantics, seeded
 noise, independent Python target-family model, concrete differential vectors, and
-executable TLC/SMT/exhaustive checks. Persistence, certified M3 relations/extractors,
-and M4–M9 campaign layers remain outstanding.
+executable TLC/SMT/exhaustive checks. The verified M3 checkpoint adds all nine stateless
+hard-reset templates, artifact-bound certificates, conservative interval decisions,
+latent-fault finite extractors, and the typed serializable constraint expression IR.
+Persistence, Z3 translation/hypothesis management, and M4–M9 campaign layers remain
+outstanding.
 
 ## Progress
 
@@ -62,7 +65,7 @@ and M4–M9 campaign layers remain outstanding.
 - [x] (2026-07-15 16:17Z) Complete M0 locks, fail-closed checks, bounded/correlated JSONL protocol, live process/schema tests, and initial boundary audit; evidence is recorded in `VALIDATION.md`.
 - [ ] (2026-07-15 16:58Z) M1 implementation and milestone-specific acceptance pass: full DSL/AST/validator/interpreter, canonical text/JSON/hash fixtures, sparse memory, malformed-input checks, and generated noninterference tests. Closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
 - [ ] (2026-07-15 17:29Z) M2 implementation and milestone-specific acceptance pass: microcode/state/fault/noise separation, strict public/private profiles, committed challenge packages, one-shot judge, live fault confinement/replay, exhaustive Rust/Python vectors, TLC, and mutation detection. Formal closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
-- [ ] (date) Complete M3 relation templates, certificates, normalizers, and sound exact/bounded extractors.
+- [ ] (2026-07-16 01:33Z) M3 implementation and milestone-specific acceptance pass: nine typed stateless templates, strict cached certificates, exact/bounded interval decisions, latent-fault extractors, recursive expression IR, schemas, and reduced/live soundness evidence. Closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
 - [ ] (date) Complete M4 harness, append-only/SQLite knowledge base, constraint IR, and exact hypothesis store.
 - [ ] (date) Complete M5 tutorial recovery and fault-free negative control.
 - [ ] (date) Complete M6 grammar-guided CEGIS query synthesis and integrate it into selection.
@@ -99,6 +102,12 @@ and M4–M9 campaign layers remain outstanding.
 - Observation: A formal check that only produces positive results can silently become vacuous.
   Evidence: the M2 checker now exhausts 131,072 guarded-replay combinations and self-tests an intentional `replay_credit == 2` suppression mutation; the direct mutated run exits 1 at `phase=0,replay=2,lane=0,token=0,epoch=0,secret_bank=0,anchor_bank=0`.
 
+- Observation: Treating the documented fault family as public does not reveal which family member a generated challenge selected.
+  Evidence: exact equal anchor observations under the `off` member are consistent with all 16 lane secrets; the M3 extractor keeps fault identity in every finite assignment, and its off-control test retains the true off model and all secret projections.
+
+- Observation: Equal quantized buckets are compatible with negative, zero, and positive cycle deltas even under a small bounded-noise profile.
+  Evidence: the width-four regression produces a normalized interval containing `{-1,0,1}`, returns `inconclusive`, and emits no hard constraint; repeat amplification with certified replay drain moves a signal wholly above zero and emits a sound bounded disjunction for all nine noise pairs.
+
 Add dated observations here. Include failed assumptions, benchmark results, solver behavior, tool limitations, and concise command/artifact evidence.
 
 ## Decision Log
@@ -120,6 +129,12 @@ Add dated observations here. Include failed assumptions, benchmark results, solv
   Alternatives considered: Bayesian inference for every profile.
   Date/author: 2026-07-15, design package.
   Consequences: Statistics is not needed for tutorial mode; final result statuses must distinguish exact and soft.
+
+- Decision: Represent M3 hard evidence as finite disjunctions over secret projections and the shared latent fault variant, while also defining a generic solver-independent typed expression IR for M4.
+  Rationale: Finite enumeration makes reduced extractor soundness directly testable and handles quantization/noise without false elimination; the generic IR prevents Z3 objects from becoming the persistence contract.
+  Alternatives considered: Assume the reference fault from profile names; store Z3 ASTs; convert bucket equality directly into cycle equality.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: M4 can translate either finite evidence or composed expressions to Z3, and exact recovery must identify a secret despite fault-family ambiguity.
 
 - Decision: Start query synthesis with typed relation skeleton enumeration plus SMT-filled holes and CEGIS model counterexamples.
   Rationale: It is easier to verify and debug than synthesizing arbitrary instruction streams, while still exercising syntax-guided synthesis.
@@ -491,13 +506,14 @@ Populate during implementation:
 - M0 baseline and validation record: `VALIDATION.md`, 2026-07-15; locked toolchains, quality checks, live protocol tests, and initial boundary audit pass.
 - M1 language/architecture evidence: `VALIDATION.md`, `tests/fixtures/programs/`, and `docs/DSL_AND_ARCHITECTURE.md`, 2026-07-15; all milestone-specific tests and repository checks pass, while the required M5 tutorial gate remains explicitly pending.
 - M2 target/challenge evidence: `VALIDATION.md`, `tests/fixtures/model/`, `tests/fixtures/challenge/`, and `docs/SYSTEM_A_SPHINX_VM.md`, 2026-07-15; 44 Rust and 68 Python tests cover the semantic split, live fault confinement, deterministic replay, permissions, and judge policy.
+- M3 relation/extractor evidence: `VALIDATION.md`, `tests/python/test_certified_relations.py`, `tests/python/test_constraint_ir.py`, `tests/fixtures/relations/`, and `docs/RELATION_ORACLES.md`, 2026-07-16; 99 Python tests include every stateless relation, all bounded noise/fault generators, strict certificate/IR persistence, and live Rust relation arms.
 - Tutorial acceptance report: pending.
 - Standard full-system report: pending.
 - Baseline/ablation report: pending.
 - Fault-free control report: pending.
 - One-shot leakage audit: pending.
 - Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; statistical M7/M9 calibration remains pending.
-- Formal/TLA+/SMT report: M2 scheduler/exhaustive/SMT evidence in `VALIDATION.md`; full relation/session obligations remain pending M3/M9.
+- Formal/TLA+/SMT report: M2 scheduler and M3 reduced relation/expression differential evidence in `VALIDATION.md`; durable-session and final mutation obligations remain M4/M9.
 - Boundary-audit report: M2 artifact permission/public-key/live-response evidence in `VALIDATION.md`; final release rerun remains pending M9.
 - Minimized witness collection: pending.
 - Release manifest/revision: pending.

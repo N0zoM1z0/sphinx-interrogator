@@ -39,8 +39,14 @@ def validate_fixtures() -> list[str]:
             (ROOT / "tests/fixtures/protocol").glob("*.json")
         ),
         ROOT / "spec/relation.schema.json": sorted(
-            (ROOT / "tests/fixtures/relations").glob("*.json")
+            (ROOT / "tests/fixtures/relations").glob("anchor*.json")
         ),
+        ROOT / "spec/constraint.schema.json": [
+            ROOT / "tests/fixtures/relations/finite-model-constraint.json"
+        ],
+        ROOT / "spec/constraint-ir.schema.json": [
+            ROOT / "tests/fixtures/relations/constraint-program.json"
+        ],
         ROOT / "spec/challenge.schema.json": [
             ROOT / "tests/fixtures/challenge/public-challenge.json"
         ],

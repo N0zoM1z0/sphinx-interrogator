@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-15 17:29Z**
+Last updated: **2026-07-16 01:33Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -196,3 +196,69 @@ challenge/server/judge smoke coverage.
   tutorial recovery/fault-free-control flows before M1/M2 formal closure.
 - CEGIS, stochastic calibration/MaxSMT, active learning/retraction, reduction,
   benchmark acceptance, and the final release audit remain M6–M9.
+
+## M3 certified relation and extractor checkpoint
+
+M3 replaces the tutorial-only anchor scaffold with immutable typed relation instances
+for `anchor-switch`, `token-switch`, `epoch-switch`, `phase-shift`,
+`repeat-amplify`, `independent-swap`, `context-lift`, `register-rename`, and
+`hard-replay`. Every template has structured applicability rejection, canonical program
+and instance hashes, architectural/fault-free claims, normalization/decision methods,
+extractor policy, and reducer rules. Register renaming and hard replay are apparatus
+controls and cannot emit hard secret constraints. Stateful `soft-history-contrast`
+remains disabled until M8 can certify its history abstraction.
+
+Certificate persistence is strict and artifact-bound: the digest covers semantic
+version, profile scope, relation hash, proof method, both claims, preconditions, and
+limitations. Load-time digest recomputation rejects altered semantics/claims and
+unknown fields. The current secret-bearing template scope is identity lane mapping,
+unique hard reset, and tutorial/standard bounded observation profiles.
+
+Normalization converts public quantized buckets into closed pre-noise integer
+intervals after subtracting each program's public static cost. A hard extractor is
+eligible only when the complete difference interval has one order. It exhaustively
+retains every `(secret projection, fault variant)` whose independently modeled source
+and follow-up can reproduce both buckets for some declared bounded-noise values. Thus
+the private `off/reference/weak/signed` choice remains latent and fault-free controls do
+not produce false secret singletons.
+
+The solver-independent constraint expression IR has explicit Boolean, integer, named
+finite-domain, and fixed-width bit-vector sorts; typed Boolean/arithmetic/ITE/extract
+and signed/unsigned comparison operations; named assumption provenance; strict
+recursive decoding; canonical JSON; and a Draft 2020-12 recursive schema. Exhaustive
+tests compare its S-box/bank expression over all 512 cell inputs and its fault/replay
+expressions over their complete reduced domains.
+
+The final M3 suite used the repository-local Cargo home/target, two build jobs, and no
+concurrent Cargo/rustc process:
+
+```text
+just fmt             pass (35 Python/script files already formatted; Rustfmt clean)
+just lint            pass (Clippy -D warnings, Ruff, strict mypy over 18 modules)
+just test            pass (42 Rust lib + 2 Rust binary; 99 Python; 7 live process tests)
+just schema-check    pass (including relation, finite-constraint, and expression-IR fixtures)
+just docs-check      pass
+just verify-formal   pass (Z3 unsat x3; TLC 70,557 generated/2,276 distinct;
+                          131,072 guarded-replay cells; mutation rejected)
+just boundary-audit  pass; binary sha256=628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b
+```
+
+Python M3 tests cover positive/negative preconditions for all nine templates, reduced
+architectural and off-fault normalization, exact extractors for all seven
+secret-bearing templates, every `[-1,1]` noise pair and all four fault variants,
+quantized equal-bucket inconclusiveness, certificate policy/tamper rejection, schema
+round trips, and a live authoritative Rust-process execution of all relation arms.
+
+`just demo-tutorial` was run and still exits 1 at the checked-in M5
+generate/recover/judge/report TODO. M3 is therefore a verified implementation
+checkpoint, not a false claim that the cross-milestone semantic gate has closed.
+
+## Remaining limitations after M3
+
+- M4 must persist raw/derived evidence, materialize SQLite views, translate the IR to
+  Z3, prove exact uniqueness by excluding alternatives, and implement resume/replay,
+  implication, unsat-core quarantine, and provenance-rich snapshots.
+- M5 must replace the tutorial TODO with generated challenge recovery, one-shot judge
+  acceptance, and the fault-free negative control.
+- CEGIS, stochastic/MaxSMT calibration, stateful learning/retraction, relation-aware
+  reduction, benchmarks, and final release evidence remain M6–M9.

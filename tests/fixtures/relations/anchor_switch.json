@@ -2,9 +2,14 @@
   "schema_version": "1.0",
   "relation_id": "anchor-switch/v1",
   "instance_id": "rel-1",
+  "instance_hash": "1111111111111111111111111111111111111111111111111111111111111111",
   "source_query_id": "q-a",
   "follow_up_query_ids": [
     "q-b"
+  ],
+  "source_program_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+  "follow_up_program_sha256": [
+    "3333333333333333333333333333333333333333333333333333333333333333"
   ],
   "holes": {
     "lane": 0,
@@ -13,13 +18,21 @@
     "bank_a": 0,
     "bank_b": 2
   },
-  "expected_observation_relation": "equal",
+  "expected_observation_relation": "equal_after_static_normalization",
+  "reset_policy": "hard",
+  "involved_lanes": [0],
+  "emits_secret_constraints": true,
+  "reducer_rules": ["shrink-pad-mod-4"],
   "certificate": {
+    "certificate_schema_version": "1.0",
     "certificate_id": "cert-example",
     "semantic_version": "0.1.0",
-    "proof_method": "smt-bounded-complete",
+    "profile_scope": ["tutorial@0.1.0"],
+    "relation_instance_hash": "1111111111111111111111111111111111111111111111111111111111111111",
+    "proof_method": "exhaustive-enumeration",
     "architectural_claim": "final public architecture is equal",
     "fault_free_claim": "normalized cycle cost is equal",
+    "preconditions": ["hard reset"],
     "artifact_digest": "0000000000000000000000000000000000000000000000000000000000000000",
     "limitations": [
       "example fixture only"

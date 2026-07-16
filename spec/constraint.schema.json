@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/constraint.schema.json",
+  "title": "Sphinx Interrogator finite hard constraint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "constraint_version",
+    "constraint_id",
+    "kind",
+    "lanes",
+    "allowed_models",
+    "approximation",
+    "relation_instance_id",
+    "certificate_id",
+    "decision_kind",
+    "source_request_ids",
+    "assumptions"
+  ],
+  "properties": {
+    "constraint_version": {
+      "const": "1.0"
+    },
+    "constraint_id": {
+      "type": "string",
+      "pattern": "^constraint:[0-9a-f]{24}$"
+    },
+    "kind": {
+      "const": "finite_model_relation"
+    },
+    "lanes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "allowed_models": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["secret_values", "fault_variant"],
+        "properties": {
+          "secret_values": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 15
+            }
+          },
+          "fault_variant": {
+            "enum": ["off", "reference", "weak", "signed"]
+          }
+        }
+      }
+    },
+    "approximation": {
+      "enum": ["exact", "bounded"]
+    },
+    "relation_instance_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "certificate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision_kind": {
+      "enum": [
+        "exact_less",
+        "exact_equal",
+        "exact_greater",
+        "bounded_less",
+        "bounded_greater"
+      ]
+    },
+    "source_request_ids": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

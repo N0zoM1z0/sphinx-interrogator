@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/constraint-ir.schema.json",
+  "title": "Solver-independent Sphinx constraint expression program",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ir_version", "declarations", "assumptions", "assertion"],
+  "properties": {
+    "ir_version": {"const": "1.0"},
+    "declarations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/expression"}
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/namedAssumption"}
+    },
+    "assertion": {"$ref": "#/$defs/expression"}
+  },
+  "$defs": {
+    "sort": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {"kind": {"enum": ["bool", "int"]}}
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "width"],
+          "properties": {
+            "kind": {"const": "bitvector"},
+            "width": {"type": "integer", "minimum": 1, "maximum": 256}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "name", "values"],
+          "properties": {
+            "kind": {"const": "finite"},
+            "name": {"type": "string", "minLength": 1},
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string"}
+            }
+          }
+        }
+      ]
+    },
+    "expression": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "sort"],
+      "properties": {
+        "op": {
+          "enum": [
+            "literal", "variable", "not", "and", "or", "eq", "distinct", "ite",
+            "int_add", "int_sub", "int_lt", "int_le", "int_gt", "int_ge",
+            "bv_xor", "bv_and", "bv_or", "bv_add", "bv_sub", "bv_extract",
+            "bv_ult", "bv_ule", "bv_ugt", "bv_uge",
+            "bv_slt", "bv_sle", "bv_sgt", "bv_sge"
+          ]
+        },
+        "sort": {"$ref": "#/$defs/sort"},
+        "args": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/expression"}
+        },
+        "value": {"type": ["boolean", "integer", "string"]},
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "parameters": {
+          "type": "array",
+          "items": {"type": "integer"}
+        }
+      }
+    },
+    "namedAssumption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "expression", "group", "provenance"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "expression": {"$ref": "#/$defs/expression"},
+        "group": {"type": "string", "minLength": 1},
+        "provenance": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

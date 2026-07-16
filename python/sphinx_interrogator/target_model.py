@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+
+from sphinx_interrogator.ast import Op, Program
 
 SBOX4: tuple[int, ...] = (6, 11, 0, 4, 13, 3, 15, 8, 10, 2, 5, 12, 1, 14, 7, 9)
 
@@ -54,6 +57,15 @@ class FaultContext:
     guard: bool
     suppress: bool
     replay_credit: int
+
+
+@dataclass(frozen=True, slots=True)
+class ModelExecution:
+    """Exact straight-line hidden execution used by certified finite extractors."""
+
+    fault_cycles: int
+    static_cycles: int
+    final_state: MicroState
 
 
 def bank_of(secret: int, token: int, epoch: int, *, salt: int = 0) -> int:
@@ -184,6 +196,86 @@ def fault_delta(variant: FaultVariant, context: FaultContext | None) -> int:
     if not context.collision and context.guard and context.replay_credit == 2:
         return -1
     return 0
+
+
+def execute_experiment_program(
+    program: Program,
+    secret_by_lane: Mapping[int, int],
+    *,
+    initial_state: MicroState | None = None,
+    variant: FaultVariant = FaultVariant.REFERENCE,
+    salt_by_lane: Mapping[int, int] | None = None,
+) -> ModelExecution:
+    """Execute the public straight-line scheduler model without target-private code."""
+    state = MicroState() if initial_state is None else initial_state
+    total_fault = 0
+    total_static = 0
+    salts = {} if salt_by_lane is None else salt_by_lane
+    for instruction in program.instructions:
+        total_static += instruction.static_cycles()
+        if instruction.op is Op.PROBE:
+            lane, token, epoch = instruction.operands
+            try:
+                secret = secret_by_lane[lane]
+            except KeyError as error:
+                raise ValueError(f"missing symbolic secret for lane {lane}") from error
+            state = probe_transition(
+                state,
+                lane=lane,
+                token=token,
+                epoch=epoch,
+                secret_bank=bank_of(secret, token, epoch, salt=salts.get(lane, 0)),
+            )
+        elif instruction.op is Op.ANCHOR:
+            bank, epoch = instruction.operands
+            state, delta, _context = anchor_transition(
+                state,
+                bank=bank,
+                epoch=epoch,
+                variant=variant,
+            )
+            total_fault += delta
+        elif instruction.op is Op.PAD:
+            state = pad_transition(state, instruction.operands[0])
+        elif instruction.op is Op.FENCE:
+            state = fence_transition(state)
+        elif instruction.op in {Op.JMP, Op.JZ, Op.JNZ, Op.CALL, Op.RET, Op.LOOP}:
+            raise ValueError("finite relation model accepts straight-line programs only")
+        else:
+            state = _ordinary_cache_transition(state, instruction.op)
+        if instruction.op is Op.HALT:
+            break
+    return ModelExecution(
+        fault_cycles=total_fault,
+        static_cycles=total_static,
+        final_state=state,
+    )
+
+
+def _ordinary_cache_transition(state: MicroState, op: Op) -> MicroState:
+    cache_tags = {
+        Op.MOVI: 0x0,
+        Op.MOV: 0x1,
+        Op.CMP: 0x2,
+        Op.ADD: 0x3,
+        Op.XOR: 0x3,
+        Op.AND: 0x3,
+        Op.OR: 0x3,
+        Op.SHL: 0x3,
+        Op.SHR: 0x3,
+        Op.LOAD: 0x8,
+        Op.STORE: 0x8,
+        Op.MIXOUT: 0x7,
+        Op.HALT: 0xB,
+    }
+    return MicroState(
+        phase=state.phase,
+        last_bank=state.last_bank,
+        replay_credit=state.replay_credit,
+        uop_cache_tag=cache_tags.get(op, 0xA),
+        uop_cache_valid=True,
+        pending_probe=state.pending_probe,
+    )
 
 
 def _bounded(value: int, minimum: int, maximum: int | None, role: str) -> None:

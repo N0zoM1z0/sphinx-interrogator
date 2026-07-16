@@ -8,8 +8,17 @@
     "schema_version",
     "relation_id",
     "instance_id",
+    "instance_hash",
     "source_query_id",
     "follow_up_query_ids",
+    "source_program_sha256",
+    "follow_up_program_sha256",
+    "holes",
+    "expected_observation_relation",
+    "reset_policy",
+    "involved_lanes",
+    "emits_secret_constraints",
+    "reducer_rules",
     "certificate"
   ],
   "properties": {
@@ -24,6 +33,10 @@
       "type": "string",
       "minLength": 1
     },
+    "instance_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "source_query_id": {
       "type": "string",
       "minLength": 1
@@ -36,34 +49,91 @@
         "minLength": 1
       }
     },
+    "source_program_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "follow_up_program_sha256": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
     "holes": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": {
+        "type": ["integer", "string"]
+      }
     },
     "expected_observation_relation": {
       "enum": [
         "equal",
+        "equal_after_static_normalization",
         "less_equal",
         "greater_equal",
         "custom"
       ]
+    },
+    "reset_policy": {
+      "enum": ["hard", "soft", "none"]
+    },
+    "involved_lanes": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "emits_secret_constraints": {
+      "type": "boolean"
+    },
+    "reducer_rules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "certificate": {
       "type": "object",
       "additionalProperties": false,
       "required": [
         "certificate_id",
+        "certificate_schema_version",
         "semantic_version",
+        "profile_scope",
+        "relation_instance_hash",
         "proof_method",
         "architectural_claim",
         "fault_free_claim",
+        "preconditions",
         "artifact_digest"
       ],
       "properties": {
         "certificate_id": {
           "type": "string"
         },
+        "certificate_schema_version": {
+          "const": "1.0"
+        },
         "semantic_version": {
           "type": "string"
+        },
+        "profile_scope": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "relation_instance_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
         },
         "proof_method": {
           "enum": [
@@ -79,6 +149,13 @@
         },
         "fault_free_claim": {
           "type": "string"
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "artifact_digest": {
           "type": "string",

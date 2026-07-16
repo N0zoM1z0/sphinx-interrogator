@@ -1,0 +1,25 @@
+{
+  "constraint_version": "1.0",
+  "constraint_id": "constraint:111111111111111111111111",
+  "kind": "finite_model_relation",
+  "lanes": [0],
+  "allowed_models": [
+    {
+      "secret_values": [3],
+      "fault_variant": "reference"
+    },
+    {
+      "secret_values": [3],
+      "fault_variant": "signed"
+    }
+  ],
+  "approximation": "exact",
+  "relation_instance_id": "relation-1",
+  "certificate_id": "cert:111111111111111111111111",
+  "decision_kind": "exact_greater",
+  "source_request_ids": ["request-a", "request-b"],
+  "assumptions": [
+    "identity_lane_mapping",
+    "unique_hard_reset_state"
+  ]
+}

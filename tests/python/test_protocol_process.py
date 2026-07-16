@@ -14,6 +14,18 @@ import pytest
 
 from sphinx_interrogator.ast import Program
 from sphinx_interrogator.protocol import VmClient
+from sphinx_interrogator.relations import (
+    AnchorSwitchTemplate,
+    Cell,
+    ContextLiftTemplate,
+    EpochSwitchTemplate,
+    HardReplayTemplate,
+    IndependentSwapTemplate,
+    PhaseShiftTemplate,
+    RegisterRenameTemplate,
+    RepeatAmplifyTemplate,
+    TokenSwitchTemplate,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = ROOT / "benchmarks/profiles/tutorial.toml"
@@ -329,3 +341,104 @@ def test_seeded_standard_transcript_replays_across_fresh_processes(tmp_path: Pat
         return observations
 
     assert transcript() == transcript()
+
+
+@pytest.mark.integration
+def test_certified_relation_arms_match_authoritative_rust_semantics(challenge: Path) -> None:
+    """Every M3 family preserves its claimed public architecture and static metric in Rust."""
+    anchor = AnchorSwitchTemplate().instantiate(
+        instance_id="live-anchor",
+        lane=0,
+        token=0,
+        epoch=0,
+        bank_a=0,
+        bank_b=2,
+        pad=0,
+    )
+    relations = [
+        anchor,
+        TokenSwitchTemplate().instantiate(
+            instance_id="live-token",
+            lane=0,
+            token_a=0,
+            token_b=1,
+            epoch=0,
+            anchor=2,
+            pad=0,
+        ),
+        EpochSwitchTemplate().instantiate(
+            instance_id="live-epoch",
+            lane=0,
+            token=0,
+            epoch_a=0,
+            epoch_b=1,
+            anchor=2,
+            pad_a=0,
+            pad_b=1,
+        ),
+        PhaseShiftTemplate().instantiate(
+            instance_id="live-phase",
+            lane=0,
+            token=0,
+            epoch=0,
+            anchor=2,
+            pad_a=0,
+            pad_b=1,
+        ),
+        RepeatAmplifyTemplate().instantiate(
+            instance_id="live-repeat",
+            lane=0,
+            token=0,
+            epoch=0,
+            anchor=2,
+            pad=0,
+            repeats=3,
+        ),
+        IndependentSwapTemplate().instantiate(
+            instance_id="live-swap",
+            first=Cell(0, 0, 0, 2),
+            second=Cell(1, 1, 1, 3, 2),
+        ),
+        ContextLiftTemplate().instantiate(
+            instance_id="live-context",
+            base=anchor,
+            prefix_pad=3,
+        ),
+    ]
+    register_program = Program.parse(
+        "MOVI r0, 7\nMOV r1, r0\nADD r2, r0, r1\nMIXOUT r2\nHALT\n",
+        lanes=4,
+    )
+    relations.append(
+        RegisterRenameTemplate().instantiate(
+            instance_id="live-register",
+            source=register_program,
+            permutation=(1, 2, 0, 3, 4, 5, 6, 7),
+        )
+    )
+    relations.append(
+        HardReplayTemplate().instantiate(
+            instance_id="live-replay",
+            program=anchor.source_program,
+            repetitions=3,
+            deterministic_observation=True,
+        )
+    )
+
+    with VmClient.start(vm_binary(), challenge=challenge, timeout_seconds=2.0) as client:
+        client.hello()
+        for relation_index, relation in enumerate(relations):
+            results = []
+            for arm_index, program in enumerate(relation.programs):
+                result = client.execute(
+                    program.render(),
+                    session_id=f"relation-{relation_index}-{arm_index}",
+                    logical_batch_id=f"relation-{relation_index}",
+                    reset="hard",
+                )
+                assert result.static_cycles == program.static_cycles()
+                assert result.status == "halted"
+                results.append(result)
+            assert {result.public_digest for result in results} == {results[0].public_digest}
+            if relation.relation_id == "hard-replay/v1":
+                assert len({result.observation.cycle_bucket for result in results}) == 1

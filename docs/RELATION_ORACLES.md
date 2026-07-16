@@ -9,26 +9,33 @@ A relation oracle decides whether a family of executions satisfies a relation th
 
 The first responsibility is testing. The second turns testing into inference.
 
+The M3 implementation lives in `python/sphinx_interrogator/relations.py`, with
+certificate, normalization, finite extraction, and solver-independent expression IR
+types split into adjacent modules. The nine hard-reset templates in Section 4.1–4.9
+are enabled. `soft-history-contrast/v1` remains intentionally disabled until the M8
+state learner can supply a checked history/state certificate.
+
 ## 2. Relation-template interface
 
 A template implementation should expose the following logical interface:
 
 ```python
 class RelationTemplate(Protocol):
-    id: RelationId
-    version: SemVer
+    relation_id: str
 
-    def applicable(self, source: Query, profile: PublicProfile) -> Applicability: ...
-    def instantiate(self, source: Query, holes: HoleAssignment) -> RelationInstance: ...
-    def prove_arch(self, instance: RelationInstance) -> Certificate: ...
-    def prove_fault_free(self, instance: RelationInstance) -> Certificate: ...
-    def normalize(self, execution: ExecutionRecord) -> NormalizedObservation: ...
-    def decide(self, batch: RelationBatch) -> OracleDecision: ...
-    def extract(self, instance: RelationInstance, decision: OracleDecision) -> ConstraintArtifact: ...
-    def reduction_rules(self) -> tuple[ReductionRule, ...]: ...
+    def normalize(self, result: ExecutionResult, *, noise_bound: int) -> NormalizedObservation: ...
+    def decide(self, relation: RelationInstance, source: ExecutionResult,
+               follow_up: ExecutionResult, *, noise_bound: int) -> PairDecision: ...
+    def extract(self, relation: RelationInstance, source: ExecutionResult,
+                follow_up: ExecutionResult, decision: PairDecision,
+                *, noise_bound: int) -> ConstraintExtraction: ...
+    def reduction_rules(self, relation: RelationInstance) -> tuple[str, ...]: ...
 ```
 
-`applicable` returns either a proof-producing precondition result or a structured rejection. A relation cannot be executed for inference merely because its constructor can generate syntax.
+Each concrete template additionally exposes typed `applicable(...)` and
+`instantiate(...)` methods for its own finite holes. `applicable` returns either
+certified preconditions or structured rejection reasons. A relation cannot be
+executed for inference merely because its constructor can generate syntax.
 
 ## 3. Oracle taxonomy
 
@@ -204,6 +211,14 @@ Recommended proof-strength lattice:
 
 A campaign policy declares the minimum proof strength. Tutorial mode may accept bounded-complete certificates. Release benchmarks should not rely on empirical-only relations.
 
+Certificates are canonical JSON data, not live solver objects. Their artifact digest
+binds the semantic version, profile scope, relation-instance hash, proof method,
+claims, preconditions, and limitations. Strict loading recomputes that digest and
+rejects unknown fields or changed semantics. The registry caches identical artifacts;
+the current stateless template certificates are backed by reduced exhaustive
+enumeration, while register renaming is explicitly labeled differential-property and
+cannot pass the default hard-evidence policy.
+
 ## 6. Composition
 
 For relation instances \(P\sim_\rho Q\) and \(Q\sim_\sigma R\), transitive composition is allowed only if:
@@ -235,6 +250,12 @@ candidate outcome set
 
 An outcome set can contain several symbolic possibilities under quantization. The extractor should emit their disjunction rather than forcing one sign.
 
+The implemented normalizer represents every public bucket as a closed integer cycle
+interval, subtracts the public static metric, and widens it by the declared independent
+noise bound. Pair subtraction therefore retains all feasible signed deltas. Intervals
+strictly below or above zero produce bounded order decisions; intervals crossing zero
+are `inconclusive` and never emit a hard constraint.
+
 ## 8. Sound extraction example
 
 Suppose `anchor-switch` uses hard reset, exact cycles, active guard, and no suppression. Let source anchor be 0 and follow-up anchor be 2. Then:
@@ -263,3 +284,20 @@ Every template requires:
 - serialization/version compatibility tests.
 
 The highest-value property test generates a secret, initial state, relation instance, and bounded noise choices, executes concrete semantics, extracts a formula, and checks that the true secret/state satisfies it.
+
+The M3 finite extractor retains a disjunction of `(secret projection, fault variant)`
+models. Fault identity is deliberately latent because the public challenge does not
+identify `off`, `reference`, `weak`, or `signed`. For each candidate model it executes
+the independent public Python semantics and keeps the model if some noise value in the
+declared bound reproduces both observed buckets. This is exact finite elimination for
+the hard-reset identity-mapping scope, not a statistical approximation. Tests cover
+all declared noise pairs and all fault variants for every secret-bearing stateless
+template; invalid, policy-rejected, apparatus-only, and inconclusive paths carry no
+hard constraints.
+
+The generic `constraint_ir.py` format provides explicit Boolean, integer, finite, and
+fixed-width bit-vector sorts; equality, Boolean connectives, ITE, arithmetic,
+extraction, and signed/unsigned comparisons; and provenance-bearing named
+assumptions. It has a recursive normative JSON Schema and strict round-trip decoder.
+Concrete differential tests exhaust the S-box/bank expression and reduced fault and
+replay transitions. Translation to Z3 and durable solver snapshots are M4 work.

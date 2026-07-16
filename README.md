@@ -89,9 +89,9 @@ just benchmark-standard # reproducible standard-profile campaign suite
 
 `just demo-tutorial` and `just benchmark-standard` remain later-milestone acceptance
 commands. The language, architecture, microcode/fault model, isolated challenges,
-public process server, and one-shot judge are implemented; certified relations,
-persistence, recovery, synthesis, learning, and evaluation are the remaining research
-layers. Exact status and executed evidence are maintained in
+public process server, one-shot judge, and certified hard-reset relation/extractor
+layer are implemented; persistence, solver-backed recovery, synthesis, learning, and
+evaluation are the remaining research layers. Exact status and executed evidence are maintained in
 [`agent/STATUS.md`](agent/STATUS.md) and [`VALIDATION.md`](VALIDATION.md).
 
 ## Local target lifecycle

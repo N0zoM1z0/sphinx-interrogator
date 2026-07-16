@@ -1,0 +1,49 @@
+{
+  "ir_version": "1.0",
+  "declarations": [
+    {
+      "op": "variable",
+      "sort": {"kind": "bitvector", "width": 4},
+      "name": "secret_0"
+    }
+  ],
+  "assumptions": [
+    {
+      "name": "relation_evidence_1",
+      "expression": {
+        "op": "eq",
+        "sort": {"kind": "bool"},
+        "args": [
+          {
+            "op": "variable",
+            "sort": {"kind": "bitvector", "width": 4},
+            "name": "secret_0"
+          },
+          {
+            "op": "literal",
+            "sort": {"kind": "bitvector", "width": 4},
+            "value": 9
+          }
+        ]
+      },
+      "group": "relation:anchor-switch/v1",
+      "provenance": ["request:source", "request:follow-up", "certificate:fixture"]
+    }
+  ],
+  "assertion": {
+    "op": "eq",
+    "sort": {"kind": "bool"},
+    "args": [
+      {
+        "op": "variable",
+        "sort": {"kind": "bitvector", "width": 4},
+        "name": "secret_0"
+      },
+      {
+        "op": "literal",
+        "sort": {"kind": "bitvector", "width": 4},
+        "value": 9
+      }
+    ]
+  }
+}
