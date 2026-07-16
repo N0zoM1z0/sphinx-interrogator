@@ -199,6 +199,14 @@ Create versions with fault amplitude/guard frequency scaled from zero to strong.
 - one-shot audit rejects trivial leakage;
 - physical-execution cost remains practical.
 
+Measured mutation-control audit (2026-07-16): `scripts/audit_standard_profile.py`
+now writes report version 1.1 with a stateful aggregate-cost control. The public
+three-cell control reports fault-cycle aggregates `off=0`, `weak=1`, `signed=1`,
+and `reference=2`, while the drained repeat-amplify control documents the intended
+active-variant equivalence under the hard-reset M7 grammar. The regenerated artifact
+is `runs/standard-profile-audit-m7/standard-profile-audit.json` with
+`mutation_controls_separated=true`.
+
 ## 7. Correctness validation
 
 ### 7.1 Exhaustive reduced machine

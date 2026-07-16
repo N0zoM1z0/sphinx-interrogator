@@ -180,6 +180,13 @@ the later superseding observations and evidence list record the current behavior
   static cost; `check_formal_scaffold.py` exhaustively checks reset projections,
   experiment architectural confinement, gas/progress, fault-free normalized-cost
   independence, guarded replay, and the replay-suppression mutation self-test.
+- [x] (2026-07-16 17:18Z) Add standard-profile mutation aggregate-control evidence:
+  `scripts/audit_standard_profile.py` now emits report v1.1 with a public stateful
+  three-cell control that separates aggregate fault cycles as `off=0`, `weak=1`,
+  `signed=1`, and `reference=2`, while retaining the drained-repeat control that
+  documents active-variant latent equivalence under the hard-reset M7 grammar.
+  Focused audit tests, audit regeneration, `docs-check`, `git diff --check`,
+  `just fmt`, `just lint`, and `just test` passed after the update.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
   and the clean-tree manifest now completes. Current evidence is still short of a
@@ -249,8 +256,13 @@ the later superseding observations and evidence list record the current behavior
 - Observation: The frozen standard profile is learnable by simple certified anchor schedules, not only by the full CEGIS selector.
   Evidence: `runs/standard-benchmark-v1/standard-benchmark-report.json` records 100/100 exact and accepted reference campaigns for `full`, `random`, `stateless`, `kb_no_synthesis`, and `synthesis_no_kb`; the full selector median is 40 logical families and p95 is 48.
 
-- Observation: The drained hard-reset M7 grammar does not distinguish the active `reference`, `weak`, and `signed` variants.
-  Evidence: `runs/standard-profile-audit-m7/standard-profile-audit.json` records repeat-amplify fault margins of 15 cycles for all three active variants and zero for `off`; a one-seed mutation ladder recovered reference/weak/signed exactly at the same cost shape.
+- Observation: The drained hard-reset M7 grammar intentionally does not distinguish
+  the active `reference`, `weak`, and `signed` variants, but a separate stateful
+  aggregate-control program does separate stronger/weaker mutation behavior.
+  Evidence: `runs/standard-profile-audit-m7/standard-profile-audit.json` report v1.1
+  records repeat-amplify fault margins of 15 cycles for all three active variants and
+  zero for `off`; its stateful three-cell control records aggregate fault cycles
+  `off=0`, `weak=1`, `signed=1`, and `reference=2`.
 
 - Observation: A learned quotient can be much smaller than exact bounded history on the deterministic soft-reset fixture.
   Evidence: `runs/state-learning-m8/state-learning-report.json` reports exact-history depth four with 31 states and 1.0 held-out accuracy, while AALpy L* learns a 2-state Mealy model with 1.0 held-out accuracy; the one-state no-learner baseline reaches 0.133.
@@ -917,8 +929,8 @@ Populate during implementation:
 - M7 standard full-system report: `runs/standard-benchmark-v1/standard-benchmark-report.json`, 2026-07-16; 600 campaigns passed, full/reference exact rate 1.0, median 40 logical families, p95 48, median 80 physical executions, and targets_met true.
 - Baseline/ablation report: `runs/standard-benchmark-v1/standard-benchmark-report.json`, 2026-07-16; all four reference baselines also reached 100/100 exact, so the frozen standard profile shows robustness but not a large selector gap.
 - M5 fault-free control report: `runs/tutorial-fault-free-v2/summary.json`, 2026-07-16; 100/100 blind off-fault campaigns are `candidate_set` public results with zero judge submissions.
-- One-shot leakage audit: `runs/standard-profile-audit-m7/standard-profile-audit.json`, 2026-07-16; max public one-shot partition is 1.5 bits, median useful partition is 1.5 bits, oracle collision bound is 16 logical relations, and blind scan worst-case is 64.
-- Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; M7 one-seed campaign ladder in `runs/standard-mutation-ladder-smoke-m7/standard-benchmark-report.json` confirms active variants recover and `runs/standard-profile-audit-m7/standard-profile-audit.json` records the active-variant latent equivalence under drained repeats.
+- One-shot leakage audit: `runs/standard-profile-audit-m7/standard-profile-audit.json`, 2026-07-16; report v1.1 records max public one-shot partition 1.5 bits, median useful partition 1.5 bits, oracle collision bound 16 logical relations, blind scan worst-case 64, and `mutation_controls_separated=true`.
+- Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; M7 one-seed campaign ladder in `runs/standard-mutation-ladder-smoke-m7/standard-benchmark-report.json` confirms active variants recover; the standard-profile audit v1.1 records the drained-repeat active-variant latent equivalence plus a stateful aggregate-control separation of `off=0`, `weak=1`, `signed=1`, and `reference=2`.
 - M8 state-learning report: `runs/state-learning-m8/state-learning-report.json`,
   2026-07-16; real research SphinxVM evaluation over 126 held-out words reports
   no-learner 0.246, exact-history 1.0, and learned-state 1.0; the regenerated report

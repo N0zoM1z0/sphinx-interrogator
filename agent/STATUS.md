@@ -12,8 +12,8 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 17:03Z after expanding formal reset,
-  architectural-confinement, gas/progress, and normalized-cost checks.
+- **Last updated:** 2026-07-16 17:18Z after validating standard-profile mutation
+  aggregate-control evidence.
 
 ## Current milestone
 
@@ -31,20 +31,23 @@ GitHub Actions CI run. The public `CampaignController` now exposes the required
 Differential tests now compare live Rust exact cycles for small programs against the
 independent Python model and compare extractor outputs against concrete bucket-model
 enumeration. Formal checks now cover reset projection, architectural confinement,
-gas/progress, and normalized-cost invariants. No v1.0 or research-complete release
-should be created yet: broader P2 documentation/version, explicit release-smoke CI,
-and release-tag obligations remain.
+gas/progress, and normalized-cost invariants. The standard-profile audit v1.1 now
+records mutation aggregate controls with `off=0`, `weak=1`, `signed=1`, and
+`reference=2` while preserving the documented drained-repeat active-variant
+equivalence. No v1.0 or research-complete release should be created yet: broader P2
+documentation/version, explicit release-smoke CI, and release-tag obligations remain.
 
 ## Verification dashboard
 
 | Check | Last result | Evidence |
 |---|---|---|
-| `just fmt`, `just lint`, `just test` | pass | 2026-07-16 differential pass: Rust 46 tests and Python 189 tests pass |
+| `just fmt`, `just lint`, `just test` | pass | 2026-07-16 mutation-control pass: Rust 46 tests and Python 191 tests pass |
 | `just schema-check`, `just docs-check` | pass | Current fixtures, release-manifest schema, and links pass their implemented checks |
 | `just verify-formal` | pass | Z3 `unsat` x3; TLC 78,333 generated/7,672 distinct; finite checker covers reset, gas, confinement, normalized cost, and 131,072 guarded-replay cells |
 | `just boundary-audit` | pass | Recursive schema checks and separate-UID/FD-broker isolation; binary SHA-256 `c094fff9561f0997dd8c307940dba991b80c920792c07095113f979d430da6cd` |
 | `just demo-tutorial` | pass | `unique_exact`, judge accepted, 16 logical families; `runs/tutorial-demo-v3` |
 | standard benchmark v2 | pass | Report v1.1 covers 100 seeds / 700 campaigns with paired bootstrap CI, complete B0-B7 surface, `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact, fault-off 0 false exact, and normative result statuses only |
+| standard profile audit v1.1 | pass | `mutation_controls_separated=true`; aggregate controls are off 0, weak 1, signed 1, reference 2 |
 | `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
 | release manifest v2 | pass on clean tree | After the differential commit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
@@ -83,6 +86,11 @@ and release-tag obligations remain.
   700-campaign v2 benchmark with paired bootstrap CI and complete B0-B7 surface;
   `full_published_matrix=true`, `targets_met=true`, SHA-256
   `55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480`.
+- `runs/standard-profile-audit-m7/standard-profile-audit.json`: report v1.1 with
+  public one-shot, learnability, drained-repeat, and stateful aggregate mutation
+  controls; `mutation_controls_separated=true`, aggregate controls are `off=0`,
+  `weak=1`, `signed=1`, and `reference=2`, SHA-256
+  `5a56977028f0342813a55fe3bae33b15cac9f598f46cafbc4aa813fbb95e48ce`.
 - `runs/tutorial-demo-v3/report.json`: fresh tutorial demo, SHA-256
   `ad02a85d07f5de69547a7bb1870fe2caa04031e56b482e4fda726b520d63cf5b`; companion
   manifest v1.2 SHA-256

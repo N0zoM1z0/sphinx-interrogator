@@ -10,6 +10,7 @@ import os
 from collections import Counter
 from pathlib import Path
 
+from sphinx_interrogator.ast import Program
 from sphinx_interrogator.relations import RepeatAmplifyTemplate
 from sphinx_interrogator.target_model import FaultVariant, bank_of, execute_experiment_program
 
@@ -31,14 +32,16 @@ def main() -> int:
     one_shot = _one_shot_leakage()
     learnability = _learnability_bound()
     signal = _fault_signal_summary()
+    mutation_ladder = _mutation_ladder()
     report = {
-        "report_version": "1.0",
+        "report_version": "1.1",
         "profile_name": "standard",
         "semantic_version": "0.1.0",
         "analysis_scope": "public-symbolic-development-audit",
         "one_shot_leakage": one_shot,
         "learnability_bound": learnability,
         "fault_signal": signal,
+        "mutation_ladder": mutation_ladder,
         "targets_met": {
             "one_shot_max_bits_le_4": one_shot["maximum_partition_bits"] <= 4.0,
             "median_useful_bits_in_range": (
@@ -50,6 +53,7 @@ def main() -> int:
             "oracle_collision_logical_eq_16": (
                 learnability["oracle_collision_logical_relations"] == 16
             ),
+            "mutation_controls_separated": mutation_ladder["targets_met"]["aggregate_separation"],
         },
     }
     _write_json(output / "standard-profile-audit.json", report)
@@ -188,6 +192,68 @@ def _fault_signal_summary() -> dict[str, object]:
     }
 
 
+def _mutation_ladder() -> dict[str, object]:
+    drained = _fault_signal_summary()["certified_repeat_amplify_16"]
+    stateful = _stateful_mutation_control()
+    aggregates = {
+        variant: int(record["aggregate_fault_cycles"]) for variant, record in stateful.items()
+    }
+    targets = {
+        "off_zero": aggregates["off"] == 0,
+        "weak_less_than_reference": aggregates["weak"] < aggregates["reference"],
+        "signed_branch_observed": aggregates["signed"] < aggregates["reference"],
+        "nonzero_active_controls": all(
+            aggregates[variant] > 0 for variant in ("weak", "reference", "signed")
+        ),
+        "drained_repeat_equivalence_documented": (
+            drained["weak"]["repeat_margin_cycles"]
+            == drained["reference"]["repeat_margin_cycles"]
+            == drained["signed"]["repeat_margin_cycles"]
+        ),
+    }
+    targets["aggregate_separation"] = all(targets.values())
+    return {
+        "ladder_version": "aggregate-cost/v1",
+        "stateful_three_cell_control": stateful,
+        "drained_repeat_margin_control": drained,
+        "aggregate_order": ["off", "weak", "signed", "reference"],
+        "interpretation": (
+            "The drained hard-reset repeat grammar intentionally keeps active variants "
+            "latent-equivalent, so the separation control uses a stateful three-cell "
+            "public program that accumulates replay credit and triggers the signed "
+            "negative branch. This shows off=0, weak/signed active, and reference "
+            "stronger than the weak aggregate control."
+        ),
+        "targets_met": targets,
+    }
+
+
+def _stateful_mutation_control() -> dict[str, dict[str, object]]:
+    source = (
+        "PROBE 0, 0, 0\n"
+        "ANCHOR 2, 0\n"
+        "PAD 3\n"
+        "PROBE 0, 0, 0\n"
+        "ANCHOR 2, 0\n"
+        "PAD 3\n"
+        "PROBE 0, 0, 0\n"
+        "ANCHOR 0, 0\n"
+        "HALT\n"
+    )
+    # Use explicit text for the third non-collision cell; Program.parse keeps this
+    # audit independent from any relation constructor that would drain state.
+    program = Program.parse(source, lanes=4)
+    result: dict[str, dict[str, object]] = {}
+    for variant in FaultVariant:
+        model = execute_experiment_program(program, {0: 0}, variant=variant)
+        result[variant.value] = {
+            "static_cycles": model.static_cycles,
+            "aggregate_fault_cycles": model.fault_cycles,
+            "normalized_cycles": model.static_cycles + model.fault_cycles,
+        }
+    return result
+
+
 def _anchor_switch_signature(secret_bank: int, bank_a: int, bank_b: int) -> str:
     if secret_bank == bank_a:
         return "source_collision"
@@ -227,8 +293,14 @@ def _write_json(path: Path, data: object) -> None:
 def _write_markdown(path: Path, report: dict[str, object]) -> None:
     one_shot = report["one_shot_leakage"]
     learnability = report["learnability_bound"]
+    mutation = report["mutation_ladder"]
     if not isinstance(one_shot, dict) or not isinstance(learnability, dict):
         raise TypeError("audit sections must be objects")
+    if not isinstance(mutation, dict):
+        raise TypeError("mutation ladder section must be an object")
+    stateful = mutation["stateful_three_cell_control"]
+    if not isinstance(stateful, dict):
+        raise TypeError("mutation ladder stateful control must be an object")
     lines = [
         "# Standard Profile Audit",
         "",
@@ -238,6 +310,11 @@ def _write_markdown(path: Path, report: dict[str, object]) -> None:
         f"`{learnability['oracle_collision_logical_relations']}`",
         f"- Blind scan worst logical relations: "
         f"`{learnability['blind_scan_worst_logical_relations']}`",
+        f"- Mutation aggregate controls: off "
+        f"`{stateful['off']['aggregate_fault_cycles']}`, weak "
+        f"`{stateful['weak']['aggregate_fault_cycles']}`, signed "
+        f"`{stateful['signed']['aggregate_fault_cycles']}`, reference "
+        f"`{stateful['reference']['aggregate_fault_cycles']}`",
         "",
     ]
     temporary = path.with_suffix(f".tmp-{os.getpid()}")

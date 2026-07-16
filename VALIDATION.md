@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 17:03Z**
+Last updated: **2026-07-16 17:18Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -37,6 +37,38 @@ Python target-family model. `SphinxVM.tla` and `check_formal_scaffold.py` now co
 reset projection, experiment architectural confinement, gas/progress, and fault-free
 normalized-cost invariants.
 
+## 2026-07-16 mutation-control audit update
+
+The standard-profile audit now includes a stateful aggregate-cost mutation control in
+addition to the drained repeat-amplify control. The drained hard-reset grammar remains
+intentionally latent-equivalent for active variants, while the stateful public
+three-cell control observes aggregate fault cycles `off=0`, `weak=1`, `signed=1`, and
+`reference=2`.
+
+```text
+uv run --frozen pytest tests/python/test_standard_profile_audit.py
+                         pass (2 tests)
+uv run --frozen ruff check scripts/audit_standard_profile.py tests/python/test_standard_profile_audit.py
+                         pass
+uv run --frozen ruff format --check scripts/audit_standard_profile.py tests/python/test_standard_profile_audit.py
+                         pass
+uv run --frozen python scripts/audit_standard_profile.py --output runs/standard-profile-audit-m7
+                         pass; mutation_controls_separated=true
+PATH=/tmp/sphinx-just/bin:$PATH just docs-check
+                         pass
+git diff --check         pass
+PATH=/tmp/sphinx-just/bin:$PATH just fmt
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just lint
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just test
+                         pass (46 Rust tests; 191 Python tests)
+```
+
+Regenerated artifact:
+`runs/standard-profile-audit-m7/standard-profile-audit.json`, report v1.1,
+SHA-256 `5a56977028f0342813a55fe3bae33b15cac9f598f46cafbc4aa813fbb95e48ce`.
+
 ## 2026-07-16 acceptance re-audit
 
 The latest task-spec audit supersedes any later section that describes M8, M9, or the
@@ -72,11 +104,11 @@ The passing commands do not close the following acceptance gaps:
   M8 emits a non-trivial learned-state effective-nibble constraint, and M9 emits
   continuous reducer parent paths with reset-policy-aware measured replay.
 - `scripts/release_manifest.py` has been repaired after this audit to fail closed:
-  current `runs/release-m9/release-manifest.json` reports `status=blocked`,
-  `semantic_checks_pass=false`, and `validation_gates_pass=true`. It no longer
-  crashes for absolute `--output` paths. Remaining release blockers are dirty-tree
-  plus the broader proof/formal/reproducibility obligations tracked in
-  `agent/STATUS.md`.
+  the current clean-tree `runs/release-m9/release-manifest.json` reports
+  `status=complete`, `semantic_checks_pass=true`, and `validation_gates_pass=true`.
+  It no longer crashes for absolute `--output` paths. Remaining release blockers are
+  broader release-smoke CI coverage, release-tag evidence, and final
+  documentation/version alignment tracked in `agent/STATUS.md`.
 - Release versions and expanded release-smoke CI coverage remain below the normative
   task specification. Tutorial and standard benchmark campaign manifests now use v1.2
   runtime reproducibility metadata and normative campaign statuses. Release-bound
@@ -91,10 +123,9 @@ GitHub Actions CI has passed on the pushed repair series.
 ## 2026-07-16 task-spec gap audit and lifecycle documentation repair
 
 The task-spec gap audit reconfirmed that the current P0 benchmark/security repairs and
-M8/M9 semantic artifact repairs are supported by local evidence, but release
-completion is still blocked by incomplete mutation-ladder separation, broader
-release-smoke CI coverage, release-tag evidence, and final documentation/version
-alignment.
+M8/M9 semantic artifact repairs are supported by local evidence. Release completion is
+still blocked by broader release-smoke CI coverage, release-tag evidence, and final
+documentation/version alignment.
 
 README, `docs/PROTOCOL.md`, and `docs/REPOSITORY_GUIDE.md` now document the repaired
 split challenge lifecycle: `challenge private-root`, split public/private challenge
@@ -916,6 +947,10 @@ The one-seed mutation ladder at
 variants all have the same drained-repeat margin of 15 cycles, while `off` has margin
 0. M7 therefore keeps the active variant latent and treats only `off` as the release
 negative control; active-variant identification remains an M8 state/history problem.
+The 2026-07-16 v1.1 audit adds a separate stateful aggregate-control program and
+records aggregate fault cycles `off=0`, `weak=1`, `signed=1`, and `reference=2`, so
+the release evidence now covers both the drained latent-equivalence case and the
+required stronger/weaker mutation-control separation.
 
 The full published standard matrix was run with:
 

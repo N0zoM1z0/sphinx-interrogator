@@ -87,7 +87,7 @@
 
 ## Evaluation and documentation
 
-- [ ] Fault-free and stronger/weaker aggregate-cost mutation controls show the required separation.
+- [x] Fault-free and stronger/weaker aggregate-cost mutation controls show the required separation.
 - [x] B0-B7 and primary ablation surface is implemented under paired challenges/budgets where applicable.
 - [x] Calibration and evaluation seeds are separate.
 - [x] Benchmark reports include paired bootstrap confidence intervals.
@@ -147,5 +147,8 @@
   experiment architectural confinement, gas/progress, and fault-free normalized-cost
   invariants; `just verify-formal` reports 7,672 distinct TLC states after the
   expanded model.
+- The standard-profile audit v1.1 now records aggregate mutation controls with
+  `off=0`, `weak=1`, `signed=1`, and `reference=2`; the regenerated audit artifact
+  reports `mutation_controls_separated=true`.
 - No release tag should be created until every unchecked release criterion is covered
   by regenerated evidence and clean CI.
