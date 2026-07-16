@@ -12,8 +12,7 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 17:20Z after validating standard-profile mutation
-  aggregate-control evidence and regenerating the release manifest.
+- **Last updated:** 2026-07-16 17:26Z after adding clean release-smoke CI coverage.
 
 ## Current milestone
 
@@ -34,8 +33,11 @@ enumeration. Formal checks now cover reset projection, architectural confinement
 gas/progress, and normalized-cost invariants. The standard-profile audit v1.1 now
 records mutation aggregate controls with `off=0`, `weak=1`, `signed=1`, and
 `reference=2` while preserving the documented drained-repeat active-variant
-equivalence. No v1.0 or research-complete release should be created yet: broader P2
-documentation/version, explicit release-smoke CI, and release-tag obligations remain.
+equivalence. The CI workflow now includes a clean `release-smoke` job covering
+tutorial, standard smoke, M8, M9 reducer, evaluation artifact export, and
+release-manifest packaging smoke. No v1.0 or research-complete release should be
+created yet: final P2 documentation/version alignment and release-tag obligations
+remain.
 
 ## Verification dashboard
 
@@ -52,6 +54,7 @@ documentation/version, explicit release-smoke CI, and release-tag obligations re
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
 | release manifest v2 | pass on clean tree | After the mutation-control audit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
 | GitHub CI | pass | Remote `main` has a successful `ci` workflow covering Python, Rust, and integration/boundary jobs |
+| release-smoke CI job | pass locally | Clean `/tmp/sphinx-interrogator-ci-smoke` worktree generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest with expected semantic checks |
 
 ## Release blockers
 
@@ -77,8 +80,8 @@ documentation/version, explicit release-smoke CI, and release-tag obligations re
   local CLI examples now match the repaired private-root and socket/FD interfaces,
   but release notes, changelog/versioning, generated result schemas, and examples still
   need a final release consistency pass.
-- Broaden CI from the current Python/Rust/integration/boundary coverage to explicit
-  tutorial, standard, M8, reducer, and release-packaging smoke jobs.
+- Create an intentional release tag only after the final release consistency pass and
+  a fresh clean-tree release manifest regeneration.
 
 ## Current release artifacts
 

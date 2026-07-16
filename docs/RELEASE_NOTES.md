@@ -36,6 +36,7 @@ records a non-trivial learned-state effective-nibble constraint, and M9 records
 continuous reducer parent paths with reset-policy-aware replay. Public CSV/plot
 release artifacts are generated under `runs/release-m9/evaluation-artifacts/`.
 The standard-profile audit now reports mutation aggregate controls with `off=0`,
-`weak=1`, `signed=1`, and `reference=2`. Current release blockers are final
-documentation/version/changelog alignment, broader release-smoke CI coverage, and the
-absence of a release tag.
+`weak=1`, `signed=1`, and `reference=2`. The CI workflow now includes clean
+release-smoke coverage for tutorial, standard smoke, M8, reducer, evaluation artifact
+export, and release-manifest packaging. Current release blockers are final
+documentation/version/changelog alignment and the absence of a release tag.

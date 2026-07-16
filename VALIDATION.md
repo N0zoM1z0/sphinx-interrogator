@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 17:20Z**
+Last updated: **2026-07-16 17:26Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -70,6 +70,43 @@ PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
 Regenerated artifact:
 `runs/standard-profile-audit-m7/standard-profile-audit.json`, report v1.1,
 SHA-256 `5a56977028f0342813a55fe3bae33b15cac9f598f46cafbc4aa813fbb95e48ce`.
+
+## 2026-07-16 CI release-smoke coverage update
+
+The GitHub Actions workflow now has a clean `release-smoke` job. It builds
+`sphinx-vm`, regenerates the standard-profile audit, runs tutorial recovery, runs a
+one-seed standard benchmark smoke, runs M8 state learning, runs the M9 reducer,
+exports evaluation artifacts, builds a release manifest, and asserts that the smoke
+manifest is packageable but intentionally `blocked` because it is not the full
+published standard matrix.
+
+The same command sequence was run in a clean detached worktree at
+`/tmp/sphinx-interrogator-ci-smoke`:
+
+```text
+uv sync --frozen --extra dev
+                         pass
+CARGO_BUILD_JOBS=2 cargo build --locked --bin sphinx-vm
+                         pass
+uv run --frozen python scripts/audit_standard_profile.py --output runs/standard-profile-audit-m7
+                         pass; mutation_controls_separated=true
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/demo_tutorial.py
+                         pass; unique_exact and judge_accepted=true
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/benchmark_standard.py --output runs/standard-benchmark-v2 --smoke --bootstrap-samples 100
+                         pass; selected_seed_count=1, targets_met=false, off false exact=0
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
+                         pass; all M8 targets true
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/reduce_witnesses.py --output runs/reduced-witnesses-m9 --require-all-minimized
+                         pass
+uv run --frozen python scripts/export_evaluation_artifacts.py --output runs/release-m9/evaluation-artifacts
+                         pass
+uv run --frozen python scripts/release_manifest.py --output runs/release-m9/release-manifest.json
+                         pass; smoke manifest status=blocked
+python3 release-smoke assertion snippet
+                         pass; tutorial/M8/M9/evaluation checks pass, standard full matrix fails
+ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'
+                         pass
+```
 
 ## 2026-07-16 acceptance re-audit
 

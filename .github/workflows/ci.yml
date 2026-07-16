@@ -61,3 +61,55 @@ jobs:
       - run: cargo build --locked --bin sphinx-vm
       - run: uv run --frozen pytest tests/python -m integration
       - run: uv run --frozen python scripts/boundary_audit.py
+
+  release-smoke:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: "2"
+      SPHINX_VM_BINARY: target/debug/sphinx-vm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.82.0
+      - uses: astral-sh/setup-uv@v4
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen --extra dev
+      - run: cargo build --locked --bin sphinx-vm
+      - name: Generate standard-profile audit
+        run: uv run --frozen python scripts/audit_standard_profile.py --output runs/standard-profile-audit-m7
+      - name: Run tutorial smoke
+        run: uv run --frozen python scripts/demo_tutorial.py
+      - name: Run standard benchmark smoke
+        run: >
+          uv run --frozen python scripts/benchmark_standard.py
+          --output runs/standard-benchmark-v2
+          --smoke
+          --bootstrap-samples 100
+      - name: Run M8 state-learning smoke
+        run: uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
+      - name: Run M9 reducer smoke
+        run: >
+          uv run --frozen python scripts/reduce_witnesses.py
+          --output runs/reduced-witnesses-m9
+          --require-all-minimized
+      - name: Export release evaluation artifacts
+        run: uv run --frozen python scripts/export_evaluation_artifacts.py --output runs/release-m9/evaluation-artifacts
+      - name: Build release manifest smoke
+        run: uv run --frozen python scripts/release_manifest.py --output runs/release-m9/release-manifest.json
+      - name: Assert release manifest smoke semantics
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("runs/release-m9/release-manifest.json").read_text())
+          checks = {item["name"]: item["status"] for item in manifest["release_checks"]}
+          assert manifest["summary"]["artifact_count"] == 5
+          assert manifest["summary"]["all_present"] is True
+          assert manifest["status"] == "blocked"
+          assert checks["standard.full_published_matrix"] == "fail"
+          assert checks["tutorial.unique_exact"] == "pass"
+          assert checks["m8.state_conditioned_secret_inference"] == "pass"
+          assert checks["m9.reducer_replay_paths_valid"] == "pass"
+          assert checks["evaluation_artifacts.required_files"] == "pass"
+          PY

@@ -100,7 +100,7 @@
 
 - [x] Release status depends on semantic acceptance and actual gate execution.
 - [x] Tutorial and standard campaign manifests include revision, dirty state, versions, command/environment, times, status, and artifact hashes.
-- [ ] CI exercises clean tutorial/standard smoke, M8, reducer, and release packaging.
+- [x] CI exercises clean tutorial/standard smoke, M8, reducer, and release packaging.
 - [ ] README, STATUS, ExecPlan, checklist, CHANGELOG, release notes, and versions agree.
 - [x] A remote branch and successful CI run provide external release evidence.
 
@@ -150,5 +150,8 @@
 - The standard-profile audit v1.1 now records aggregate mutation controls with
   `off=0`, `weak=1`, `signed=1`, and `reference=2`; the regenerated audit artifact
   reports `mutation_controls_separated=true`.
+- The CI workflow now has a `release-smoke` job that builds the VM from a clean
+  checkout, regenerates the standard-profile audit, runs tutorial, standard smoke,
+  M8, M9 reducer, evaluation-artifact export, and release-manifest packaging smoke.
 - No release tag should be created until every unchecked release criterion is covered
   by regenerated evidence and clean CI.

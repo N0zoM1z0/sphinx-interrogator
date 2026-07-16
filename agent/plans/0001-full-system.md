@@ -188,11 +188,17 @@ the later superseding observations and evidence list record the current behavior
   Focused audit tests, audit regeneration, `docs-check`, `git diff --check`,
   `just fmt`, `just lint`, `just test`, and `just release-manifest` passed after the
   update.
+- [x] (2026-07-16 17:26Z) Add clean release-smoke CI coverage: `.github/workflows/ci.yml`
+  now includes a `release-smoke` job that builds the VM, regenerates the
+  standard-profile audit, runs tutorial recovery, standard `--smoke`, M8
+  state-learning, M9 reducer, evaluation-artifact export, release-manifest packaging,
+  and smoke manifest assertions. The same command sequence passed in a clean
+  `/tmp/sphinx-interrogator-ci-smoke` worktree.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
   and the clean-tree manifest now completes. Current evidence is still short of a
-  release tag because broader CI smoke, release proof, and documentation/version
-  alignment remain incomplete.
+  release tag because release proof and documentation/version alignment remain
+  incomplete.
 - [x] (2026-07-16 12:08Z) Re-audit every task-spec acceptance area and rerun local
   quality, schema, formal, boundary, tutorial, M8, and M9 checks. Record the remaining
   P0/P1/P2 blockers in `agent/STATUS.md`, `agent/REVIEW_CHECKLIST.md`, this ExecPlan,
