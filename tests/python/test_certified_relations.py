@@ -22,6 +22,7 @@ from sphinx_interrogator.relations import (
     AnchorSwitchTemplate,
     Cell,
     ContextLiftTemplate,
+    DrainedAnchorSwitchTemplate,
     EpochSwitchTemplate,
     HardReplayTemplate,
     IndependentSwapTemplate,
@@ -34,6 +35,7 @@ from sphinx_interrogator.relations import (
 )
 from sphinx_interrogator.target_model import (
     FaultVariant,
+    bank_of,
     execute_experiment_program,
 )
 
@@ -223,6 +225,7 @@ def test_template_registry_and_every_precondition_path() -> None:
     """Every M3 template has a positive and a structured negative precondition."""
     assert set(TEMPLATE_REGISTRY) == {
         "anchor-switch/v1",
+        "drained-anchor-switch/v1",
         "token-switch/v1",
         "epoch-switch/v1",
         "phase-shift/v1",
@@ -235,6 +238,19 @@ def test_template_registry_and_every_precondition_path() -> None:
     }
     assert AnchorSwitchTemplate().applicable(bank_a=0, bank_b=1).accepted
     assert not AnchorSwitchTemplate().applicable(bank_a=1, bank_b=1).accepted
+    assert DrainedAnchorSwitchTemplate().applicable(bank_a=0, bank_b=1, repeats=2).accepted
+    assert not DrainedAnchorSwitchTemplate().applicable(bank_a=1, bank_b=1, repeats=2).accepted
+    assert not DrainedAnchorSwitchTemplate().applicable(bank_a=0, bank_b=1, repeats=1).accepted
+    assert (
+        not DrainedAnchorSwitchTemplate()
+        .applicable(
+            bank_a=0,
+            bank_b=1,
+            repeats=2,
+            drain_between=False,
+        )
+        .accepted
+    )
     assert TokenSwitchTemplate().applicable(token_a=0, token_b=1).accepted
     assert not TokenSwitchTemplate().applicable(token_a=1, token_b=1).accepted
     assert EpochSwitchTemplate().applicable(epoch_a=0, epoch_b=1).accepted
@@ -733,6 +749,53 @@ def test_repeat_amplification_can_emit_a_bounded_standard_constraint() -> None:
         assert constraint.accepts(secret, fault_variant=FaultVariant.REFERENCE.value)
         emitted += 1
     assert emitted == 9
+
+
+def test_drained_anchor_switch_emits_three_way_bounded_constraints() -> None:
+    """Drained anchor pairs provide a standard-profile A/B/other discriminator."""
+    relation = DrainedAnchorSwitchTemplate().instantiate(
+        instance_id="bounded-drained-anchor",
+        lane=0,
+        token=0,
+        epoch=0,
+        bank_a=0,
+        bank_b=2,
+        pad=0,
+        repeats=15,
+    )
+    assert relation.source_program.static_cycles() == relation.follow_up_programs[0].static_cycles()
+    assert relation.architectural_precheck()
+    assert relation.fault_free_precheck()
+
+    for source_noise, follow_noise in itertools.product(range(-1, 2), repeat=2):
+        secret = (0,)
+        source = _result(
+            relation,
+            follow_up=False,
+            secret=secret,
+            variant=FaultVariant.REFERENCE,
+            noise=source_noise,
+            width=4,
+            request_id="drained-anchor:s",
+        )
+        follow_up = _result(
+            relation,
+            follow_up=True,
+            secret=secret,
+            variant=FaultVariant.REFERENCE,
+            noise=follow_noise,
+            width=4,
+            request_id="drained-anchor:f",
+        )
+        decision = _decision(relation, source, follow_up, noise_bound=1)
+        assert decision.kind is DecisionKind.BOUNDED_GREATER
+        extraction = extract_finite_models(relation, source, follow_up, decision, noise_bound=1)
+        assert extraction.status is ExtractionStatus.EMITTED
+        constraint = extraction.hard_constraints[0]
+        assert constraint.accepts(secret, fault_variant=FaultVariant.REFERENCE.value)
+        assert {model.secret_values[0] for model in constraint.allowed_models} == {
+            value for value in range(16) if bank_of(value, 0, 0) == 2
+        }
 
 
 def test_standard_repeat_schedule_preserves_all_generating_models() -> None:

@@ -446,6 +446,81 @@ class AnchorSwitchTemplate(CertifiedTemplate):
         )
 
 
+class DrainedAnchorSwitchTemplate(CertifiedTemplate):
+    """Compare two public anchors through the same drained repetition schedule."""
+
+    relation_id = "drained-anchor-switch/v1"
+
+    def applicable(
+        self,
+        *,
+        bank_a: int,
+        bank_b: int,
+        repeats: int,
+        drain_between: bool = True,
+    ) -> Applicability:
+        """Check distinct anchors and bounded drained repetition."""
+        reasons = []
+        if bank_a == bank_b:
+            reasons.append("drained-anchor-switch requires two distinct banks")
+        if not 2 <= repeats <= 16:
+            reasons.append("drained-anchor-switch requires repeats in 2..=16")
+        if not drain_between:
+            reasons.append("drained-anchor-switch requires certified drain/phase restoration")
+        if reasons:
+            return Applicability.reject(*reasons)
+        return Applicability.accept(
+            "hard reset",
+            "identity lane mapping",
+            "drained replay between cells",
+            "restored entry phase",
+            "reference fault",
+        )
+
+    def instantiate(
+        self,
+        *,
+        instance_id: str,
+        lane: int,
+        token: int,
+        epoch: int,
+        bank_a: int,
+        bank_b: int,
+        pad: int,
+        repeats: int,
+        drain_between: bool = True,
+    ) -> RelationInstance:
+        """Construct a repeated anchor substitution with equal public resources."""
+        applicability = self.applicable(
+            bank_a=bank_a,
+            bank_b=bank_b,
+            repeats=repeats,
+            drain_between=drain_between,
+        )
+        applicability.require()
+        source = _drained_repetitions_program(Cell(lane, token, epoch, bank_a, pad), repeats)
+        follow_up = _drained_repetitions_program(Cell(lane, token, epoch, bank_b, pad), repeats)
+        return _build_instance(
+            relation_id=self.relation_id,
+            instance_id=instance_id,
+            source=source,
+            follow_ups=(follow_up,),
+            holes={
+                "lane": lane,
+                "token": token,
+                "epoch": epoch,
+                "bank_a": bank_a,
+                "bank_b": bank_b,
+                "pad": pad,
+                "repeats": repeats,
+                "drain_between": int(drain_between),
+            },
+            involved_lanes=(lane,),
+            preconditions=applicability.certified_preconditions,
+            reducer_rules=("reduce-repeats", "shrink-pad-mod-4"),
+        )
+
+
 class TokenSwitchTemplate(CertifiedTemplate):
     """Change a probe token while retaining lane, epoch, anchor, and phase context."""
 
@@ -925,6 +1000,7 @@ TEMPLATE_REGISTRY: Mapping[str, RelationTemplate] = MappingProxyType(
         template.relation_id: template
         for template in (
             AnchorSwitchTemplate(),
+            DrainedAnchorSwitchTemplate(),
             TokenSwitchTemplate(),
             EpochSwitchTemplate(),
             PhaseShiftTemplate(),

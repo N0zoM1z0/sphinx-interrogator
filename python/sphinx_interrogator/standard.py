@@ -41,17 +41,20 @@ from sphinx_interrogator.persistence import (
     normalize_campaign_result_status,
 )
 from sphinx_interrogator.protocol import submit_judge as submit_judge_request
-from sphinx_interrogator.relations import RelationInstance, RepeatAmplifyTemplate
+from sphinx_interrogator.relations import TEMPLATE_REGISTRY, RelationInstance
 from sphinx_interrogator.solver import SolverStatus
 from sphinx_interrogator.synthesis import (
     BoundedRelationGrammar,
     CegisSynthesizer,
     DiverseCommittee,
+    DrainedAnchorSwitchCandidate,
     RepeatAmplifyCandidate,
+    ResourceBounds,
     SynthesisContext,
     SynthesisModel,
     SynthesisResult,
     SynthesisStatus,
+    TypedCandidate,
     score_candidate,
 )
 
@@ -397,17 +400,27 @@ def _select_candidate(
     knowledge: InterrogationKnowledgeBase,
     frontier: ActiveFrontier,
     logical_time: int,
-) -> tuple[RepeatAmplifyCandidate | None, SynthesisResult | None]:
+) -> tuple[TypedCandidate | None, SynthesisResult | None]:
     active_pad = (lane ^ epoch) & 3
-    candidates = tuple(
-        RepeatAmplifyCandidate(lane, 0, epoch, anchor, active_pad, 16)
-        for anchor in range(4)
-        if RepeatAmplifyCandidate(lane, 0, epoch, anchor, active_pad, 16).canonical_key()
-        not in used
-    )
-    if not candidates:
-        return None, None
     if mode in {StandardSelectorMode.FULL, StandardSelectorMode.SYNTHESIS_NO_KB}:
+        grammar = BoundedRelationGrammar(
+            lanes=(lane,),
+            tokens=(0,),
+            epochs=(epoch,),
+            pads=(active_pad,),
+            repeat_counts=(15,),
+            include_anchor_switch=False,
+            include_drained_anchor_switch=True,
+            include_repeat_amplify=True,
+            resources=ResourceBounds(combined_instructions=192),
+        )
+        candidates = tuple(
+            candidate
+            for candidate in grammar.all_candidates()
+            if candidate.canonical_key() not in used
+        )
+        if not candidates:
+            return None, None
         models = []
         for value in sorted(lane_domain):
             secret = [0] * secret_cells
@@ -418,14 +431,6 @@ def _select_candidate(
             limit=len(models),
             complete=True,
             source="standard-factorized-lane-domain",
-        )
-        grammar = BoundedRelationGrammar(
-            lanes=(lane,),
-            tokens=(0,),
-            epochs=(epoch,),
-            pads=(active_pad,),
-            repeat_counts=(16,),
-            include_anchor_switch=False,
         )
         local = CegisSynthesizer(grammar, hole_filler=synthesizer.hole_filler)
         result = local.synthesize(
@@ -447,8 +452,6 @@ def _select_candidate(
             # the failed synthesis result for audit metadata and fall back to
             # the cheapest unexplored certified assignment.
             return min(candidates, key=lambda candidate: candidate.canonical_key()), result
-        if not isinstance(result.score.candidate, RepeatAmplifyCandidate):
-            raise RuntimeError("standard grammar returned the wrong relation skeleton")
         if mode is StandardSelectorMode.SYNTHESIS_NO_KB:
             return result.score.candidate, result
 
@@ -456,14 +459,28 @@ def _select_candidate(
             score_candidate(candidate, committee, result.context) for candidate in candidates
         )
         by_key = {candidate.canonical_key(): candidate for candidate in candidates}
+        ranked_scores = [
+            result.score,
+            *(
+                candidate_score
+                for candidate_score in sorted(scored, key=lambda item: item.objective_key())
+                if candidate_score.candidate.canonical_key()
+                != result.score.candidate.canonical_key()
+            ),
+        ]
+        objective_rank = {
+            candidate_score.candidate.canonical_key(): rank
+            for rank, candidate_score in enumerate(ranked_scores)
+        }
         for candidate_score in scored:
             candidate = candidate_score.candidate
-            if not isinstance(candidate, RepeatAmplifyCandidate):
+            if not isinstance(candidate, (DrainedAnchorSwitchCandidate, RepeatAmplifyCandidate)):
                 raise RuntimeError("standard frontier received the wrong candidate type")
-            relation = candidate.lower(f"frontier-{logical_time:03d}-{candidate.anchor}")
+            candidate_suffix = hashlib.sha256(candidate.canonical_key().encode()).hexdigest()[:12]
+            relation = candidate.lower(f"frontier-{logical_time:03d}-{candidate_suffix}")
             usage = _knowledge_usage(knowledge, candidate)
             frontier_candidate = FrontierCandidate(
-                candidate_id=f"standard-frontier-{logical_time:03d}-{candidate.anchor}",
+                candidate_id=f"standard-frontier-{logical_time:03d}-{candidate_suffix}",
                 structural_key=relation.instance_hash,
                 relation_key=relation.relation_id,
                 state_key="hard-reset/v1",
@@ -476,15 +493,11 @@ def _select_candidate(
                     ).encode()
                 ).hexdigest(),
                 semantic_key=candidate.canonical_key(),
-                score=(
-                    candidate_score.partition_score_bits
-                    - candidate_score.worst_bucket_size
-                    + candidate_score.minimum_margin * 0.01
-                    + 1.0 / (1 + usage)
-                ),
+                score=-(objective_rank[candidate.canonical_key()] + usage * 0.001),
                 data={
                     "candidate": dict(candidate.hole_values()),
                     "synthesis_score": candidate_score.to_data(),
+                    "objective_rank": objective_rank[candidate.canonical_key()],
                     "knowledge_prior_uses": usage,
                 },
                 expires_after=logical_time,
@@ -499,6 +512,14 @@ def _select_candidate(
             return by_key[chosen.semantic_key], result
         except KeyError as error:
             raise RuntimeError("frontier selected an unknown candidate") from error
+    candidates = tuple(
+        RepeatAmplifyCandidate(lane, 0, epoch, anchor, active_pad, 16)
+        for anchor in range(4)
+        if RepeatAmplifyCandidate(lane, 0, epoch, anchor, active_pad, 16).canonical_key()
+        not in used
+    )
+    if not candidates:
+        return None, None
     if mode is StandardSelectorMode.RANDOM:
         selected = min(
             candidates,
@@ -605,7 +626,7 @@ def _execute_relation(
         )
     source = by_arm["source"]
     follow_up = by_arm["follow_up"]
-    template = RepeatAmplifyTemplate()
+    template = TEMPLATE_REGISTRY[relation.relation_id]
     decision = template.decide(relation, source, follow_up, noise_bound=noise_bound)
     repository.append_event(
         event_id=f"decision:{relation.instance_id}",
@@ -637,11 +658,13 @@ def _execute_relation(
 
 def _knowledge_usage(
     knowledge: InterrogationKnowledgeBase,
-    candidate: RepeatAmplifyCandidate,
+    candidate: TypedCandidate,
 ) -> int:
+    relation_id = candidate.lower("knowledge-usage").relation_id
+    holes = candidate.hole_values()
     return sum(
-        record.instance.holes.get("anchor") == candidate.anchor
-        and record.instance.holes.get("epoch") == candidate.epoch
+        record.instance.relation_id == relation_id
+        and all(record.instance.holes.get(key) == value for key, value in holes.items())
         for record in knowledge.relations.values()
     )
 

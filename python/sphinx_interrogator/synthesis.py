@@ -17,6 +17,7 @@ import z3  # type: ignore[import-untyped]
 from sphinx_interrogator.frontier import FrontierCandidate
 from sphinx_interrogator.relations import (
     AnchorSwitchTemplate,
+    DrainedAnchorSwitchTemplate,
     RelationInstance,
     RepeatAmplifyTemplate,
 )
@@ -97,6 +98,68 @@ class QueryCandidate:
 
 
 @dataclass(frozen=True, slots=True)
+class DrainedAnchorSwitchCandidate:
+    """Concrete holes for an amplified two-anchor switch skeleton."""
+
+    lane: int
+    token: int
+    epoch: int
+    bank_a: int
+    bank_b: int
+    pad: int
+    repeats: int
+
+    def __post_init__(self) -> None:
+        _bounded(self.lane, 0, None, "lane")
+        _bounded(self.token, 0, 15, "token")
+        _bounded(self.epoch, 0, 1, "epoch")
+        _bounded(self.bank_a, 0, 3, "bank_a")
+        _bounded(self.bank_b, 0, 3, "bank_b")
+        _bounded(self.pad, 0, 65_535, "pad")
+        _bounded(self.repeats, 2, 16, "repeats")
+        if self.bank_a >= self.bank_b:
+            raise ValueError("drained-anchor-switch banks must be in canonical increasing order")
+
+    @property
+    def skeleton_kind(self) -> SkeletonKind:
+        """Return the grammar production lowered by this assignment."""
+        return SkeletonKind.DRAINED_ANCHOR_SWITCH
+
+    def canonical_key(self) -> str:
+        """Return the deterministic grammar-assignment key."""
+        return (
+            f"drained-anchor:l{self.lane}:t{self.token}:e{self.epoch}:"
+            f"b{self.bank_a}-{self.bank_b}:p{self.pad}:r{self.repeats}"
+        )
+
+    def hole_values(self) -> Mapping[str, int]:
+        """Return the finite typed-hole assignment."""
+        return {
+            "lane": self.lane,
+            "token": self.token,
+            "epoch": self.epoch,
+            "bank_a": self.bank_a,
+            "bank_b": self.bank_b,
+            "pad": self.pad,
+            "repeats": self.repeats,
+        }
+
+    def lower(self, instance_id: str) -> RelationInstance:
+        """Lower only through the certified typed relation constructor."""
+        return DrainedAnchorSwitchTemplate().instantiate(
+            instance_id=instance_id,
+            lane=self.lane,
+            token=self.token,
+            epoch=self.epoch,
+            bank_a=self.bank_a,
+            bank_b=self.bank_b,
+            pad=self.pad,
+            repeats=self.repeats,
+            drain_between=True,
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class RepeatAmplifyCandidate:
     """Concrete typed holes for a drained ``repeat-amplify/v1`` skeleton."""
 
@@ -152,7 +215,7 @@ class RepeatAmplifyCandidate:
         )
 
 
-type TypedCandidate = QueryCandidate | RepeatAmplifyCandidate
+type TypedCandidate = QueryCandidate | DrainedAnchorSwitchCandidate | RepeatAmplifyCandidate
 
 
 @dataclass(frozen=True, slots=True)
@@ -253,6 +316,7 @@ class SkeletonKind(StrEnum):
     """Version-1 bounded high-level relation productions."""
 
     ANCHOR_SWITCH = "anchor-switch"
+    DRAINED_ANCHOR_SWITCH = "drained-anchor-switch"
     REPEAT_AMPLIFY = "repeat-amplify"
 
 
@@ -342,6 +406,7 @@ class BoundedRelationGrammar:
         pads: Iterable[int] = range(4),
         repeat_counts: Iterable[int] = (2, 4, 8, 16),
         include_anchor_switch: bool = True,
+        include_drained_anchor_switch: bool = False,
         include_repeat_amplify: bool = True,
         resources: ResourceBounds | None = None,
         version: str = _GRAMMAR_VERSION,
@@ -351,9 +416,14 @@ class BoundedRelationGrammar:
         self.epochs = _finite_values(epochs, 0, 1, "epochs")
         self.pads = _finite_values(pads, 0, 65_535, "pads")
         self.repeat_counts = _finite_values(repeat_counts, 2, 16, "repeat_counts")
-        if not include_anchor_switch and not include_repeat_amplify:
+        if (
+            not include_anchor_switch
+            and not include_drained_anchor_switch
+            and not include_repeat_amplify
+        ):
             raise ValueError("grammar must enable at least one relation skeleton")
         self.include_anchor_switch = include_anchor_switch
+        self.include_drained_anchor_switch = include_drained_anchor_switch
         self.include_repeat_amplify = include_repeat_amplify
         self.resources = ResourceBounds() if resources is None else resources
         self.version = version
@@ -378,6 +448,20 @@ class BoundedRelationGrammar:
                         TypedHole("bank_a", HoleSort.BANK, (0, 1, 2, 3)),
                         TypedHole("bank_b", HoleSort.BANK, (0, 1, 2, 3)),
                         TypedHole("pad", HoleSort.PAD, self.pads),
+                    ),
+                )
+            )
+        if self.include_drained_anchor_switch:
+            skeletons.append(
+                RelationSkeleton(
+                    SkeletonKind.DRAINED_ANCHOR_SWITCH,
+                    self.version,
+                    (
+                        *shared,
+                        TypedHole("bank_a", HoleSort.BANK, (0, 1, 2, 3)),
+                        TypedHole("bank_b", HoleSort.BANK, (0, 1, 2, 3)),
+                        TypedHole("pad", HoleSort.PAD, self.pads),
+                        TypedHole("repeats", HoleSort.COUNT, self.repeat_counts),
                     ),
                 )
             )
@@ -414,6 +498,29 @@ class BoundedRelationGrammar:
                 if bank_a >= bank_b:
                     continue
                 candidates.append(QueryCandidate(lane, token, epoch, bank_a, bank_b, pad))
+        elif skeleton.kind is SkeletonKind.DRAINED_ANCHOR_SWITCH:
+            for lane, token, epoch, bank_a, bank_b, pad, repeats in product(
+                domains["lane"],
+                domains["token"],
+                domains["epoch"],
+                domains["bank_a"],
+                domains["bank_b"],
+                domains["pad"],
+                domains["repeats"],
+            ):
+                if bank_a >= bank_b:
+                    continue
+                candidates.append(
+                    DrainedAnchorSwitchCandidate(
+                        lane,
+                        token,
+                        epoch,
+                        bank_a,
+                        bank_b,
+                        pad,
+                        repeats,
+                    )
+                )
         else:
             for lane, token, epoch, anchor, pad, repeats in product(
                 domains["lane"],
@@ -1069,6 +1176,10 @@ def symbolic_signature(
     if isinstance(candidate, QueryCandidate):
         source = int(enabled and secret_bank == candidate.bank_a)
         follow_up = int(enabled and secret_bank == candidate.bank_b)
+        center = source - follow_up
+    elif isinstance(candidate, DrainedAnchorSwitchCandidate):
+        source = int(enabled and secret_bank == candidate.bank_a) * candidate.repeats
+        follow_up = int(enabled and secret_bank == candidate.bank_b) * candidate.repeats
         center = source - follow_up
     else:
         collision = int(enabled and secret_bank == candidate.anchor)

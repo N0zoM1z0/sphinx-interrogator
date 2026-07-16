@@ -11,6 +11,7 @@ from sphinx_interrogator.constraints import (
     FiniteModelConstraint,
 )
 from sphinx_interrogator.frontier import ActiveFrontier, FrontierCandidate, NoveltyStatus
+from sphinx_interrogator.knowledge_base import InterrogationKnowledgeBase
 from sphinx_interrogator.persistence import CampaignManifest, CampaignRepository
 from sphinx_interrogator.solver import (
     ConstraintGroup,
@@ -18,15 +19,18 @@ from sphinx_interrogator.solver import (
     SecretDomain,
     finite_model_program,
 )
+from sphinx_interrogator.standard import StandardSelectorMode, _select_candidate
 from sphinx_interrogator.synthesis import (
     BoundedRelationGrammar,
     CegisSynthesizer,
     CounterexamplePair,
     DiverseCommittee,
+    DrainedAnchorSwitchCandidate,
     HoleFillResult,
     QueryCandidate,
     RelationSkeleton,
     RepeatAmplifyCandidate,
+    ResourceBounds,
     SignatureInterval,
     SynthesisContext,
     SynthesisModel,
@@ -94,6 +98,81 @@ def test_bounded_skeletons_lower_to_certified_resource_safe_ast_pairs() -> None:
         assert relation.architectural_precheck()
         assert relation.fault_free_precheck()
         assert all(not program.effects().writes_digest for program in relation.programs)
+
+
+def test_drained_anchor_switch_skeleton_scores_with_concrete_signature() -> None:
+    """The standard amplified anchor skeleton is a first-class CEGIS candidate."""
+    grammar = BoundedRelationGrammar(
+        lanes=(0,),
+        tokens=(0,),
+        epochs=(0,),
+        pads=(0,),
+        repeat_counts=(15,),
+        include_anchor_switch=False,
+        include_drained_anchor_switch=True,
+        include_repeat_amplify=False,
+        resources=ResourceBounds(combined_instructions=192),
+    )
+    assert {skeleton.kind.value for skeleton in grammar.skeletons()} == {"drained-anchor-switch"}
+    candidates = grammar.all_candidates()
+    assert candidates
+    assert all(isinstance(candidate, DrainedAnchorSwitchCandidate) for candidate in candidates)
+
+    candidate = DrainedAnchorSwitchCandidate(0, 0, 0, 0, 2, 0, 15)
+    model = SynthesisModel("secret-bank-b", (0,), FaultVariant.REFERENCE)
+    symbolic = symbolic_signature(candidate, model, noise_bound=1, bucket_width=4)
+    concrete = concrete_signature(candidate, model, noise_bound=1, bucket_width=4)
+    assert symbolic.center == concrete.center == -15
+
+    committee = _committee()
+    score = score_candidate(
+        candidate,
+        committee,
+        _context(committee, bucket_width=4, noise_bound=1),
+    )
+    assert score.partition_sizes == (8, 4, 4)
+
+
+def test_standard_full_selector_uses_amplified_anchor_skeleton(tmp_path: Path) -> None:
+    """The standard full selector must not regress to repeat-only synthesis."""
+    repository = CampaignRepository.create(
+        tmp_path / "standard-selector",
+        CampaignManifest(
+            campaign_id="standard-selector",
+            challenge_id="public-challenge",
+            challenge_commitment="0" * 64,
+            profile_name="standard",
+            semantic_version="0.1.0",
+            public_profile_sha256="1" * 64,
+            seed=31,
+            minimum_certificate_strength="exhaustive-enumeration",
+            logical_query_budget=80,
+            physical_execution_budget=240,
+            hard_reset_budget=240,
+        ),
+    )
+    try:
+        selected, result = _select_candidate(
+            StandardSelectorMode.FULL,
+            lane=0,
+            epoch=0,
+            lane_domain=frozenset(range(16)),
+            secret_cells=8,
+            used=set(),
+            campaign_seed=31,
+            synthesizer=CegisSynthesizer(),
+            knowledge=InterrogationKnowledgeBase(),
+            frontier=ActiveFrontier(repository),
+            logical_time=0,
+        )
+    finally:
+        repository.close()
+
+    assert isinstance(selected, DrainedAnchorSwitchCandidate)
+    assert result is not None
+    assert result.status is SynthesisStatus.SAT
+    assert result.score is not None
+    assert selected.canonical_key() == result.score.candidate.canonical_key()
 
 
 def test_tiny_exact_domain_matches_the_bruteforce_known_optimum() -> None:

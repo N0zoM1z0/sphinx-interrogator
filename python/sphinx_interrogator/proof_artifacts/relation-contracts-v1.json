@@ -23,7 +23,7 @@
   ],
   "supporting_artifact_hashes": {
     "formal/relation_contracts.smt2": "9b8f79992e49783a8775a2aa9ae79fe2581d7533cf0fe83388044fb85711220e",
-    "tests/python/test_certified_relations.py": "128d5f52cc2c109c4411f2016318bc57a0662c6af1ea32699e8d53e8c0cbdab2",
+    "tests/python/test_certified_relations.py": "b78b868380fc9def33f1d54f6dd131eed6e9f3cc22cd7bce08e265e71c3c547c",
     "crates/sphinx-vm/src/machine.rs": "122b77f9c7d32e3021a7fa02bf78a92d7fc4732aa121b142bc97bedbc30b9714"
   }
 }
