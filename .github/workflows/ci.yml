@@ -35,6 +35,15 @@ jobs:
       - run: uv run --frozen pytest tests/python -m "not integration"
       - run: uv run --frozen python scripts/validate_schemas.py
       - run: uv run --frozen python scripts/check_markdown_links.py
+      - name: Bootstrap pinned TLC
+        run: |
+          mkdir -p .tools
+          curl --fail --location --silent --show-error \
+            --output .tools/tla2tools-1.7.4.jar \
+            https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar
+          printf '%s  %s\n' \
+            '936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88' \
+            '.tools/tla2tools-1.7.4.jar' | sha256sum --check
       - run: uv run --frozen python scripts/check_formal_scaffold.py
 
   integration:

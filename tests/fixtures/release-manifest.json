@@ -1,0 +1,110 @@
+{
+  "artifacts": [
+    {
+      "json": {
+        "report_version": "2.0",
+        "top_level_keys": [
+          "report_version"
+        ]
+      },
+      "kind": "state-learning-report",
+      "modified_at": "2026-07-16T00:00:00Z",
+      "path": "runs/state-learning-m8/state-learning-report.json",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "size_bytes": 128,
+      "status": "present"
+    },
+    {
+      "json": null,
+      "kind": "tutorial-demo-report",
+      "modified_at": null,
+      "path": "runs/tutorial-demo-v3/report.json",
+      "sha256": null,
+      "size_bytes": null,
+      "status": "missing"
+    }
+  ],
+  "command": {
+    "argv": [
+      "scripts/release_manifest.py",
+      "--require-complete"
+    ],
+    "cwd": "/repo",
+    "environment": {
+      "CARGO_HOME": null,
+      "SPHINX_VM_BINARY": "target/debug/sphinx-vm"
+    }
+  },
+  "duration_ms": 3,
+  "ended_at": "2026-07-16T00:00:01Z",
+  "hashes": {
+    "runs/state-learning-m8/state-learning-report.json": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "kind": "sphinx-interrogator-release",
+  "manifest_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+  "manifest_version": "2.0",
+  "release_checks": [
+    {
+      "details": {
+        "status_short": [
+          " M scripts/release_manifest.py"
+        ]
+      },
+      "name": "repository.clean",
+      "reason": "working tree has tracked changes",
+      "status": "fail"
+    },
+    {
+      "details": {
+        "path": "runs/state-learning-m8/state-learning-report.json"
+      },
+      "name": "m8.state_conditioned_secret_inference",
+      "reason": "state-conditioned secret inference evidence is missing or trivial",
+      "status": "fail"
+    }
+  ],
+  "repository": {
+    "branch": "main",
+    "dirty": true,
+    "head": "3333333333333333333333333333333333333333",
+    "revision": "3333333333333333333333333333333333333333",
+    "status_short": [
+      " M scripts/release_manifest.py"
+    ]
+  },
+  "schema": "release-manifest/v2",
+  "started_at": "2026-07-16T00:00:00Z",
+  "status": "blocked",
+  "summary": {
+    "all_present": false,
+    "artifact_count": 2,
+    "complete": false,
+    "missing": [
+      "runs/tutorial-demo-v3/report.json"
+    ],
+    "missing_count": 1,
+    "present_count": 1,
+    "semantic_checks_pass": false,
+    "validation_gates_pass": false
+  },
+  "validation_commands": [
+    {
+      "command": "just fmt",
+      "duration_ms": null,
+      "ended_at": null,
+      "evidence": null,
+      "exit_code": null,
+      "started_at": null,
+      "status": "missing_evidence"
+    }
+  ],
+  "versions": {
+    "cargo": "cargo 1.88.0",
+    "java": "openjdk version",
+    "just": "just 1.40.0",
+    "platform": "Linux",
+    "python": "3.12.13",
+    "rustc": "rustc 1.88.0",
+    "uv": "uv 0.8.15"
+  }
+}

@@ -1,9 +1,10 @@
 # Release notes
 
-## v1.0 research-complete candidate
+## v1.0 blocked release candidate
 
-This repository now implements the synthetic SphinxVM/Interrogator system described in
-`agent/CODEX_TASK_SPEC.md` through M9.
+This repository contains substantial executable SphinxVM/Interrogator functionality,
+but the current evidence does not yet satisfy `agent/CODEX_TASK_SPEC.md` through M9.
+Do not tag this state as research-complete.
 
 Measured release evidence is generated, not hand-edited:
 
@@ -11,17 +12,27 @@ Measured release evidence is generated, not hand-edited:
 - standard benchmark and baselines: `just benchmark-standard`;
 - state-learning evaluation: `just evaluate-state-learning`;
 - minimized relation witnesses: `just reduce-witnesses`;
+- public evaluation CSVs and plots: `just export-evaluation-artifacts`;
 - release artifact manifest: `just release-manifest`.
 
 The M9 reducer report is written to
 `runs/reduced-witnesses-m9/reduced-witnesses-report.json`. It contains one minimized
-witness for each enabled core relation family and labels preservation as a bounded
-public-model implication over a finite committee. It does not use the hidden challenge
-secret.
+witness for each enabled core relation family. A candidate is accepted only when it
+preserves the finite public-model predicate and measured public VM replay
+decision/confidence/provenance. It does not use the hidden challenge secret.
 
 The release manifest is written to `runs/release-m9/release-manifest.json` and records
-artifact hashes, repository revision, dirty status, and tool/environment metadata.
+manifest v2 status, artifact hashes, repository revision, dirty status, tool versions,
+command line, start/end timestamps, semantic release checks, and validation-gate
+evidence slots. The current manifest is intentionally `blocked`; `just
+release-manifest` exits nonzero until repository-cleanliness passes. The 12 root-gate
+evidence checks are recorded as passing in `runs/release-m9/validation-evidence.json`.
 
-Known caveat: the frozen standard profile is recoverable by all published selector
-baselines. The report therefore demonstrates robust exact recovery and boundary safety,
-but not a large selector-performance gap for that profile.
+Current benchmark evidence: `just benchmark-standard` has been rerun on the current
+code and produced the full 100-seed / 700-campaign v2 standard report with
+`targets_met=true`. Current M8/M9 semantic evidence has also been regenerated: M8
+records a non-trivial learned-state effective-nibble constraint, and M9 records
+continuous reducer parent paths with reset-policy-aware replay. Public CSV/plot
+release artifacts are generated under `runs/release-m9/evaluation-artifacts/`.
+Current release blockers are repository cleanliness and remaining broader
+proof/formal/reproducibility/CI obligations.

@@ -1,11 +1,376 @@
 # Verification record
 
-Last updated: **2026-07-16 05:08Z**
+Last updated: **2026-07-16 16:24Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
 `preparation/` directory. This record distinguishes completed checks from later
 milestone requirements and never treats a scaffold check as full-system evidence.
+
+## 2026-07-16 acceptance re-audit
+
+The latest task-spec audit supersedes any later section that describes M8, M9, or the
+release as complete. No tracked implementation source was changed by this audit; the
+status/checklist/ExecPlan were corrected to match current evidence.
+
+Commands rerun:
+
+```text
+just fmt                 pass
+just lint                pass
+just test                pass (46 Rust tests; 169 Python tests)
+just schema-check        pass
+just docs-check          pass
+just verify-formal       pass (Z3 unsat x3; TLC 70,557/2,276 states;
+                               131,072 guarded-replay cells)
+just boundary-audit      pass (recursive validation; distinct UID/FD broker;
+                               binary c094fff9561f0997dd8c307940dba991b80c920792c07095113f979d430da6cd)
+just demo-tutorial       pass (unique_exact; judge accepted; 16 logical families)
+just evaluate-state-learning
+                         pass as a command (0.246/1.0/1.0 measured accuracy)
+just reduce-witnesses    pass as a command (10 families reported minimized)
+```
+
+The passing commands do not close the following acceptance gaps:
+
+- `runs/standard-benchmark-v2/standard-benchmark-report.json` now contains the full
+  100-seed / 700-campaign current-code standard benchmark with paired bootstrap
+  confidence intervals and a complete B0-B7 surface. It records
+  `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact,
+  B0 random-final-guess 0/100 exact, and fault-off 0 false exact declarations.
+- The M8/M9 semantic artifact gaps identified by the audit have now been repaired:
+  M8 emits a non-trivial learned-state effective-nibble constraint, and M9 emits
+  continuous reducer parent paths with reset-policy-aware measured replay.
+- `scripts/release_manifest.py` has been repaired after this audit to fail closed:
+  current `runs/release-m9/release-manifest.json` reports `status=blocked`,
+  `semantic_checks_pass=false`, and `validation_gates_pass=true`. It no longer
+  crashes for absolute `--output` paths. Remaining release blockers are dirty-tree
+  plus the broader proof/formal/reproducibility obligations tracked in
+  `agent/STATUS.md`.
+- The TLA+/SMT suite omits several task-required reset, architectural-confinement,
+  gas/progress, normalized-cost, exact-cycle, and extractor-differential obligations.
+- Integrated campaign modes, CLI documentation, release versions, and CI coverage
+  remain below the normative task specification. Tutorial and standard benchmark
+  campaign manifests now use v1.2 runtime reproducibility metadata and normative
+  campaign statuses. Release-bound public CSV/plot artifacts are now generated and
+  hashed by the release manifest.
+
+The repaired challenge boundary is a confirmed positive result: private roots are
+unpredictable, public labels do not derive secrets, IDs are generic, System B receives
+only public paths/socket access, and adversarial recursive-field and distinct-UID
+tests pass. A full current benchmark has now been performed; a remote CI run has not,
+and the remote currently has no branch heads or Actions runs.
+
+## 2026-07-16 task-spec gap audit and lifecycle documentation repair
+
+The task-spec gap audit reconfirmed that the current P0 benchmark/security repairs and
+M8/M9 semantic artifact repairs are supported by local evidence, but release
+completion is still blocked by dirty-tree state, incomplete formal/differential
+obligations, missing clean CI evidence, non-normative statuses in some public result
+schemas, incomplete mutation-ladder separation, and final documentation/version
+alignment.
+
+README, `docs/PROTOCOL.md`, and `docs/REPOSITORY_GUIDE.md` now document the repaired
+split challenge lifecycle: `challenge private-root`, split public/private challenge
+outputs, private-root files, private directory FD brokerage, and public VM/judge
+sockets. The old `challenge create --seed --output` and `serve --challenge` examples
+were removed from current lifecycle docs. An older release-manifest hash in this file
+was relabeled as historical and paired with the current manifest hash.
+
+```text
+git diff --check         pass
+PATH=/tmp/sphinx-just/bin:$PATH just docs-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+```
+
+## 2026-07-16 normative public result status repair
+
+Tutorial, standard, and B0 random-final-guess recovery reports now emit the
+task-spec result status vocabulary. Legacy report statuses are accepted only for
+resume/migration and are normalized as follows: `unique_exact_unjudged` to
+`unique_exact`, `inconclusive` to `candidate_set`, `inconsistent` to
+`model_inconsistent`, and `judge_rejected` to `target_error`. Internal
+relation/statistical decisions still use `inconclusive` where appropriate; that is no
+longer a public campaign result status.
+
+The full standard benchmark was rerun in resume/upgrade mode. The regenerated
+aggregate contains 500 `unique_exact` rows and 200 `candidate_set` rows; all 700
+per-run reports and all 700 campaign manifests use the same normative status set, and
+no per-run recovery report retains a legacy status string.
+
+```text
+uv run --frozen ruff format --check python/sphinx_interrogator/persistence.py python/sphinx_interrogator/tutorial.py python/sphinx_interrogator/standard.py python/sphinx_interrogator/cli.py scripts/benchmark_standard.py scripts/tutorial_matrix.py tests/python/test_protocol_process.py tests/python/test_standard_benchmark.py
+                         pass
+uv run --frozen ruff check python/sphinx_interrogator/persistence.py python/sphinx_interrogator/tutorial.py python/sphinx_interrogator/standard.py python/sphinx_interrogator/cli.py scripts/benchmark_standard.py scripts/tutorial_matrix.py tests/python/test_protocol_process.py tests/python/test_standard_benchmark.py
+                         pass
+uv run --frozen python -m py_compile python/sphinx_interrogator/persistence.py python/sphinx_interrogator/tutorial.py python/sphinx_interrogator/standard.py python/sphinx_interrogator/cli.py scripts/benchmark_standard.py scripts/tutorial_matrix.py
+                         pass
+uv run --frozen pytest tests/python/test_standard_benchmark.py tests/python/test_persistence.py
+                         pass (10 tests)
+SPHINX_VM_BINARY="${CARGO_TARGET_DIR:-target}/debug/sphinx-vm" uv run --frozen pytest tests/python/test_protocol_process.py -k 'tutorial_campaign_recovers or standard_campaign_recovers or fault_free_tutorial_control or fault_free_standard_control'
+                         pass (4 selected integration tests)
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just benchmark-standard
+                         pass; 700/700 result rows use normative statuses
+PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
+                         expected fail; validation_gates_pass true, only repository.clean fails
+```
+
+```text
+standard_benchmark_sha256: 55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480
+validation_evidence_sha256: e6d6f4491e98685f6d1fd47128964da75142663cfceaa7a8da975d3cc32e7cb7
+release_manifest_sha256:    056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
+```
+
+## 2026-07-16 release-manifest gate repair
+
+The release manifest now fails closed instead of deriving completion from artifact
+presence alone. It records semantic checks for benchmark, tutorial, M8, and M9
+artifacts; a repository-cleanliness check; and explicit root-gate evidence slots.
+The standard benchmark artifact was also upgraded to report v1.1 with paired
+seed-level bootstrap confidence intervals and B0-B7 surface evidence, then regenerated
+as the full published 100-seed benchmark.
+
+Commands run:
+
+```text
+PATH=/tmp/sphinx-just/bin:$PATH just fmt
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just lint
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just test
+                         pass (46 Rust tests; 175 Python tests)
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just docs-check
+                         pass
+uv run --frozen pytest tests/python/test_standard_benchmark.py tests/python/test_release_manifest.py
+                         pass (6 tests)
+uv run --frozen python scripts/release_manifest.py --output /tmp/sphinx-release-manifest.json
+                         pass; absolute output path writes a blocked manifest
+PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
+                         expected fail; writes blocked manifest and exits 1 with
+                         --require-complete
+PATH=/tmp/sphinx-just/bin:$PATH just benchmark-standard
+                         pass; 100 seeds / 700 campaigns; targets_met true
+git diff --check         pass
+```
+
+After the full benchmark, the root gates were rerun:
+
+```text
+PATH=/tmp/sphinx-just/bin:$PATH just fmt
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just lint
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just test
+                         pass (46 Rust tests; 175 Python tests)
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just docs-check
+                         pass
+git diff --check         pass
+```
+
+Current `runs/release-m9/release-manifest.json`:
+
+```text
+status: blocked
+semantic_checks_pass: false
+validation_gates_pass: true
+failed_release_checks: 1
+standard_benchmark_sha256: 55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480
+missing_or_failed_gates: 0
+file_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
+```
+
+## 2026-07-16 M8/M9 semantic artifact repair
+
+M8 and M9 were regenerated after the acceptance re-audit. M8 now uses independent
+campaign private roots and records a learned-state-conditioned effective-nibble
+projection constraint. The constraint is intentionally labeled as an effective
+projection because research profiles hide lane permutation and salts; it reduces the
+public macro's effective nibble from 16 values to 4 and is grouped by state-model
+provenance for retraction.
+
+M9 now reconstructs the accepted parent chain to each final reduced witness instead of
+serializing the whole accepted search tree. Measured VM replay records the reset
+sequence used for each relation; the soft-history witness uses `["hard", "soft"]`
+rather than hard-resetting every arm.
+
+```text
+PATH=/tmp/sphinx-just/bin:$PATH just evaluate-state-learning
+                         pass; state_conditioned_inference.status complete,
+                         nontrivial_constraints 1
+PATH=/tmp/sphinx-just/bin:$PATH just reduce-witnesses
+                         pass; all_replay_paths_valid true,
+                         reset_policy_honored true
+uv run --frozen pytest tests/python/test_reducer.py tests/python/test_research_state.py tests/python/test_release_manifest.py
+                         pass (14 tests)
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just fmt
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just lint
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just test
+                         pass (46 Rust tests; 176 Python tests)
+PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
+                         expected fail; only repository.clean fails among release checks,
+                         validation gates are supplied by the recorder section below
+git diff --check         pass
+```
+
+Current regenerated artifacts:
+
+```text
+state_learning_sha256: ce5b2daecf11499e3d1465200ecf04abd77a906927f3bb337f855ebaa354eef1
+reduced_witnesses_sha256: a924448f71b27708c35945b5a64bff33f5ffd1394ca84cd700f052c12d95aa56
+release_manifest_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
+```
+
+## 2026-07-16 certificate proof-bundle binding repair
+
+Relation certificates now bind `relation-contracts-v1` to the actual contents of the
+declared proof/test/semantic artifacts instead of only hashing a manifest that lists
+their paths. The installed proof artifact records and verifies SHA-256 digests for
+`formal/relation_contracts.smt2`, `tests/python/test_certified_relations.py`, and
+`crates/sphinx-vm/src/machine.rs`; persisted certificates fail closed when any claimed
+supporting digest is stale.
+
+```text
+uv run --frozen pytest tests/python/test_certified_relations.py tests/python/test_relations.py
+                         pass (30 tests)
+uv run --frozen pytest tests/python/test_solver.py::test_wrong_symbolic_model_evidence_is_unsat_not_false_exact tests/python/test_certified_relations.py::test_broken_normalizer_static_cost_mutation_is_invalid
+                         pass (2 tests)
+uv run --frozen ruff check python/sphinx_interrogator/certificates.py tests/python/test_certified_relations.py
+                         pass
+uv run --frozen python -m py_compile python/sphinx_interrogator/certificates.py
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
+                         expected fail; only repository.clean fails among release checks,
+                         validation gates are supplied by the recorder section below
+```
+
+```text
+proof_artifact_sha256: 24e7b87fbf8d1a0122e701bcfc5ff813b4da860942f9a83505c37be93b80765b
+relation_contracts_smt2_sha256: 9b8f79992e49783a8775a2aa9ae79fe2581d7533cf0fe83388044fb85711220e
+certified_relations_test_sha256: 14367234ffc81e86f3f2fba3606f88497aac29adbaeaae2aa32908695c024b90
+solver_test_sha256: 39e48ec11ac1518ae04a70da97dace9c5333de7aed0fbf558e0c299d97398a97
+rust_machine_semantics_sha256: 122b77f9c7d32e3021a7fa02bf78a92d7fc4732aa121b142bc97bedbc30b9714
+```
+
+The same repair set now includes two adversarial mutation regressions: a deliberately
+contradictory symbolic-model constraint is reported as UNSAT rather than a false
+singleton, and a mutated static-cost normalizer is rejected as `INVALID` before any
+hard evidence is extracted.
+
+## 2026-07-16 validation-gate evidence recorder
+
+`scripts/record_validation_gate.py` now runs a gate command, captures exit status,
+timestamps, stdout/stderr log hashes, and log paths, and merges the result into
+`runs/release-m9/validation-evidence.json`. `just release-manifest` now reads that
+default evidence file. All 11 expected root gates have been rerun through the
+recorder and pass; the release manifest remains blocked by the dirty working tree.
+
+```text
+uv run --frozen pytest tests/python/test_validation_evidence.py tests/python/test_release_manifest.py
+                         pass (4 tests)
+uv run --frozen ruff check scripts/record_validation_gate.py tests/python/test_validation_evidence.py
+                         pass
+uv run --frozen python -m py_compile scripts/record_validation_gate.py
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just --list
+                         pass; includes record-validation-gate label +command
+PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
+                         expected fail; reads validation-evidence path, only
+                         repository.clean fails among release checks,
+                         validation_gates_pass true
+```
+
+```text
+validation_evidence_sha256: e6d6f4491e98685f6d1fd47128964da75142663cfceaa7a8da975d3cc32e7cb7
+release_manifest_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
+```
+
+## 2026-07-16 campaign manifest v1.2 reproducibility repair
+
+`CampaignManifest` now supports version 1.2 with repository revision/dirty state,
+status-short details, tool versions, command argv/cwd, timing, normative campaign
+status, and artifact hashes. `CampaignRepository.finalize_manifest()` writes the v1.2
+manifest after reports are durable. Tutorial recovery, standard recovery, and the B0
+random-final-guess benchmark baseline all finalize manifests; existing accepted
+reports are upgraded on resume.
+
+```text
+uv run --frozen pytest tests/python/test_persistence.py tests/python/test_validation_evidence.py tests/python/test_release_manifest.py
+                         pass (11 tests)
+SPHINX_VM_BINARY="${CARGO_TARGET_DIR:-target}/debug/sphinx-vm" uv run --frozen pytest tests/python/test_protocol_process.py -k 'tutorial_campaign_recovers or standard_campaign_recovers or fault_free_tutorial_control or fault_free_standard_control'
+                         pass (4 selected integration tests)
+uv run --frozen pytest tests/python/test_standard_benchmark.py
+                         pass (3 tests)
+PATH=/tmp/sphinx-just/bin:$PATH just fmt
+                         pass via record-validation-gate
+PATH=/tmp/sphinx-just/bin:$PATH just lint
+                         pass via record-validation-gate
+PATH=/tmp/sphinx-just/bin:$PATH just test
+                         pass via record-validation-gate; 46 Rust tests and 179 Python tests
+PATH=/tmp/sphinx-just/bin:$PATH just benchmark-standard
+                         pass via record-validation-gate; 700/700 standard campaign manifests are v1.2
+PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
+                         expected fail; validation_gates_pass true, only repository.clean fails
+```
+
+```text
+tutorial_manifest_sha256: 8a77bcbbd91764261c402976cf5c7924bfd0bd6f72de550d54f0e3664b7a4950
+standard_campaign_manifests: 700
+standard_campaign_manifest_versions: ["1.2"]
+standard_campaign_manifest_statuses: ["candidate_set", "unique_exact"]
+validation_evidence_sha256: e6d6f4491e98685f6d1fd47128964da75142663cfceaa7a8da975d3cc32e7cb7
+release_manifest_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
+```
+
+## 2026-07-16 evaluation CSV/plot artifact export
+
+`scripts/export_evaluation_artifacts.py` now derives public release CSVs and SVG
+plots from the standard benchmark, M8 state-learning, and M9 reducer artifacts. The
+exporter reads only public generated reports and event logs, writes a schema-versioned
+manifest, and `scripts/release_manifest.py` treats that manifest as a fifth semantic
+release artifact.
+
+```text
+uv run --frozen pytest tests/python/test_evaluation_artifacts.py tests/python/test_release_manifest.py
+                         pass (4 tests)
+uv run --frozen ruff check scripts/export_evaluation_artifacts.py scripts/release_manifest.py tests/python/test_evaluation_artifacts.py scripts/validate_schemas.py
+                         pass
+uv run --frozen ruff format --check scripts/export_evaluation_artifacts.py scripts/release_manifest.py tests/python/test_evaluation_artifacts.py scripts/validate_schemas.py
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just export-evaluation-artifacts
+                         pass; wrote campaign/query/relation/state/reducer CSVs and SVG plots
+PATH=/tmp/sphinx-just/bin:$PATH just record-validation-gate 'just export-evaluation-artifacts' just export-evaluation-artifacts
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
+                         expected fail; evaluation artifact checks pass, validation_gates_pass true,
+                         only repository.clean fails
+```
+
+```text
+campaign_rows: 700
+query_rows: 52928
+relation_rows: 26464
+state_rows: 13
+reducer_family_rows: 10
+evaluation_artifacts_manifest_sha256: c7ff125818abd7b8d0a895a897a994638b54cc5c5c32086fe73f0ca1cf8ba367
+validation_evidence_sha256: e6d6f4491e98685f6d1fd47128964da75142663cfceaa7a8da975d3cc32e7cb7
+release_manifest_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
+```
 
 ## M0 environment
 
@@ -368,7 +733,7 @@ SPHINX_VM_BINARY="$PWD/.cache/sphinx-target/debug/sphinx-vm" \
   uv run --frozen python scripts/tutorial_matrix.py \
   --output runs/tutorial-fault-free-v2 --fault off
 
-100/100 inconclusive; 0 exact declarations; 0 judge submissions
+100/100 candidate_set; 0 exact declarations; 0 judge submissions
 median logical relation families: 16; maximum: 16
 artifact: runs/tutorial-fault-free-v2/summary.json
 ```
@@ -546,7 +911,7 @@ full/reference median logical:     40
 full/reference p95 logical:        48
 full/reference median physical:    80
 off-control false exact:           0/100
-off-control status:                100/100 inconclusive
+off-control status:                100/100 candidate_set
 targets_met:                       true
 ```
 
@@ -699,7 +1064,11 @@ Release manifest: `runs/release-m9/release-manifest.json`.
 ```text
 artifact_count: 5
 missing_count:  0
-manifest_sha256 9b05653db1954b434a870295acda8dc5338b36b31ec5e92a873ffe6ca814667f
+status:         blocked
+semantic_checks_pass: false
+validation_gates_pass: true
+historical_manifest_sha256: 07abd071c4717435587bb42b3b5d012dea26806459aabda20a6998c9340ed6b7
+current_manifest_sha256:    056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
 ```
 
 The final M9 suite used the repository-local Cargo home/target, two build jobs, and no
@@ -719,7 +1088,8 @@ just benchmark-standard     pass; 600 campaigns, targets_met true, full/referenc
                                  exact rate 1.0, p95 48 logical, off false exact 0
 just evaluate-state-learning pass; learned-state and exact-history targets met
 just reduce-witnesses       pass; 10/10 relation families minimized
-just release-manifest       pass; five public artifacts hashed, none missing
+just release-manifest       fails closed; four public artifacts hashed, semantic
+                            release checks/gate evidence incomplete
 ```
 
 ## Remaining limitations after M9

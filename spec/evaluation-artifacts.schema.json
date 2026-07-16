@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sphinx-interrogator.local/spec/evaluation-artifacts.schema.json",
+  "title": "Sphinx Interrogator public evaluation artifact manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version",
+    "kind",
+    "schema",
+    "generated_at",
+    "private_artifacts_included",
+    "sources",
+    "files",
+    "row_counts",
+    "summary",
+    "manifest_sha256"
+  ],
+  "properties": {
+    "report_version": {
+      "const": "1.0"
+    },
+    "kind": {
+      "const": "evaluation-artifacts"
+    },
+    "schema": {
+      "const": "evaluation-artifacts/v1"
+    },
+    "generated_at": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "private_artifacts_included": {
+      "const": false
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 9,
+      "items": {
+        "$ref": "#/$defs/file"
+      }
+    },
+    "row_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "campaign_results",
+        "query_events",
+        "relation_decisions",
+        "state_learning",
+        "reducer_families"
+      ],
+      "properties": {
+        "campaign_results": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "query_events": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "relation_decisions": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "state_learning": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reducer_families": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "all_required_present",
+        "csv_count",
+        "plot_count",
+        "required_csvs",
+        "required_plots"
+      ],
+      "properties": {
+        "all_required_present": {
+          "const": true
+        },
+        "csv_count": {
+          "const": 5
+        },
+        "plot_count": {
+          "const": 4
+        },
+        "required_csvs": {
+          "type": "array",
+          "minItems": 5,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required_plots": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "manifest_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T.*Z$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "kind",
+        "status",
+        "sha256",
+        "size_bytes"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "csv",
+            "plot"
+          ]
+        },
+        "status": {
+          "const": "present"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

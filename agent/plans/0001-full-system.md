@@ -72,6 +72,13 @@ predicates, minimized witnesses for every enabled relation family, CLI
 doctor/reduce/benchmark coverage, reducer report schema coverage, release notes, a
 completed review checklist, and an ignored release manifest with artifact hashes.
 
+A comprehensive audit on 2026-07-16 reopened M8 and M9 acceptance. The repair pass
+following that audit rebuilt challenge security, recursive protocol validation,
+certificate/extractor enforcement, standard benchmark v2 semantics, real research
+state learning, measured replay witness reduction, clean formal bootstrapping, and
+release manifest v2. The negative audit reproductions below are retained as history;
+the later superseding observations and evidence list record the current behavior.
+
 ## Progress
 
 - [x] (2026-07-15 00:00Z) Create project brief, formal model, architecture, research basis, evaluation design, safety policy, task specification, and initial ExecPlan.
@@ -81,11 +88,91 @@ completed review checklist, and an ignored release manifest with artifact hashes
 - [x] (2026-07-16 02:34Z) Close M2 after its semantic/challenge/formal evidence and the real downstream tutorial gate both pass.
 - [x] (2026-07-16 02:34Z) Close M3 after all certified relation/extractor evidence and the real downstream tutorial gate both pass.
 - [x] (2026-07-16 02:34Z) Close M4 after durable campaign/exact-solver evidence, database migration 2, and the real downstream tutorial gate all pass.
-- [x] (2026-07-16 02:34Z) Complete M5 deterministic tutorial recovery and blind fault-free negative control: 100/100 exact accepted reference seeds and 100/100 inconclusive off-fault seeds at 16 logical families each.
+- [x] (2026-07-16 02:34Z) Complete M5 deterministic tutorial recovery and blind fault-free negative control: 100/100 exact accepted reference seeds and 100/100 `candidate_set` off-fault results at 16 logical families each.
 - [x] (2026-07-16 03:00Z) Complete M6 grammar-guided CEGIS: typed anchor/repeat skeletons, bounded enumeration, Z3 hole filling, diverse hypothesis-store committees, real counterexample refinement, interval/resource objectives, deterministic cache/ties, frontier integration, live Rust execution, and 20-seed random-hole calibration.
-- [x] (2026-07-16 04:52Z) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance: 600-campaign standard matrix passed with 100/100 full-reference exact, p95 48 logical families, and 100/100 off-control inconclusive.
-- [x] (2026-07-16 05:08Z) Complete M8 soft-reset state, exact-history mode, AALpy learner, and retraction semantics: deterministic state-learning evaluation reports no-learner accuracy 0.133, exact-history 1.0, and learned-state 1.0 on 30 held-out macro sequences.
-- [x] (2026-07-16 06:24Z) Complete M9 relational reducer, baselines/ablations, formal/boundary audit, and release evidence: 10/10 enabled relation families minimized; full release gates and standard benchmark passed.
+- [x] (2026-07-16 04:52Z) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance: 600-campaign standard matrix passed with 100/100 full-reference exact, p95 48 logical families, and 100/100 off-control `candidate_set` results.
+- [x] (2026-07-16 05:08Z) Historical M8 closure, superseded by the acceptance
+  re-audit below: deterministic fixture evaluation reported no-learner 0.133,
+  exact-history 1.0, and learned-state 1.0.
+- [x] (2026-07-16 06:24Z) Historical M9 closure, superseded by the acceptance
+  re-audit below: the original scripts reported 10/10 minimized families and passing
+  release gates.
+- [x] (2026-07-16 08:00Z) Reopen M8 acceptance: replace the deterministic
+  `ping/toggle` fixture-only report with held-out measurements from actual
+  research-profile SphinxVM challenges and integrate state-conditioned inference.
+- [x] (2026-07-16 08:00Z) Reopen M9 acceptance: repair boundary isolation, relation
+  certificate enforcement, baseline semantics, run manifests/artifact validation,
+  clean CI formal bootstrap, result/CLI contracts, and release documentation.
+- [x] (2026-07-16 10:30Z) Complete P0 challenge-security repair: private 256-bit root
+  generation is separate from public campaign scheduling, public IDs are generic,
+  VM launch uses only a public directory plus private FD brokerage, and boundary tests
+  cover distinct UID/FD and recursive private-field injection.
+- [x] (2026-07-16 14:40Z) Finish P0 benchmark v2: challenge/noise pairing,
+  randomized execution, false-exact accounting, CLI status reading, and real selector
+  branches are implemented; paired bootstrap confidence intervals are reported in
+  v1.1; the B0-B7 surface is machine-readable and complete; `just
+  benchmark-standard` completed the full 100-seed / 700-campaign matrix with
+  `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact,
+  and fault-off 0 false exact.
+- [x] (2026-07-16 13:20Z) Add paired seed-level bootstrap confidence intervals to
+  the standard benchmark report, schema, fixture, tests, and current selected
+  benchmark artifact.
+- [x] (2026-07-16 13:45Z) Add B0-B7 benchmark surface evidence: B0 is a real
+  no-query deterministic final-guess judge baseline, B1-B4 bind to measured selector
+  branches, B5/B6 are marked not applicable to the standard profile, and B7 binds to
+  the development-only standard-profile upper-bound artifact.
+- [x] (2026-07-16 14:53Z) Finish P1 real M8 semantic artifact evidence: real research
+  SphinxVM measurements compare no learner, exact history, and learned state; M8 now
+  records independent campaign private roots and one non-trivial learned-state
+  effective-nibble constraint with state-model provenance and retraction metadata.
+- [x] (2026-07-16 14:53Z) Finish P1 real M9 semantic artifact evidence: reducer
+  results now reconstruct the accepted parent chain to the final witness, and measured
+  replay records and honors each relation's reset policy.
+- [x] (2026-07-16 15:04Z) Bind relation certificates to real proof/test/semantic
+  artifact contents: `relation-contracts-v1` records SHA-256 digests for the SMT
+  contract, certificate/extractor tests, and Rust machine semantics file; stale
+  supporting hashes now fail closed in certificate loading.
+- [x] (2026-07-16 16:08Z) Add adversarial mutation regressions: a contradictory
+  symbolic-model constraint is UNSAT rather than false-exact, and a broken static-cost
+  normalizer is rejected as `INVALID` before hard extraction.
+- [x] (2026-07-16 13:05Z) Repair release-manifest fail-closed behavior: status now
+  depends on semantic artifact checks and explicit root-gate evidence, absolute
+  `--output` paths no longer crash after writing, and `just release-manifest` fails
+  while current release evidence is blocked.
+- [x] (2026-07-16 15:10Z) Add machine-readable validation-gate evidence recording:
+  `scripts/record_validation_gate.py` runs a root command, captures exit status,
+  timestamps, stdout/stderr log hashes, and merges the entry into
+  `runs/release-m9/validation-evidence.json`; `just release-manifest` now reads this
+  file by default.
+- [x] (2026-07-16 15:37Z) Add campaign manifest v1.2 reproducibility metadata:
+  finalized tutorial and standard campaign manifests record revision, dirty state,
+  versions, command/cwd, timing, normative campaign status, and artifact hashes; all
+  700 standard benchmark run directories now have v1.2 manifests with
+  `unique_exact` or `candidate_set` status.
+- [x] (2026-07-16 15:47Z) Re-audit the task-spec gap list and repair stale public
+  lifecycle documentation: README, protocol, and repository-guide examples now use
+  split public/private challenge creation, private-root files, private directory FD
+  brokerage, and public sockets. `git diff --check`, `just docs-check`, and
+  `just schema-check` passed after the documentation repair.
+- [x] (2026-07-16 15:56Z) Normalize public recovery and benchmark result statuses:
+  tutorial, standard, and B0 reports now emit task-spec statuses (`unique_exact`,
+  `candidate_set`, `model_inconsistent`, `target_error`) instead of legacy
+  `inconclusive`, `unique_exact_unjudged`, `inconsistent`, or `judge_rejected`;
+  existing standard run reports are upgraded on resume, and the 700-campaign
+  standard benchmark artifact now contains only `unique_exact`/`candidate_set`
+  result rows.
+- [x] (2026-07-16 16:24Z) Generate release-bound evaluation CSV/plot artifacts:
+  `just export-evaluation-artifacts` writes campaign, query, relation, state-learning,
+  and reducer CSVs plus deterministic SVG plots; release manifest v2 now hashes and
+  semantically checks the evaluation artifact manifest.
+- [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
+  metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
+  but current evidence is still blocked by dirty tree, incomplete clean-CI/release
+  proof, and broader documentation/version alignment.
+- [x] (2026-07-16 12:08Z) Re-audit every task-spec acceptance area and rerun local
+  quality, schema, formal, boundary, tutorial, M8, and M9 checks. Record the remaining
+  P0/P1/P2 blockers in `agent/STATUS.md`, `agent/REVIEW_CHECKLIST.md`, this ExecPlan,
+  and `VALIDATION.md`.
 
 ## Surprises & Discoveries
 
@@ -132,7 +219,7 @@ completed review checklist, and an ignored release manifest with artifact hashes
   Evidence: each reference campaign has three satisfying full models (reference, weak, and signed) with one shared secret projection; excluding that 16-bit projection is `unsat` for all 100 published seeds.
 
 - Observation: A fixed complete tutorial design is both cheaper and easier to audit than adaptive early stopping at this milestone.
-  Evidence: every reference and off-fault campaign uses exactly 16 logical relation families and 32 physical executions; the reference matrix is 100/100 exact and the off-fault matrix is 100/100 inconclusive.
+  Evidence: every reference and off-fault campaign uses exactly 16 logical relation families and 32 physical executions; the reference matrix is 100/100 exact and the off-fault matrix is 100/100 `candidate_set` public results.
 
 - Observation: Committee scoring materially improves candidate balance even before a full standard campaign exists.
   Evidence: on 20 deterministic eight-model nibble subsets with no designated true secret, M6 achieved mean worst bucket 3.00 versus 7.15 for seeded uniform random holes and won strictly on 19/20 subsets.
@@ -157,6 +244,154 @@ completed review checklist, and an ignored release manifest with artifact hashes
 
 - Observation: The final release manifest is inherently a generated run artifact, not a tracked source file.
   Evidence: `runs/release-m9/release-manifest.json` records the current HEAD, dirty status, tool versions, and hashes of five generated public artifacts; committing the manifest itself would immediately stale its recorded revision/dirty state.
+
+- Observation: The current process split does not enforce the claimed private-file
+  boundary.
+  Evidence: Python receives the challenge root and runs under the same UID that owns
+  mode-0700/mode-0600 private files; an audit probe confirmed a private `secret.bin` is
+  readable. `scripts/boundary_audit.py` checks only literal source markers and decoded
+  dataclass keys.
+
+- Observation: Protocol response validation is strict only at the top level.
+  Evidence: adding `observation.secret` to a schema fixture was accepted by
+  `decode_execute_response`; the schema declares nested `additionalProperties=false`,
+  and raw write-ahead would persist the injected field before typed decoding.
+
+- Observation: Relation proof strength is self-declared rather than verified at hard
+  extraction time.
+  Evidence: replacing a certified relation's source program produced
+  `architectural_precheck=False` while retaining an `exhaustive-enumeration`
+  certificate, yet `extract_finite_models` emitted a hard constraint. The fault-free
+  precheck is the tautology `x - x == 0`.
+
+- Observation: The M8 report is a learner unit fixture, not research-profile
+  evaluation.
+  Evidence: `scripts/evaluate_state_learning.py` uses only `ping`, `toggle`, and a
+  local `_toggle_oracle`; it never starts SphinxVM or reads `research.toml`.
+
+- Observation: The published standard ablations cannot establish KB or synthesis
+  value.
+  Evidence: `full` and `synthesis_no_kb` take the same CEGIS branch;
+  `kb_no_synthesis` selects the canonical minimum without consulting the KB; the full
+  frontier is recreated around one candidate and immediately selects that candidate.
+
+- Observation: Generated campaign artifacts have drifted across schema versions.
+  Evidence: an audit sweep found 825 manifests, of which 202 are legacy version 1.0
+  and fail the current version-1.1 schema. Both 100-seed tutorial matrix commands
+  resumed these legacy runs, while a fresh detached-checkout tutorial generated a
+  valid 1.1 manifest.
+
+- Observation: The clean-CI TLC bootstrap defect found by the first audit has been
+  repaired.
+  Evidence: `just verify-formal` depends on `bootstrap-formal`, and
+  `.github/workflows/ci.yml` downloads and SHA-256 verifies the pinned TLC 1.7.4 jar
+  before invoking the formal checker.
+
+- Observation: The M8 fixture-only finding is superseded only for measurement, not for
+  state-conditioned secret inference.
+  Evidence: `runs/state-learning-m8/state-learning-report.json` measures 126 held-out
+  words on real research SphinxVM campaigns and reaches 0.246/1.0/1.0 accuracy, while
+  `scripts/evaluate_state_learning.py` persists the dependent constraint as Boolean
+  literal `true`.
+
+- Observation: Measured reducer evidence does not make the reported `steps` array a
+  replayable reduction trace.
+  Evidence: `python/sphinx_interrogator/reducer.py` appends every accepted search edge
+  to one flat list without parent reconstruction. A fresh report had discontinuities
+  in 9 of 10 families, including 350 breaks across 351 hard-replay steps; the replay
+  script also hard-resets every candidate regardless of relation policy.
+
+- Observation: M8 state-conditioned inference now emits a non-trivial public
+  projection constraint instead of a tautology.
+  Evidence: `PATH=/tmp/sphinx-just/bin:$PATH just evaluate-state-learning` regenerated
+  `runs/state-learning-m8/state-learning-report.json` with
+  `state_conditioned_inference.status=complete`, `nontrivial_constraints=1`,
+  `shared_private_root=false`, and an exact candidate snapshot reducing
+  `effective_nibble_lane_0` from 16 values to 4.
+
+- Observation: M9 reducer reports now contain continuous replayable parent paths and
+  reset-policy-aware replay evidence.
+  Evidence: `PATH=/tmp/sphinx-just/bin:$PATH just reduce-witnesses` regenerated
+  `runs/reduced-witnesses-m9/reduced-witnesses-report.json` with
+  `all_minimized=true`, `all_replay_paths_valid=true`, and
+  `reset_policy_honored=true`; the `soft-history-contrast/v1` measured replay uses
+  resets `["hard", "soft"]`.
+
+- Observation: Release manifest v2 schema validity does not imply release validity.
+  Evidence: `scripts/release_manifest.py` derives `complete` only from missing artifact
+  files and records every gate as `not_run_by_manifest`; the generated manifest still
+  says `complete` while its embedded standard benchmark reports
+  `full_published_matrix=false` and `targets_met=false`.
+
+- Observation: Release-manifest completion is now fail-closed instead of
+  presence-based.
+  Evidence: `PATH=/tmp/sphinx-just/bin:$PATH just release-manifest` writes
+  `runs/release-m9/release-manifest.json` and exits 1 because the manifest is
+  `blocked`; after the full standard benchmark rerun the generated report lists failed
+  semantic checks, a dirty repository check, and root validation commands with missing
+  evidence. After the M8/M9 and evaluation-artifact repairs, only the dirty repository
+  check remains failed among release checks.
+
+- Observation: Standard benchmark report v1.1 now records paired bootstrap
+  confidence intervals. A selected one-seed matrix remains only smoke evidence, while
+  the later full matrix is the release benchmark evidence.
+  Evidence: rerunning `scripts/benchmark_standard.py --output
+  runs/standard-benchmark-v2 --limit 1` generated 18 group intervals and 12
+  full-vs-baseline paired comparisons over the selected one-seed matrix; that smoke
+  artifact reported `full_published_matrix=false` and `targets_met=false`.
+
+- Observation: The selected standard benchmark now has a complete B0-B7 surface, but
+  remains selected evidence only.
+  Evidence: rerunning the same command after adding B0 generated seven campaigns:
+  B0 `random_final_guess` ended `candidate_set` with zero logical/physical queries;
+  B1-B4 are measured black-box selector branches; B5/B6 are explicitly
+  not-applicable to standard; and B7 points to the development-only upper-bound
+  artifact. The release manifest's failed checks dropped to six, with
+  `standard.required_ablation_surface` now passing.
+
+- Observation: The repaired current-code standard benchmark now satisfies the full
+  published matrix gate.
+  Evidence: `PATH=/tmp/sphinx-just/bin:$PATH just benchmark-standard` completed 700
+  campaigns over 100 published seeds and exited 0. The report records
+  `full_published_matrix=true`, `targets_met=true`, paired bootstrap intervals,
+  complete B0-B7 evidence, full/reference 100/100 exact, B0 random-final-guess 0/100
+  exact, and fault-off 0 false exact declarations.
+
+- Observation: Passing `just verify-formal` does not cover the task's complete formal
+  obligation set.
+  Evidence: `formal/SphinxVM.tla` models scheduler variables but no architectural
+  state, gas, or progress, and its configured invariants do not state soft/hard reset,
+  architectural confinement, or fault-disabled normalized-cost independence.
+
+- Observation: Relation certificates now bind actual supporting artifact contents.
+  Evidence: `relation-contracts-v1` records SHA-256 digests for
+  `formal/relation_contracts.smt2`, `tests/python/test_certified_relations.py`, and
+  `crates/sphinx-vm/src/machine.rs`; `uv run --frozen pytest
+  tests/python/test_certified_relations.py tests/python/test_relations.py` passed 30
+  tests, including a stale-supporting-hash rejection.
+
+- Observation: Root-gate evidence now has a machine-readable recorder and all expected
+  root gates have been rerun through it.
+  Evidence: `uv run --frozen pytest tests/python/test_validation_evidence.py
+  tests/python/test_release_manifest.py` passed 4 tests; `just release-manifest`
+  records the validation evidence path in its command argv, reports
+  `validation_gates_pass=true`, and remains `blocked` only because
+  `repository.clean` fails.
+
+- Observation: Tutorial and standard campaign manifests now carry v1.2 runtime
+  reproducibility metadata.
+  Evidence: `uv run --frozen python` inspection found 700/700 manifests under
+  `runs/standard-benchmark-v2/runs` with `manifest_version` `1.2`, statuses
+  `candidate_set` or `unique_exact`, and artifact hashes; `runs/tutorial-demo-v3/manifest.json`
+  is also v1.2 with `unique_exact` status.
+
+- Observation: Public lifecycle documentation had drifted behind the repaired split
+  challenge interface and has now been corrected.
+  Evidence: README, `docs/PROTOCOL.md`, and `docs/REPOSITORY_GUIDE.md` now show
+  `challenge private-root`, split `--public-output`/`--private-output`,
+  `--private-root-file`, `--private-challenge-fd`, and public socket usage. After the
+  repair, `git diff --check`, `PATH=/tmp/sphinx-just/bin:$PATH just docs-check`, and
+  `PATH=/tmp/sphinx-just/bin:$PATH just schema-check` passed.
 
 ## Decision Log
 
@@ -194,7 +429,7 @@ completed review checklist, and an ignored release manifest with artifact hashes
   Rationale: Fault assignment is deliberately private and reference, weak, and signed can remain observationally equivalent in this bounded tutorial; requiring a unique full model would reject an otherwise exact secret recovery.
   Alternatives considered: assume the reference member; judge a candidate before uniqueness; require a unique `(secret, fault)` tuple.
   Date/author: 2026-07-16, Codex implementation.
-  Consequences: reports preserve the three-model ambiguity, contain an explicit projection-level `unsat` artifact, and off-fault campaigns remain inconclusive with no judge call.
+  Consequences: reports preserve the three-model ambiguity, contain an explicit projection-level `unsat` artifact, and off-fault campaigns remain `candidate_set` results with no judge call.
 
 - Decision: Start query synthesis with typed relation skeleton enumeration plus SMT-filled holes and CEGIS model counterexamples.
   Rationale: It is easier to verify and debug than synthesizing arbitrary instruction streams, while still exercising syntax-guided synthesis.
@@ -249,6 +484,38 @@ completed review checklist, and an ignored release manifest with artifact hashes
   Alternatives considered: commit one manifest snapshot; omit release artifact hashing; hand-write release notes only.
   Date/author: 2026-07-16, Codex implementation.
   Consequences: reviewers regenerate `just release-manifest` after checkout or after a release commit, while tracked docs/status record the evidence path and current pre-commit hash.
+
+- Decision: Reopen M8/M9 and treat the 2026-07-16 comprehensive audit as the current
+  release status.
+  Rationale: Passing existing tests and aggregate thresholds is insufficient when
+  required boundary, proof, baseline, research, artifact, and clean-CI properties have
+  direct counterexamples.
+  Alternatives considered: retain the completion claim and list the findings as
+  non-blocking limitations.
+  Date/author: 2026-07-16, Codex audit.
+  Consequences: no v1.0/research-complete tag should be created until the blockers are
+  fixed, covered by regressions, and all evidence is regenerated from empty artifacts.
+
+- Decision: Distinguish command success from task-spec acceptance in all status and
+  release records.
+  Rationale: The M8, reducer, formal, and manifest commands can exit zero while their
+  output lacks required semantics or evidence.
+  Alternatives considered: treat remaining gaps as documentation-only caveats.
+  Date/author: 2026-07-16, Codex acceptance re-audit.
+  Consequences: scripts may remain green, but milestones stay open until their
+  normative properties are directly tested and represented in artifacts.
+
+- Decision: A release manifest is complete only when artifact presence, artifact
+  semantic acceptance, repository cleanliness, and explicit root-gate evidence all
+  pass.
+  Rationale: Hashing files proves reproducibility of bytes, not acceptance of their
+  contents or execution of the release checks.
+  Alternatives considered: keep validation commands as informational
+  `not_run_by_manifest` entries; infer gate success from recently run local commands.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: `just release-manifest` is now expected to fail while benchmark,
+  M8/M9, repository cleanliness, or gate evidence is incomplete; manual manifest
+  generation without `--require-complete` still writes a blocked audit artifact.
 
 Record every later material deviation here before or with implementation.
 
@@ -615,19 +882,109 @@ Populate during implementation:
 - M1 language/architecture evidence: `VALIDATION.md`, `tests/fixtures/programs/`, and `docs/DSL_AND_ARCHITECTURE.md`, 2026-07-15; all milestone-specific tests pass, and M5 closes the previously deferred real tutorial gate.
 - M2 target/challenge evidence: `VALIDATION.md`, `tests/fixtures/model/`, `tests/fixtures/challenge/`, and `docs/SYSTEM_A_SPHINX_VM.md`, 2026-07-15; 44 Rust and 68 Python tests cover the semantic split, live fault confinement, deterministic replay, permissions, and judge policy.
 - M3 relation/extractor evidence: `VALIDATION.md`, `tests/python/test_certified_relations.py`, `tests/python/test_constraint_ir.py`, `tests/fixtures/relations/`, and `docs/RELATION_ORACLES.md`, 2026-07-16; 99 Python tests include every stateless relation, all bounded noise/fault generators, strict certificate/IR persistence, and live Rust relation arms.
+- Certificate proof-bundle binding repair:
+  `python/sphinx_interrogator/proof_artifacts/relation-contracts-v1.json`,
+  `python/sphinx_interrogator/certificates.py`, and
+  `tests/python/test_certified_relations.py`, 2026-07-16; proof artifact SHA-256
+  `24e7b87fbf8d1a0122e701bcfc5ff813b4da860942f9a83505c37be93b80765b`; focused
+  relation/certificate tests pass 30/30, reject stale supporting artifact hashes, and
+  include wrong-symbolic-model plus broken-normalizer mutation regressions.
 - M4 persistence/solver evidence: `VALIDATION.md`, `docs/CAMPAIGN_PERSISTENCE.md`, `tests/python/test_persistence.py`, `test_harness.py`, `test_hypothesis_persistence.py`, `test_frontier.py`, `test_solver.py`, and `test_symbolic_solver_model.py`, 2026-07-16; 125 Python tests cover real/fake write-ahead, replay, provenance, Z3 exactness, rollback, and CLI inspection.
 - M5 tutorial acceptance report: `runs/tutorial-evaluation-v2/summary.json`, `runs/tutorial-demo-v2-seed-7/report.json`, `docs/TUTORIAL_RECOVERY.md`, and `VALIDATION.md`, 2026-07-16; 100/100 reference seeds are exact and judge accepted at 16 logical families.
 - M6 synthesis evidence: `python/sphinx_interrogator/synthesis.py`, `tests/python/test_synthesis.py`, `tests/python/test_protocol_process.py`, `docs/PROGRAM_SYNTHESIS.md`, and `VALIDATION.md`, 2026-07-16; known-optimum, refinement, no-discriminator, unknown, margin, cache/frontier, exhaustive differential, live-process, and 20-seed random-hole calibration all pass.
 - M7 standard full-system report: `runs/standard-benchmark-v1/standard-benchmark-report.json`, 2026-07-16; 600 campaigns passed, full/reference exact rate 1.0, median 40 logical families, p95 48, median 80 physical executions, and targets_met true.
 - Baseline/ablation report: `runs/standard-benchmark-v1/standard-benchmark-report.json`, 2026-07-16; all four reference baselines also reached 100/100 exact, so the frozen standard profile shows robustness but not a large selector gap.
-- M5 fault-free control report: `runs/tutorial-fault-free-v2/summary.json`, 2026-07-16; 100/100 blind off-fault campaigns are inconclusive with zero judge submissions.
+- M5 fault-free control report: `runs/tutorial-fault-free-v2/summary.json`, 2026-07-16; 100/100 blind off-fault campaigns are `candidate_set` public results with zero judge submissions.
 - One-shot leakage audit: `runs/standard-profile-audit-m7/standard-profile-audit.json`, 2026-07-16; max public one-shot partition is 1.5 bits, median useful partition is 1.5 bits, oracle collision bound is 16 logical relations, and blind scan worst-case is 64.
 - Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; M7 one-seed campaign ladder in `runs/standard-mutation-ladder-smoke-m7/standard-benchmark-report.json` confirms active variants recover and `runs/standard-profile-audit-m7/standard-profile-audit.json` records the active-variant latent equivalence under drained repeats.
-- M8 state-learning report: `runs/state-learning-m8/state-learning-report.json`, 2026-07-16; no-learner accuracy 0.133, exact-history accuracy 1.0 with 31 states, and AALpy learned-state accuracy 1.0 with 2 states on 30 deterministic held-out macro sequences.
+- M8 state-learning report: `runs/state-learning-m8/state-learning-report.json`,
+  2026-07-16; real research SphinxVM evaluation over 126 held-out words reports
+  no-learner 0.246, exact-history 1.0, and learned-state 1.0; the regenerated report
+  records `state_conditioned_inference.status=complete`, one non-trivial
+  effective-nibble constraint, and `shared_private_root=false`; file SHA-256
+  `ce5b2daecf11499e3d1465200ecf04abd77a906927f3bb337f855ebaa354eef1`.
 - Formal/TLA+/SMT report: `just verify-formal`, 2026-07-16; Z3 relation contracts returned `unsat` x3, TLC generated 70,557 states with 2,276 distinct states and no invariant violation, and the 131,072-cell guarded-replay mutation self-test was rejected.
-- Boundary-audit report: `just boundary-audit`, 2026-07-16; release-mode public process audit passed with binary SHA-256 `628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b`.
-- Minimized witness collection: `runs/reduced-witnesses-m9/reduced-witnesses-report.json`, 2026-07-16; 10/10 enabled relation families minimized under bounded public-model implication, artifact SHA-256 `3558973ce4005e6cf2e478ffa44c23b2531e395860bb08dd92e6ff395c418434`.
-- Release manifest/revision: `runs/release-m9/release-manifest.json`, 2026-07-16; five public generated artifacts hashed with no missing artifacts; pre-commit manifest SHA-256 `9b05653db1954b434a870295acda8dc5338b36b31ec5e92a873ffe6ca814667f`.
+- Boundary-audit report: `just boundary-audit`, 2026-07-16; recursive protocol
+  validation and separate-UID/FD-broker isolation passed with binary SHA-256
+  `c094fff9561f0997dd8c307940dba991b80c920792c07095113f979d430da6cd`.
+- Minimized witness collection:
+  `runs/reduced-witnesses-m9/reduced-witnesses-report.json`, 2026-07-16; measured
+  candidates are present, all 10 families are minimized, accepted steps form
+  continuous parent paths, and measured replay honors each relation reset policy; file
+  SHA-256 `a924448f71b27708c35945b5a64bff33f5ffd1394ca84cd700f052c12d95aa56`.
+- Standard benchmark v2 full matrix:
+  `runs/standard-benchmark-v2/standard-benchmark-report.json`, 2026-07-16; report
+  v1.1 contains paired seed-level bootstrap confidence intervals and complete B0-B7
+  surface evidence for the full 100-seed / 700-campaign matrix; full/reference,
+  random, stateless, KB-no-synthesis, and synthesis-no-KB each reached 100/100 exact;
+  B0 random final guess remained 0/100 exact; fault-off produced 0 false exact
+  declarations; `full_published_matrix=true`; `targets_met=true`; file SHA-256
+  `55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480`.
+- Tutorial demo v3: `runs/tutorial-demo-v3/report.json`, 2026-07-16; `unique_exact`, judge accepted, 16 logical relation families, file SHA-256 `ad02a85d07f5de69547a7bb1870fe2caa04031e56b482e4fda726b520d63cf5b`; manifest v1.2 SHA-256 `8a77bcbbd91764261c402976cf5c7924bfd0bd6f72de550d54f0e3664b7a4950`.
+- Evaluation CSV/plot artifacts:
+  `runs/release-m9/evaluation-artifacts/evaluation-artifacts-manifest.json`,
+  2026-07-16; public CSV rows cover 700 campaigns, 52,928 query executions, 26,464
+  relation decisions, 13 state-learning rows, and 10 reducer-family rows; deterministic
+  SVG plots cover exact rates, median logical cost, state-learning accuracy, and
+  reducer steps; file SHA-256
+  `c7ff125818abd7b8d0a895a897a994638b54cc5c5c32086fe73f0ca1cf8ba367`.
+- Release manifest/revision: `runs/release-m9/release-manifest.json`, 2026-07-16;
+  five aggregate files are hashed and release checks are fail-closed. Current
+  `status=blocked`, `semantic_checks_pass=false`, `validation_gates_pass=true`,
+  one release check fails (`repository.clean`), and all 12 root gates have passing
+  evidence; file SHA-256
+  `056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042`.
+- Campaign manifest v1.2 reproducibility repair, 2026-07-16:
+  `python/sphinx_interrogator/persistence.py`, `tutorial.py`, `standard.py`,
+  `scripts/benchmark_standard.py`, `spec/campaign-manifest.schema.json`, and focused
+  tests. `just test` passed with 46 Rust tests and 179 Python tests; all 700 standard
+  benchmark run manifests are v1.2 and include artifact hashes.
+- Task-spec gap audit and public lifecycle documentation repair, 2026-07-16:
+  README, `docs/PROTOCOL.md`, `docs/REPOSITORY_GUIDE.md`, `VALIDATION.md`,
+  `agent/STATUS.md`, and this ExecPlan were updated after confirming remaining
+  blockers. `git diff --check`, `PATH=/tmp/sphinx-just/bin:$PATH just docs-check`,
+  and `PATH=/tmp/sphinx-just/bin:$PATH just schema-check` passed.
+- Acceptance/release-gate repair validation, 2026-07-16: `just fmt`, `just lint`,
+  `just test` (Rust 46 tests, Python 175 tests), `just schema-check`, `just
+  docs-check`,
+  `just verify-formal`, `just demo-tutorial`, `just boundary-audit`,
+  `just evaluate-state-learning`, and `just reduce-witnesses` passed as commands.
+  At that checkpoint the standard artifact was still a one-seed selected matrix; it
+  has since been superseded by the full standard benchmark rerun below.
+- Release-manifest/benchmark-CI repair tests, 2026-07-16: `uv run --frozen pytest
+  tests/python/test_standard_benchmark.py tests/python/test_release_manifest.py`
+  passed 6 tests; `git diff --check` passed;
+  `PATH=/tmp/sphinx-just/bin:$PATH just release-manifest` failed closed with
+  `status=blocked`, not from an output-path error.
+- Full standard benchmark rerun, 2026-07-16:
+  `PATH=/tmp/sphinx-just/bin:$PATH just benchmark-standard` passed with 100 seeds /
+  700 campaigns, `full_published_matrix=true`, `targets_met=true`, and report SHA-256
+  `55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480`.
+- M8/M9 semantic artifact repair, 2026-07-16:
+  `PATH=/tmp/sphinx-just/bin:$PATH just evaluate-state-learning` and
+  `PATH=/tmp/sphinx-just/bin:$PATH just reduce-witnesses` passed. The release manifest
+  now passes `m8.state_conditioned_secret_inference`,
+  `m9.reducer_replay_paths_valid`, and `m9.reducer_reset_policy_honored`. Final
+  root checks after this repair passed `just test` with 46 Rust tests and 176 Python
+  tests, and `git diff --check` passed.
+- Validation-gate evidence recorder, 2026-07-16:
+  `scripts/record_validation_gate.py`, `justfile`, and
+  `tests/python/test_validation_evidence.py`; focused release-manifest/recorder tests
+  pass 4/4. `just release-manifest` now reads
+  `runs/release-m9/validation-evidence.json`; all 12 root gates have now been rerun
+  through the recorder and pass. The generated manifest remains blocked only because
+  `repository.clean` fails.
+- Post-full-benchmark root checks, 2026-07-16: `just fmt`, `just lint`, `just test`,
+  `just schema-check`, `just docs-check`, and `git diff --check` passed; `just test`
+  covered 46 Rust tests and 175 Python tests.
+- Historical clean-checkout negative evidence, 2026-07-16: before the bootstrap
+  repair, a detached HEAD with no `.tools/` failed formal verification. The current
+  justfile and CI workflow fetch and verify the pinned TLC jar; a fresh remote CI run
+  is still absent.
+- Historical acceptance negative reproductions, 2026-07-16: before the repairs above,
+  release manifest reported complete over a failed/incomplete benchmark; absolute
+  manifest output wrote then crashed; M8's state-dependent expression was literal
+  `true`; and reducer step arrays failed sequential replay in 9 of 10 families.
 
 Each entry should contain a repository-relative or run-directory path, hash where appropriate, date, and one-sentence conclusion.
 
@@ -663,11 +1020,15 @@ At completion, summarize:
 - remaining non-blocking research questions;
 - any specification changes and why.
 
-Current outcome: M0–M9 are complete and reproducible. The repository now provides the
-accepted tutorial flow, blind fault-free controls, grammar-guided CEGIS synthesis,
-published standard benchmark, state-learning evaluation, minimized relation witnesses,
-review checklist, and release manifest generator. The main caveat is empirical rather
-than architectural: all reference selector baselines recover the frozen standard
-profile, so the release reports robustness and boundary safety rather than a large
-selector-performance gap.
+Current outcome: the tutorial flow, fault-free controls, standard recovery,
+persistence/replay, solver/synthesis components, learner components, and reducer are
+substantial and testable. The repaired challenge boundary passes direct adversarial
+isolation tests; the current standard matrix passes; and M8/M9 semantic artifact
+checks now pass with non-trivial state-conditioned inference and replayable reducer
+paths. Campaign manifests for tutorial and the full standard benchmark matrix now
+record v1.2 runtime reproducibility metadata and artifact hashes. The repository is
+nevertheless not release-complete: formal/differential obligations,
+documentation/version, clean-CI, and clean-tree release evidence remain partial. The
+generated release manifest has passing root-gate evidence and remains blocked because
+the working tree is dirty. Work resumes from the open P1/P2 items above.
 ```

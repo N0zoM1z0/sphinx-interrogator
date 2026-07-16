@@ -1,0 +1,112 @@
+{
+  "files": [
+    {
+      "kind": "csv",
+      "path": "runs/release-m9/evaluation-artifacts/csv/campaign-results.csv",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "size_bytes": 101,
+      "status": "present"
+    },
+    {
+      "kind": "csv",
+      "path": "runs/release-m9/evaluation-artifacts/csv/query-events.csv",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "size_bytes": 102,
+      "status": "present"
+    },
+    {
+      "kind": "csv",
+      "path": "runs/release-m9/evaluation-artifacts/csv/relation-decisions.csv",
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "size_bytes": 103,
+      "status": "present"
+    },
+    {
+      "kind": "csv",
+      "path": "runs/release-m9/evaluation-artifacts/csv/state-learning.csv",
+      "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+      "size_bytes": 104,
+      "status": "present"
+    },
+    {
+      "kind": "csv",
+      "path": "runs/release-m9/evaluation-artifacts/csv/reducer-families.csv",
+      "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+      "size_bytes": 105,
+      "status": "present"
+    },
+    {
+      "kind": "plot",
+      "path": "runs/release-m9/evaluation-artifacts/plots/exact-rate-by-selector.svg",
+      "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+      "size_bytes": 106,
+      "status": "present"
+    },
+    {
+      "kind": "plot",
+      "path": "runs/release-m9/evaluation-artifacts/plots/median-logical-cost-by-selector.svg",
+      "sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+      "size_bytes": 107,
+      "status": "present"
+    },
+    {
+      "kind": "plot",
+      "path": "runs/release-m9/evaluation-artifacts/plots/state-learning-accuracy.svg",
+      "sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+      "size_bytes": 108,
+      "status": "present"
+    },
+    {
+      "kind": "plot",
+      "path": "runs/release-m9/evaluation-artifacts/plots/reducer-steps-by-family.svg",
+      "sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+      "size_bytes": 109,
+      "status": "present"
+    }
+  ],
+  "generated_at": "2026-07-16T00:00:00Z",
+  "kind": "evaluation-artifacts",
+  "manifest_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "private_artifacts_included": false,
+  "report_version": "1.0",
+  "row_counts": {
+    "campaign_results": 700,
+    "query_events": 52928,
+    "reducer_families": 10,
+    "relation_decisions": 26464,
+    "state_learning": 13
+  },
+  "schema": "evaluation-artifacts/v1",
+  "sources": [
+    {
+      "path": "runs/standard-benchmark-v2/standard-benchmark-report.json",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "path": "runs/state-learning-m8/state-learning-report.json",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "path": "runs/reduced-witnesses-m9/reduced-witnesses-report.json",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "summary": {
+    "all_required_present": true,
+    "csv_count": 5,
+    "plot_count": 4,
+    "required_csvs": [
+      "csv/campaign-results.csv",
+      "csv/query-events.csv",
+      "csv/relation-decisions.csv",
+      "csv/state-learning.csv",
+      "csv/reducer-families.csv"
+    ],
+    "required_plots": [
+      "plots/exact-rate-by-selector.svg",
+      "plots/median-logical-cost-by-selector.svg",
+      "plots/state-learning-accuracy.svg",
+      "plots/reducer-steps-by-family.svg"
+    ]
+  }
+}

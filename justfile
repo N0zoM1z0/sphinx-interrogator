@@ -48,7 +48,7 @@ schema-check:
 docs-check:
     uv run --frozen python scripts/check_markdown_links.py
 
-verify-formal:
+verify-formal: bootstrap-formal
     uv run --frozen python scripts/check_formal_scaffold.py
 
 boundary-audit:
@@ -69,13 +69,21 @@ test-tutorial-fault-free:
 
 benchmark-standard:
     cargo build --locked --bin sphinx-vm
-    SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/benchmark_standard.py --output runs/standard-benchmark-v1 --require-full-targets
+    SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/benchmark_standard.py --output runs/standard-benchmark-v2 --require-full-targets
 
 evaluate-state-learning:
-    uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
+    cargo build --locked --bin sphinx-vm
+    SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
 
 reduce-witnesses:
-    uv run --frozen python scripts/reduce_witnesses.py --output runs/reduced-witnesses-m9 --require-all-minimized
+    cargo build --locked --bin sphinx-vm
+    SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/reduce_witnesses.py --output runs/reduced-witnesses-m9 --require-all-minimized
+
+export-evaluation-artifacts:
+    uv run --frozen python scripts/export_evaluation_artifacts.py --output runs/release-m9/evaluation-artifacts
 
 release-manifest:
-    uv run --frozen python scripts/release_manifest.py --output runs/release-m9/release-manifest.json --require-artifacts
+    uv run --frozen python scripts/release_manifest.py --output runs/release-m9/release-manifest.json --validation-evidence runs/release-m9/validation-evidence.json --require-artifacts --require-complete
+
+record-validation-gate label +command:
+    uv run --frozen python scripts/record_validation_gate.py --evidence runs/release-m9/validation-evidence.json --label "{{label}}" -- {{command}}

@@ -25,9 +25,10 @@ All numerical thresholds below are design acceptance targets. They become empiri
 
 M5 measured result (2026-07-16): the published 100-seed reference matrix achieved
 100/100 exact unique, judge-accepted recoveries with median/max 16 logical families.
-The paired 100-seed off-fault control produced 100/100 inconclusive results, no exact
-declarations, and no judge submissions. See `docs/TUTORIAL_RECOVERY.md` and
-`VALIDATION.md`; generated per-campaign artifacts remain under ignored `runs/` paths.
+The paired 100-seed off-fault control produced 100/100 `candidate_set` public results,
+no exact declarations, and no judge submissions. The relation-level decisions remain
+inconclusive. See `docs/TUTORIAL_RECOVERY.md` and `VALIDATION.md`; generated
+per-campaign artifacts remain under ignored `runs/` paths.
 
 M6 selector calibration (2026-07-16): across 20 fixed PRNG seeds, each defining an
 eight-model surviving nibble committee without a designated true secret, bounded CEGIS
@@ -255,14 +256,21 @@ Research-profile success may remain an experimental result rather than a release
 
 The current release evidence uses generated artifacts under `runs/`:
 
-- `runs/standard-benchmark-v1/standard-benchmark-report.json`: full published standard
-  matrix with selector baselines and fault-free controls.
+- `runs/standard-benchmark-v2/standard-benchmark-report.json`: full v2 standard
+  benchmark matrix with paired seed-level bootstrap confidence intervals and B0-B7
+  surface evidence. The current repair-pass artifact covers 100 seeds / 700 campaigns
+  and records `full_published_matrix=true` and `targets_met=true`.
+- `runs/tutorial-demo-v3/report.json`: fresh tutorial recovery and judge acceptance.
 - `runs/state-learning-m8/state-learning-report.json`: one-state, exact-history, and
-  AALpy-backed learner comparison.
+  AALpy-backed learner comparison measured on real research-profile SphinxVM campaigns.
 - `runs/reduced-witnesses-m9/reduced-witnesses-report.json`: minimized witnesses for
-  every enabled relation family.
-- `runs/release-m9/release-manifest.json`: artifact hashes and repository/tool
-  metadata.
+  every enabled relation family, with measured public VM replay evidence.
+- `runs/release-m9/evaluation-artifacts/evaluation-artifacts-manifest.json`: public
+  campaign/query/relation/state/reducer CSV exports plus deterministic SVG plots.
+- `runs/release-m9/release-manifest.json`: manifest v2 with revision, versions,
+  command, times, status, artifact states, artifact hashes, semantic release checks,
+  and validation-gate evidence. The current generated manifest is `blocked` because
+  the working tree is dirty; all 12 root validation gates are recorded as passing.
 
 The standard benchmark caveat is explicit: all reference selector baselines recover
 the frozen standard profile exactly on the published seeds, so this profile is useful
@@ -270,15 +278,15 @@ as a reproducible recovery/boundary benchmark but does not show a large selector
 
 ## 10. Reporting layout
 
-Generate:
+Generate with `just export-evaluation-artifacts`:
 
-- `summary.md`: claims, caveats, environment, aggregate tables;
-- `campaigns.csv`: one row per challenge/variant;
-- `queries.csv`: logical-query metrics;
-- `relations.csv`: oracle and constraint outcomes;
-- `state_models.csv`: learner metrics;
-- `witnesses/`: minimized examples and certificates;
-- machine-readable JSON with schema version;
-- plots produced by a checked-in script from raw CSV/JSON.
+- `csv/campaign-results.csv`: one row per challenge/selector/fault result;
+- `csv/query-events.csv`: public query execution metrics;
+- `csv/relation-decisions.csv`: oracle decisions, provenance, and constraint outcomes;
+- `csv/state-learning.csv`: learner metrics and state-conditioned constraints;
+- `csv/reducer-families.csv`: minimized family metrics and replay counts;
+- `plots/*.svg`: deterministic plots produced by a checked-in script from raw JSON/CSV;
+- `evaluation-artifacts-manifest.json`: machine-readable schema-versioned manifest
+  with hashes for all CSV and plot files.
 
 Never hand-edit derived benchmark tables without regenerating them.

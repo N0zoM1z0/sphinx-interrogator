@@ -2,18 +2,19 @@
 
 ## Product behavior
 
-- [x] The implemented behavior matches `agent/CODEX_TASK_SPEC.md` rather than only the scaffold.
+- [ ] The implemented behavior matches `agent/CODEX_TASK_SPEC.md` rather than only the scaffold.
 - [x] A clean tutorial challenge can be created, served, recovered, judged, replayed, and reported.
-- [x] Standard benchmark targets are evaluated on published seeds.
-- [x] Unresolved/soft results are not mislabeled as exact unique recovery.
+- [x] Current-code standard benchmark targets are evaluated on the full published seed matrix.
+- [x] Public recovery, campaign, and benchmark result rows use the normative exact/candidate/soft/budget/error/blocked statuses.
+- [x] Exact recovery requires an alternative-model unsat result.
 
 ## Black-box boundary
 
 - [x] System B launches/uses System A only through the public protocol.
 - [x] Python imports contain no Rust target/private challenge access.
-- [x] Private paths/environment are sanitized and permission-tested.
+- [x] Private paths/environment are inaccessible to System B and the child environment is sanitized.
 - [x] Release server has no protocol-switchable diagnostics.
-- [x] Transcript scan finds no secret, bank, phase, replay, or exact-cycle internals.
+- [x] Raw transcript validation rejects/scans forbidden fields recursively before persistence.
 - [x] Final judge is rate-limited and returns no incremental information.
 
 ## Semantics and formal soundness
@@ -21,17 +22,19 @@
 - [x] Architectural, fault-free, and faulty semantics are separate types/modules.
 - [x] Architectural output is secret-independent in exhaustive reduced/property tests.
 - [x] Fault changes only microarchitectural observation/state.
-- [x] Reset and termination invariants are tested/formally checked.
+- [ ] Formal checks cover all required reset, architectural-confinement, gas/progress, and normalized-cost invariants.
 - [x] Rust concrete and Python symbolic bank/fault/state functions agree exhaustively on reduced domains.
+- [ ] Differential tests compare exact cycles on small programs and relation-extractor outputs.
 
 ## Relations
 
 - [x] Every enabled template has versioned precondition and certificates.
-- [x] Architectural and fault-free relations are independently checked.
+- [x] Architectural and fault-free prechecks are enforced before hard extraction.
+- [x] Certificate digests bind the actual proof, tests, and semantic artifacts they claim.
 - [x] Exact/bounded extractors include nuisance and latent-state assumptions.
 - [x] True secrets satisfy generated hard constraints in tests.
 - [x] Inconclusive results emit no hard assertion.
-- [x] Composition and reduction preserve declared obligations.
+- [x] Reduction reports contain a continuous, replayable accepted path and honor reset policy.
 
 ## Solver and synthesis
 
@@ -49,7 +52,8 @@
 - [x] KB has semantic/structural/state diversity and TTL behavior.
 - [x] Replay is deterministic where promised.
 - [x] Unsat-core repair/quarantine is tested.
-- [x] Every result links to profile, challenge commitment, seed, revision, and evidence.
+- [x] Every tutorial/standard benchmark result links to profile, challenge commitment, seed, revision, and evidence.
+- [ ] One integrated selector exposes infer, learn-state, calibrate, replay, reduce, and diversify modes.
 
 ## Noise/statistics
 
@@ -66,7 +70,8 @@
 - [x] Macro input/output abstractions are versioned.
 - [x] Equivalence testing is a portfolio with recorded budget.
 - [x] Counterexamples invalidate/retract dependent constraints.
-- [x] Held-out sequence accuracy is reported.
+- [x] Held-out accuracy is measured on actual research-profile challenges, not only a toggle fixture.
+- [x] Learned/exact state produces non-trivial state-conditioned secret constraints in the real inference loop.
 
 ## Tests and quality
 
@@ -75,31 +80,62 @@
 - [x] `just test` passes.
 - [x] `just schema-check` passes.
 - [x] `just verify-formal` passes with required tools.
-- [x] Boundary audit passes.
-- [x] Tests include failure paths and mutation controls.
+- [x] Boundary audit enforces the filesystem/process boundary and recursive response schema.
+- [x] Tests cover required private-field injection and broken-certificate/precheck failures.
+- [x] Tests include deliberately wrong symbolic-model and broken-normalizer mutations.
 - [x] No unseeded randomness, `unwrap`/`expect`, broad exception swallowing, or unbounded solver call remains.
 
 ## Evaluation and documentation
 
-- [x] Fault-free and mutation controls are included.
-- [x] Baselines use identical challenge sets/budgets.
+- [ ] Fault-free and stronger/weaker aggregate-cost mutation controls show the required separation.
+- [x] B0-B7 and primary ablation surface is implemented under paired challenges/budgets where applicable.
 - [x] Calibration and evaluation seeds are separate.
-- [x] Reports distinguish targets, measured results, approximations, and failures.
-- [x] References and public schemas are current.
+- [x] Benchmark reports include paired bootstrap confidence intervals.
+- [x] Required campaign/query/relation/state CSVs and plots are generated.
+- [ ] References, generated artifacts, CLI behavior, and public schemas are current.
 - [x] Ethics/synthetic-only scope remains explicit.
-- [x] Active ExecPlan and `agent/STATUS.md` reflect actual final evidence.
+- [x] Active ExecPlan and `agent/STATUS.md` reflect the reopened acceptance state.
+
+## Release evidence
+
+- [x] Release status depends on semantic acceptance and actual gate execution.
+- [x] Tutorial and standard campaign manifests include revision, dirty state, versions, command/environment, times, status, and artifact hashes.
+- [ ] CI exercises clean tutorial/standard smoke, M8, reducer, and release packaging.
+- [ ] README, STATUS, ExecPlan, checklist, CHANGELOG, release notes, and versions agree.
+- [ ] A remote branch/tag and successful CI run provide external release evidence.
 
 ## Review notes
 
-- Final release gates passed locally on 2026-07-16: `just fmt`, `just lint`,
-  `just test`, `just schema-check`, `just docs-check`, `just verify-formal`,
-  `just demo-tutorial`, `just boundary-audit`, `just benchmark-standard`,
-  `just evaluate-state-learning`, `just reduce-witnesses`, and
-  `just release-manifest`.
-- The only broad `BaseException` matches are atomic write cleanup paths that re-raise;
-  they do not swallow failures.
-- The standard profile caveat remains explicit: all published reference selector
-  baselines recover the frozen standard profile, so the release does not claim a large
-  selector gap for that profile.
-- `runs/release-m9/release-manifest.json` is generated and ignored by design. Rerun
-  `just release-manifest` after the final commit to capture the committed HEAD.
+- The 2026-07-16 acceptance re-audit confirms the challenge-security boundary repair,
+  the current standard benchmark, and the M8/M9 semantic artifact gates, but does not
+  confirm full release completion.
+- The benchmark v2 artifact now has 100 seeds / 700 campaigns, paired bootstrap
+  confidence intervals, complete B0-B7 evidence, and reports
+  `full_published_matrix=true` and `targets_met=true`; the 600-campaign v1 artifact
+  remains historical because it predates the repaired challenge and benchmark
+  implementation.
+- M8 now persists a non-trivial learned-state effective-nibble constraint, and M9 now
+  reports continuous reducer parent paths with reset-policy-aware measured replay.
+- Relation certificates now bind `relation-contracts-v1` to the SHA-256 of the
+  declared SMT contract, certificate/extractor tests, and Rust machine semantics file.
+- Campaign manifest v1.2 records runtime reproducibility metadata and artifact hashes;
+  `runs/tutorial-demo-v3/manifest.json` and all 700 standard benchmark run manifests
+  are v1.2 with normative `unique_exact` or `candidate_set` status.
+- Tutorial, standard, and B0 recovery reports now emit normative public result
+  statuses. The regenerated 700-campaign standard benchmark artifact contains 500
+  `unique_exact` rows and 200 `candidate_set` rows, with zero legacy recovery status
+  strings in per-run reports.
+- Adversarial mutation regressions now assert that contradictory symbolic-model
+  evidence becomes UNSAT instead of a false exact singleton, and that a broken
+  static-cost normalizer is rejected as `INVALID` before hard constraint extraction.
+- `just export-evaluation-artifacts` now generates release-bound campaign, query,
+  relation, state-learning, and reducer CSVs plus deterministic SVG plots; the release
+  manifest hashes and semantically checks the evaluation artifact manifest.
+- README, protocol, and repository-guide local lifecycle examples now use the repaired
+  split public/private challenge, private-root, private-FD, and public-socket
+  interface. Broader release/version/schema/example alignment remains open.
+- The release generator now fails closed; current manifest remains `blocked` because
+  the working tree is dirty, while all 12 root-gate evidence records are present and
+  passing.
+- No release tag should be created until every unchecked release criterion is covered
+  by regenerated evidence and clean CI.
