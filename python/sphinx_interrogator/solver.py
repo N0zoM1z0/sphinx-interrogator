@@ -503,6 +503,20 @@ class HypothesisStore:
         """Return one group's current lifecycle state."""
         return self._states[group_id]
 
+    def high_influence_soft_groups(self, *, limit: int) -> tuple[ConstraintGroup, ...]:
+        """Select active soft groups by capped weight and stable group ID for replay."""
+        if limit < 1:
+            raise ValueError("high-influence replay limit must be positive")
+        groups = sorted(
+            (
+                group
+                for group in self.groups
+                if not group.hard and self._states[group.group_id] is GroupState.ACTIVE
+            ),
+            key=lambda group: (-group.weight, group.group_id),
+        )
+        return tuple(groups[:limit])
+
     def quarantine(self, group_id: str) -> None:
         """Disable a suspect group without deleting its provenance."""
         if group_id not in self._groups:

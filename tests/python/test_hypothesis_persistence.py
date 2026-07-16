@@ -13,7 +13,12 @@ from sphinx_interrogator.constraints import (
 )
 from sphinx_interrogator.hypothesis_persistence import CampaignHypotheses
 from sphinx_interrogator.persistence import CampaignManifest, CampaignRepository
-from sphinx_interrogator.solver import GroupState, SolverStatus
+from sphinx_interrogator.solver import (
+    ConstraintGroup,
+    GroupState,
+    SolverStatus,
+    finite_model_program,
+)
 
 
 def _repository(tmp_path: Path) -> CampaignRepository:
@@ -171,4 +176,60 @@ def test_unsat_core_quarantine_and_retraction_survive_replay(tmp_path: Path) -> 
     assert replayed.store.state(first_id) is GroupState.RETRACTED
     assert replayed.store.state(second_id) is GroupState.QUARANTINED
     assert replayed.solve().status is SolverStatus.SAT
+    reopened.close()
+
+
+def test_high_influence_soft_replay_quarantines_repairs_and_persists(tmp_path: Path) -> None:
+    """Failed replay disables one soft group; reviewed reproduction safely repairs it."""
+    repository = _repository(tmp_path)
+    hypotheses = CampaignHypotheses(repository)
+    constraint = _constraint("constraint:333333333333333333333333", 6)
+    group = ConstraintGroup(
+        constraint.constraint_id,
+        finite_model_program(constraint, secret_cells=1),
+        hard=False,
+        weight=9,
+        provenance=("correlation:block-1", "correlation:block-2"),
+    )
+    hypotheses.add_group(
+        constraint_id=constraint.constraint_id,
+        group=group,
+        relation_instance_id=constraint.relation_instance_id,
+        certificate_id=constraint.certificate_id,
+        source_request_ids=constraint.source_request_ids,
+        approximation="probabilistic-soft",
+        logical_time=3,
+    )
+    assert hypotheses.store.high_influence_soft_groups(limit=1) == (group,)
+    assert (
+        hypotheses.review_replay(
+            group.group_id,
+            reproduced=False,
+            logical_time=4,
+            replay_request_ids=("replay-failed-a", "replay-failed-b"),
+        )
+        is GroupState.QUARANTINED
+    )
+    assert hypotheses.store.high_influence_soft_groups(limit=1) == ()
+    assert (
+        hypotheses.review_replay(
+            group.group_id,
+            reproduced=True,
+            logical_time=5,
+            replay_request_ids=("replay-passed-a", "replay-passed-b"),
+        )
+        is GroupState.ACTIVE
+    )
+    repository.close()
+
+    reopened = CampaignRepository.open(tmp_path / "run")
+    replayed = CampaignHypotheses(reopened)
+    assert replayed.store.state(group.group_id) is GroupState.ACTIVE
+    state_events = tuple(
+        event for event in reopened.events if event.kind == "constraint_state_changed"
+    )
+    assert state_events[-2].payload["reason"].startswith("high-influence replay disagreed")
+    assert state_events[-1].payload["reason"] == (
+        "reviewed replay reproduced the declared evidence"
+    )
     reopened.close()

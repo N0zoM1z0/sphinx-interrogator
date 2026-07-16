@@ -1,0 +1,95 @@
+{
+  "acceptance": {
+    "full_published_matrix": false,
+    "full_reference_exact_rate": 1.0,
+    "full_reference_median_logical": 34.0,
+    "full_reference_median_physical": 68.0,
+    "full_reference_p95_logical": 34.0,
+    "off_false_exact_declarations": 0,
+    "published_seed_count": 100,
+    "selected_seed_count": 1,
+    "selected_thresholds_met": true,
+    "targets_met": false
+  },
+  "artifacts": {
+    "challenges": "challenges",
+    "markdown_report": "standard-benchmark-report.md",
+    "runs": "runs"
+  },
+  "campaigns": 2,
+  "matrix_name": "standard-primary",
+  "off_control": true,
+  "profile_name": "standard",
+  "reference_faults": [
+    "reference"
+  ],
+  "report_version": "1.0",
+  "results": [
+    {
+      "challenge_id": "standard-full-reference-50000",
+      "cost": {
+        "hard_resets": 68,
+        "last_public_physical_remaining": 4932,
+        "logical_relation_families": 34,
+        "physical_executions": 68
+      },
+      "fault_assignment": "reference",
+      "judge_accepted": true,
+      "remaining_secret_candidates": 1,
+      "run": "runs/full-reference-seed-50000",
+      "seed": 50000,
+      "selector_mode": "full",
+      "status": "unique_exact"
+    },
+    {
+      "challenge_id": "standard-full-off-50000",
+      "cost": {
+        "hard_resets": 128,
+        "last_public_physical_remaining": 4872,
+        "logical_relation_families": 64,
+        "physical_executions": 128
+      },
+      "fault_assignment": "off",
+      "judge_accepted": null,
+      "remaining_secret_candidates": 4294967296,
+      "run": "runs/full-off-seed-50000",
+      "seed": 50000,
+      "selector_mode": "full",
+      "status": "inconclusive"
+    }
+  ],
+  "seed_file": "benchmarks/seeds/evaluation.txt",
+  "summaries": [
+    {
+      "campaigns": 1,
+      "exact_rate": 1.0,
+      "false_exact": 0,
+      "fault_assignment": "reference",
+      "judge_accepted": 1,
+      "max_logical_relation_families": 34,
+      "max_physical_executions": 68,
+      "median_logical_relation_families": 34.0,
+      "median_physical_executions": 68.0,
+      "p95_logical_relation_families": 34.0,
+      "selector_mode": "full",
+      "unique_exact": 1
+    },
+    {
+      "campaigns": 1,
+      "exact_rate": 0.0,
+      "false_exact": 0,
+      "fault_assignment": "off",
+      "judge_accepted": 0,
+      "max_logical_relation_families": 64,
+      "max_physical_executions": 128,
+      "median_logical_relation_families": 64.0,
+      "median_physical_executions": 128.0,
+      "p95_logical_relation_families": 64.0,
+      "selector_mode": "full",
+      "unique_exact": 0
+    }
+  ],
+  "variants": [
+    "full"
+  ]
+}

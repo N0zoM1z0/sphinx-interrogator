@@ -1,0 +1,65 @@
+{
+  "artifacts": {
+    "database": "campaign.sqlite3",
+    "events": "events.jsonl",
+    "manifest": "manifest.json",
+    "materialized_digest": "72b4df9355aa52790929422794752c24a7366b0b3ee348aab82fcc9e488f07e1",
+    "raw_directory": "raw"
+  },
+  "campaign_id": "standard-full-standard-smoke-50000-60000",
+  "campaign_seed": 60000,
+  "challenge_id": "standard-smoke-50000",
+  "cost": {
+    "hard_resets": 68,
+    "last_public_physical_remaining": 4932,
+    "logical_relation_families": 34,
+    "physical_executions": 68
+  },
+  "evidence": {
+    "cegis_refinements": 0,
+    "hard_bounded_constraints": 16,
+    "result_class": "bounded-hard-exact",
+    "stochastic_soft_groups": 0
+  },
+  "judge": {
+    "accepted": true,
+    "campaign_token": "campaign-096379bd720a31dd9d72bad2",
+    "challenge_id": "standard-smoke-50000",
+    "judge_version": "1.0",
+    "submission_recorded": true
+  },
+  "profile_name": "standard",
+  "remaining_secret_candidates": 1,
+  "report_version": "1.0",
+  "selector_mode": "full",
+  "semantic_version": "0.1.0",
+  "solver": {
+    "active_fault_variants": [
+      "reference",
+      "signed",
+      "weak"
+    ],
+    "candidate_approximation": "factorized-exact-bounded",
+    "exact_full_model_count": 3,
+    "status": "sat"
+  },
+  "status": "unique_exact",
+  "timing_seconds": {
+    "learning": 0.0,
+    "measurement_method": "wall-clock-segments/v1",
+    "report_persistence": 0.002317767997737974,
+    "solver": 0.04965197099954821,
+    "statistics": 0.0,
+    "synthesis": 0.2698545610110159,
+    "total": 4.960390297994309,
+    "vm_and_wire_persistence": 4.128708401003678
+  },
+  "unique_secret_hex": "29703a60",
+  "uniqueness": {
+    "alternative_model_unsat": true,
+    "candidate_secret_hex": "29703a60",
+    "reason": "alternative-model query is unsat",
+    "solver_status": "unsat",
+    "unique": true
+  }
+}

@@ -524,6 +524,67 @@ def test_repeat_amplification_can_emit_a_bounded_standard_constraint() -> None:
     assert emitted == 9
 
 
+def test_standard_repeat_schedule_preserves_all_generating_models() -> None:
+    """The exact standard schedule never emits a bounded fact excluding its generator."""
+    emitted = 0
+    total = 0
+    for secret_value, epoch, anchor, variant, source_noise, follow_noise in itertools.product(
+        range(16),
+        range(2),
+        range(4),
+        tuple(FaultVariant),
+        range(-1, 2),
+        range(-1, 2),
+    ):
+        relation = RepeatAmplifyTemplate().instantiate(
+            instance_id=f"standard-repeat-{secret_value}-{epoch}-{anchor}-{variant.value}",
+            lane=0,
+            token=0,
+            epoch=epoch,
+            anchor=anchor,
+            pad=(0 ^ epoch) & 3,
+            repeats=16,
+        )
+        secret = (secret_value,)
+        source = _result(
+            relation,
+            follow_up=False,
+            secret=secret,
+            variant=variant,
+            noise=source_noise,
+            width=4,
+            request_id="standard-repeat:s",
+        )
+        follow_up = _result(
+            relation,
+            follow_up=True,
+            secret=secret,
+            variant=variant,
+            noise=follow_noise,
+            width=4,
+            request_id="standard-repeat:f",
+        )
+        decision = _decision(relation, source, follow_up, noise_bound=1)
+        extraction = extract_finite_models(
+            relation,
+            source,
+            follow_up,
+            decision,
+            noise_bound=1,
+        )
+        total += 1
+        if extraction.status is ExtractionStatus.EMITTED:
+            assert extraction.hard_constraints[0].accepts(secret, fault_variant=variant.value)
+            emitted += 1
+        else:
+            assert extraction.status in {
+                ExtractionStatus.INCONCLUSIVE,
+                ExtractionStatus.UNINFORMATIVE,
+            }
+    assert total == 16 * 2 * 4 * len(tuple(FaultVariant)) * 3 * 3
+    assert emitted > 0
+
+
 def test_equal_quantized_buckets_remain_an_interval_not_false_equality() -> None:
     """A width-four equality crossing all signs is inconclusive and emits no hard fact."""
     relation = AnchorSwitchTemplate().instantiate(

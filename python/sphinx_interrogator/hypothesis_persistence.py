@@ -140,6 +140,13 @@ class CampaignHypotheses:
             self._record_state(group_id, GroupState.QUARANTINED, logical_time)
         return groups
 
+    def quarantine(self, group_id: str, *, logical_time: int, reason: str) -> None:
+        """Persistently disable one high-influence group after failed replay/review."""
+        if not reason:
+            raise ValueError("quarantine requires an auditable reason")
+        self.store.quarantine(group_id)
+        self._record_state(group_id, GroupState.QUARANTINED, logical_time, reason=reason)
+
     def retract(self, group_id: str, *, logical_time: int) -> None:
         """Retract a persisted group without deleting its event/provenance."""
         self.store.retract(group_id)
@@ -148,14 +155,51 @@ class CampaignHypotheses:
     def reactivate(self, group_id: str, *, logical_time: int) -> None:
         """Reactivate a reviewed quarantine in solver and materialized state."""
         self.store.reactivate(group_id)
-        self._record_state(group_id, GroupState.ACTIVE, logical_time)
+        self._record_state(
+            group_id,
+            GroupState.ACTIVE,
+            logical_time,
+            reason="reviewed replay reproduced the declared evidence",
+        )
 
-    def _record_state(self, group_id: str, state: GroupState, logical_time: int) -> None:
+    def review_replay(
+        self,
+        group_id: str,
+        *,
+        reproduced: bool,
+        logical_time: int,
+        replay_request_ids: tuple[str, ...],
+    ) -> GroupState:
+        """Quarantine a failed high-influence replay or reactivate a reviewed one."""
+        if not replay_request_ids or any(not request_id for request_id in replay_request_ids):
+            raise ValueError("replay review requires public request provenance")
+        if reproduced:
+            if self.store.state(group_id) is GroupState.QUARANTINED:
+                self.reactivate(group_id, logical_time=logical_time)
+            return self.store.state(group_id)
+        self.quarantine(
+            group_id,
+            logical_time=logical_time,
+            reason="high-influence replay disagreed: " + ",".join(replay_request_ids),
+        )
+        return GroupState.QUARANTINED
+
+    def _record_state(
+        self,
+        group_id: str,
+        state: GroupState,
+        logical_time: int,
+        *,
+        reason: str | None = None,
+    ) -> None:
+        payload: dict[str, object] = {"constraint_id": group_id, "state": state.value}
+        if reason is not None:
+            payload["reason"] = reason
         self.repository.append_event(
             event_id=f"constraint-state:{group_id}:{logical_time}:{state.value}",
             kind="constraint_state_changed",
             logical_time=logical_time,
-            payload={"constraint_id": group_id, "state": state.value},
+            payload=payload,
         )
 
     def _load(self) -> None:

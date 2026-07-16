@@ -275,6 +275,32 @@ def test_cache_key_and_frontier_adapter_persist_all_score_components(tmp_path: P
     repository.close()
 
 
+def test_excluded_candidate_keys_force_a_novel_cached_assignment() -> None:
+    """Campaign history can exclude tested holes and participates in cache identity."""
+    committee = _committee((0, 4, 8, 12))
+    grammar = BoundedRelationGrammar(
+        lanes=(0,),
+        tokens=(0,),
+        epochs=(0,),
+        pads=(0,),
+        include_repeat_amplify=False,
+    )
+    synthesizer = CegisSynthesizer(grammar)
+    first = synthesizer.synthesize(committee, _context(committee, maximum_bucket_size=2))
+    assert first.score is not None
+    second = synthesizer.synthesize(
+        committee,
+        _context(
+            committee,
+            maximum_bucket_size=2,
+            excluded_candidate_keys=(first.score.canonical_tie_break,),
+        ),
+    )
+    assert second.score is not None
+    assert second.score.candidate != first.score.candidate
+    assert not second.cache_hit
+
+
 def test_synthesized_holes_materially_beat_seeded_random_holes_without_truth() -> None:
     """Committee-only selection halves the mean worst bucket on calibration subsets."""
     grammar = BoundedRelationGrammar(

@@ -29,6 +29,7 @@ from sphinx_interrogator.relations import (
     RepeatAmplifyTemplate,
     TokenSwitchTemplate,
 )
+from sphinx_interrogator.standard import StandardSelectorMode, recover_standard
 from sphinx_interrogator.synthesis import (
     BoundedRelationGrammar,
     CegisSynthesizer,
@@ -48,6 +49,9 @@ JUDGE_SCHEMA = json.loads((ROOT / "spec/judge.schema.json").read_text(encoding="
 RECOVERY_REPORT_SCHEMA = json.loads(
     (ROOT / "spec/recovery-report.schema.json").read_text(encoding="utf-8")
 )
+STANDARD_RECOVERY_REPORT_SCHEMA = json.loads(
+    (ROOT / "spec/standard-recovery-report.schema.json").read_text(encoding="utf-8")
+)
 
 
 def vm_binary() -> Path:
@@ -59,6 +63,40 @@ def vm_binary() -> Path:
     if not binary.is_file():
         pytest.fail(f"configured SphinxVM binary does not exist: {binary}")
     return binary
+
+
+def _create_challenge(
+    *,
+    profile: Path,
+    output: Path,
+    challenge_id: str,
+    seed: int,
+    fault: str,
+) -> Path:
+    completed = subprocess.run(
+        [
+            str(vm_binary()),
+            "challenge",
+            "create",
+            "--profile",
+            str(profile),
+            "--output",
+            str(output),
+            "--challenge-id",
+            challenge_id,
+            "--seed",
+            str(seed),
+            "--fault",
+            fault,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        timeout=10,
+    )
+    assert completed.returncode == 0, completed.stderr
+    return output
 
 
 @pytest.fixture
@@ -580,6 +618,54 @@ def test_tutorial_campaign_recovers_uniquely_judges_once_and_resumes(
 
 
 @pytest.mark.integration
+def test_standard_campaign_recovers_judges_once_and_resumes(tmp_path: Path) -> None:
+    """The M7 standard flow reaches exact uniqueness through bounded hard evidence."""
+    challenge = _create_challenge(
+        profile=ROOT / "benchmarks/profiles/standard.toml",
+        output=tmp_path / "standard-reference-challenge",
+        challenge_id="standard-reference-50000",
+        seed=50_000,
+        fault="reference",
+    )
+    run = tmp_path / "standard-reference-run"
+    first = recover_standard(
+        vm_binary=vm_binary(),
+        challenge=challenge,
+        run_directory=run,
+        campaign_seed=60_000,
+        selector_mode=StandardSelectorMode.FULL,
+        submit_judge=True,
+    )
+    jsonschema.Draft202012Validator(STANDARD_RECOVERY_REPORT_SCHEMA).validate(first.report)
+    assert first.status == "unique_exact"
+    assert first.report["remaining_secret_candidates"] == 1
+    assert first.report["uniqueness"]["alternative_model_unsat"] is True
+    assert first.report["judge"]["submission_recorded"] is True
+    assert first.report["judge"]["accepted"] is True
+    assert first.report["cost"]["logical_relation_families"] <= 64
+    assert first.report["cost"]["physical_executions"] <= 128
+    assert first.report["evidence"]["hard_bounded_constraints"] == 16
+    repository = CampaignRepository.open(run)
+    assert repository.database.table_count("judge_submissions") == 1
+    digest = repository.database.digest()
+    assert repository.rebuild() == digest
+    repository.close()
+
+    resumed = recover_standard(
+        vm_binary=vm_binary(),
+        challenge=challenge,
+        run_directory=run,
+        campaign_seed=60_000,
+        selector_mode=StandardSelectorMode.FULL,
+        submit_judge=True,
+    )
+    assert resumed.report == first.report
+    repository = CampaignRepository.open(run)
+    assert repository.database.table_count("judge_submissions") == 1
+    repository.close()
+
+
+@pytest.mark.integration
 def test_fault_free_tutorial_control_never_declares_exact_recovery(tmp_path: Path) -> None:
     """All equal off-fault observations retain every secret and never invoke the judge."""
     challenge = tmp_path / "fault-free-challenge"
@@ -618,6 +704,35 @@ def test_fault_free_tutorial_control_never_declares_exact_recovery(tmp_path: Pat
     assert result.report["unique_secret_hex"] is None
     assert result.report["uniqueness"]["alternative_model_unsat"] is False
     assert result.report["judge"] is None
+
+
+@pytest.mark.integration
+def test_fault_free_standard_control_never_declares_exact_recovery(tmp_path: Path) -> None:
+    """The blind standard control exhausts bounded anchors without a false singleton."""
+    challenge = _create_challenge(
+        profile=ROOT / "benchmarks/profiles/fault_free.toml",
+        output=tmp_path / "standard-off-challenge",
+        challenge_id="standard-off-50000",
+        seed=50_000,
+        fault="off",
+    )
+    result = recover_standard(
+        vm_binary=vm_binary(),
+        challenge=challenge,
+        run_directory=tmp_path / "standard-off-run",
+        campaign_seed=60_001,
+        selector_mode=StandardSelectorMode.FULL,
+        submit_judge=True,
+    )
+    jsonschema.Draft202012Validator(STANDARD_RECOVERY_REPORT_SCHEMA).validate(result.report)
+    assert result.status == "inconclusive"
+    assert result.report["unique_secret_hex"] is None
+    assert result.report["remaining_secret_candidates"] == 16**8
+    assert result.report["uniqueness"]["alternative_model_unsat"] is False
+    assert result.report["judge"] is None
+    assert result.report["evidence"]["hard_bounded_constraints"] == 0
+    assert result.report["cost"]["logical_relation_families"] == 64
+    assert result.report["cost"]["physical_executions"] == 128
 
 
 @pytest.mark.integration

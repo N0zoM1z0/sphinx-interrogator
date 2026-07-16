@@ -68,5 +68,5 @@ test-tutorial-fault-free:
     SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/tutorial_matrix.py --output runs/tutorial-fault-free-v2 --fault off
 
 benchmark-standard:
-    @echo "TODO(M7/M9): execute and report the reproducible standard benchmark matrix"
-    @exit 1
+    cargo build --locked --bin sphinx-vm
+    SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/benchmark_standard.py --output runs/standard-benchmark-v1 --require-full-targets

@@ -60,7 +60,10 @@ public-only tutorial recovery, exact secret-projection uniqueness, one-shot judg
 accepted-report resume, and a blind fault-free negative control. The verified M6
 checkpoint adds typed bounded relation skeletons, Z3 finite-hole
 filling, diverse exact/proxy committees, pair-separating CEGIS, conservative margin and
-resource objectives, cache identity, and durable frontier score logs. M7–M9 remain
+resource objectives, cache identity, and durable frontier score logs. The verified M7
+checkpoint adds calibrated sequential soft evidence, capped grouped MaxSMT weights,
+soft-group replay/quarantine/repair, bounded standard-profile recovery, public
+leakage/learnability audit, and the full published standard benchmark. M8–M9 remain
 outstanding.
 
 ## Progress
@@ -74,7 +77,7 @@ outstanding.
 - [x] (2026-07-16 02:34Z) Close M4 after durable campaign/exact-solver evidence, database migration 2, and the real downstream tutorial gate all pass.
 - [x] (2026-07-16 02:34Z) Complete M5 deterministic tutorial recovery and blind fault-free negative control: 100/100 exact accepted reference seeds and 100/100 inconclusive off-fault seeds at 16 logical families each.
 - [x] (2026-07-16 03:00Z) Complete M6 grammar-guided CEGIS: typed anchor/repeat skeletons, bounded enumeration, Z3 hole filling, diverse hypothesis-store committees, real counterexample refinement, interval/resource objectives, deterministic cache/ties, frontier integration, live Rust execution, and 20-seed random-hole calibration.
-- [ ] (date) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance.
+- [x] (2026-07-16 04:52Z) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance: 600-campaign standard matrix passed with 100/100 full-reference exact, p95 48 logical families, and 100/100 off-control inconclusive.
 - [ ] (date) Complete M8 soft-reset state, exact-history mode, AALpy learner, and retraction semantics.
 - [ ] (date) Complete M9 relational reducer, baselines/ablations, formal/boundary audit, and release evidence.
 
@@ -131,7 +134,14 @@ outstanding.
 - Observation: Quantization/noise margin changes the grammar optimum, not merely its numeric score.
   Evidence: the exact committee selects a cheap anchor switch, while independent `[-1,1]` nuisance intervals with required positive separation select an eight-fold certified drained repeat; symbolic and concrete signatures agree exhaustively for every nibble/fault member.
 
-Add dated observations here. Include failed assumptions, benchmark results, solver behavior, tool limitations, and concise command/artifact evidence.
+- Observation: The standard recovery loop must reuse bounded public sessions.
+  Evidence: an early smoke run reached the server's `session_limit` after allocating one source/follow-up session per relation; reusing `standard-source` and `standard-follow_up` completed seed 50000 exactly with 34 logical families and 68 executions.
+
+- Observation: The frozen standard profile is learnable by simple certified anchor schedules, not only by the full CEGIS selector.
+  Evidence: `runs/standard-benchmark-v1/standard-benchmark-report.json` records 100/100 exact and accepted reference campaigns for `full`, `random`, `stateless`, `kb_no_synthesis`, and `synthesis_no_kb`; the full selector median is 40 logical families and p95 is 48.
+
+- Observation: The drained hard-reset M7 grammar does not distinguish the active `reference`, `weak`, and `signed` variants.
+  Evidence: `runs/standard-profile-audit-m7/standard-profile-audit.json` records repeat-amplify fault margins of 15 cycles for all three active variants and zero for `off`; a one-seed mutation ladder recovered reference/weak/signed exactly at the same cost shape.
 
 ## Decision Log
 
@@ -188,6 +198,18 @@ Add dated observations here. Include failed assumptions, benchmark results, solv
   Alternatives considered: custom L* implementation; always explicit history.
   Date/author: 2026-07-15, design package.
   Consequences: M8 depends on stable macro alphabets and output discretization.
+
+- Decision: Treat standard benchmark smoke/limited runs separately from full published acceptance.
+  Rationale: a one-seed smoke can verify report/resume mechanics but cannot prove the 100-seed target; the CLI now records both selected-threshold health and full-target completion, while `just benchmark-standard` requires the full target.
+  Alternatives considered: make all limited runs fail; allow limited runs to set `targets_met`.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: partial calibration commands can pass honestly, and release evidence still requires `full_published_matrix=true`.
+
+- Decision: Keep the standard active fault variants latent-equivalent under the M7 drained hard-reset grammar.
+  Rationale: the M7 acceptance target is exact secret recovery and off-control soundness; distinguishing active variants requires state/history experiments that belong to M8.
+  Alternatives considered: change the published standard fault constants; add uncertified stateful probes to M7.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: M7 reports `reference`, `weak`, and `signed` ambiguity honestly and does not claim active-variant identification.
 
 Record every later material deviation here before or with implementation.
 
@@ -551,11 +573,11 @@ Populate during implementation:
 - M4 persistence/solver evidence: `VALIDATION.md`, `docs/CAMPAIGN_PERSISTENCE.md`, `tests/python/test_persistence.py`, `test_harness.py`, `test_hypothesis_persistence.py`, `test_frontier.py`, `test_solver.py`, and `test_symbolic_solver_model.py`, 2026-07-16; 125 Python tests cover real/fake write-ahead, replay, provenance, Z3 exactness, rollback, and CLI inspection.
 - M5 tutorial acceptance report: `runs/tutorial-evaluation-v2/summary.json`, `runs/tutorial-demo-v2-seed-7/report.json`, `docs/TUTORIAL_RECOVERY.md`, and `VALIDATION.md`, 2026-07-16; 100/100 reference seeds are exact and judge accepted at 16 logical families.
 - M6 synthesis evidence: `python/sphinx_interrogator/synthesis.py`, `tests/python/test_synthesis.py`, `tests/python/test_protocol_process.py`, `docs/PROGRAM_SYNTHESIS.md`, and `VALIDATION.md`, 2026-07-16; known-optimum, refinement, no-discriminator, unknown, margin, cache/frontier, exhaustive differential, live-process, and 20-seed random-hole calibration all pass.
-- Standard full-system report: pending.
-- Baseline/ablation report: pending.
+- M7 standard full-system report: `runs/standard-benchmark-v1/standard-benchmark-report.json`, 2026-07-16; 600 campaigns passed, full/reference exact rate 1.0, median 40 logical families, p95 48, median 80 physical executions, and targets_met true.
+- Baseline/ablation report: `runs/standard-benchmark-v1/standard-benchmark-report.json`, 2026-07-16; all four reference baselines also reached 100/100 exact, so the frozen standard profile shows robustness but not a large selector gap.
 - M5 fault-free control report: `runs/tutorial-fault-free-v2/summary.json`, 2026-07-16; 100/100 blind off-fault campaigns are inconclusive with zero judge submissions.
-- One-shot leakage audit: pending.
-- Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; statistical M7/M9 calibration remains pending.
+- One-shot leakage audit: `runs/standard-profile-audit-m7/standard-profile-audit.json`, 2026-07-16; max public one-shot partition is 1.5 bits, median useful partition is 1.5 bits, oracle collision bound is 16 logical relations, and blind scan worst-case is 64.
+- Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; M7 one-seed campaign ladder in `runs/standard-mutation-ladder-smoke-m7/standard-benchmark-report.json` confirms active variants recover and `runs/standard-profile-audit-m7/standard-profile-audit.json` records the active-variant latent equivalence under drained repeats.
 - Formal/TLA+/SMT report: M2 scheduler, M3 relation, and M4 concrete-versus-Z3 bank/fault/state evidence in `VALIDATION.md`; final mutation/release obligations remain M9.
 - Boundary-audit report: M2 artifact permission/public-key/live-response evidence in `VALIDATION.md`; final release rerun remains pending M9.
 - Minimized witness collection: pending.

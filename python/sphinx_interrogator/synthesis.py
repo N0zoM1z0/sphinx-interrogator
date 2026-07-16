@@ -593,6 +593,7 @@ class SynthesisContext:
     noise_bound: int = 0
     minimum_pair_margin: int = 0
     maximum_bucket_size: int | None = None
+    excluded_candidate_keys: tuple[str, ...] = ()
     max_cegis_iterations: int = 16
     solver_timeout_ms: int = 5_000
 
@@ -605,6 +606,8 @@ class SynthesisContext:
             raise ValueError("invalid observation interval configuration")
         if self.maximum_bucket_size is not None and self.maximum_bucket_size < 1:
             raise ValueError("maximum bucket size must be positive")
+        if tuple(sorted(set(self.excluded_candidate_keys))) != self.excluded_candidate_keys:
+            raise ValueError("excluded candidate keys must be sorted and unique")
         if self.max_cegis_iterations < 1 or self.solver_timeout_ms < 1:
             raise ValueError("synthesis bounds/timeouts must be positive")
 
@@ -909,6 +912,7 @@ class CegisSynthesizer:
                 "noise_bound": context.noise_bound,
                 "minimum_pair_margin": context.minimum_pair_margin,
                 "maximum_bucket_size": context.maximum_bucket_size,
+                "excluded_candidate_keys": list(context.excluded_candidate_keys),
                 "committee": committee.fingerprint(),
                 "resources": self.grammar.resources.__dict__
                 if hasattr(self.grammar.resources, "__dict__")
@@ -938,7 +942,11 @@ class CegisSynthesizer:
             fills: list[HoleFillResult] = []
             candidate_sets: list[tuple[TypedCandidate, ...]] = []
             for skeleton in self.grammar.skeletons():
-                bounded_candidates = self.grammar.enumerate(skeleton)
+                bounded_candidates = tuple(
+                    candidate
+                    for candidate in self.grammar.enumerate(skeleton)
+                    if candidate.canonical_key() not in context.excluded_candidate_keys
+                )
                 fill = self.hole_filler.fill(
                     skeleton,
                     bounded_candidates,

@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/standard-benchmark-report.schema.json",
+  "title": "Sphinx Interrogator standard benchmark aggregate report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version",
+    "matrix_name",
+    "profile_name",
+    "seed_file",
+    "variants",
+    "reference_faults",
+    "off_control",
+    "campaigns",
+    "acceptance",
+    "summaries",
+    "results",
+    "artifacts"
+  ],
+  "properties": {
+    "report_version": {"const": "1.0"},
+    "matrix_name": {"type": "string", "minLength": 1},
+    "profile_name": {"const": "standard"},
+    "seed_file": {"type": "string", "minLength": 1},
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["full", "random", "stateless", "kb_no_synthesis", "synthesis_no_kb"]
+      }
+    },
+    "reference_faults": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["reference", "weak", "signed"]}
+    },
+    "off_control": {"type": "boolean"},
+    "campaigns": {"type": "integer", "minimum": 0},
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selected_seed_count",
+        "published_seed_count",
+        "full_published_matrix",
+        "selected_thresholds_met",
+        "full_reference_exact_rate",
+        "full_reference_median_logical",
+        "full_reference_p95_logical",
+        "full_reference_median_physical",
+        "off_false_exact_declarations",
+        "targets_met"
+      ],
+      "properties": {
+        "selected_seed_count": {"type": "integer", "minimum": 1},
+        "published_seed_count": {"type": "integer", "minimum": 1},
+        "full_published_matrix": {"type": "boolean"},
+        "selected_thresholds_met": {"type": "boolean"},
+        "full_reference_exact_rate": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "full_reference_median_logical": {"type": ["number", "null"], "minimum": 0},
+        "full_reference_p95_logical": {"type": ["number", "null"], "minimum": 0},
+        "full_reference_median_physical": {"type": ["number", "null"], "minimum": 0},
+        "off_false_exact_declarations": {"type": ["integer", "null"], "minimum": 0},
+        "targets_met": {"type": "boolean"}
+      }
+    },
+    "summaries": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/summary"}
+    },
+    "results": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/result"}
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["challenges", "runs", "markdown_report"],
+      "properties": {
+        "challenges": {"const": "challenges"},
+        "runs": {"const": "runs"},
+        "markdown_report": {"const": "standard-benchmark-report.md"}
+      }
+    }
+  },
+  "$defs": {
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selector_mode",
+        "fault_assignment",
+        "campaigns",
+        "unique_exact",
+        "judge_accepted",
+        "false_exact",
+        "exact_rate",
+        "median_logical_relation_families",
+        "p95_logical_relation_families",
+        "max_logical_relation_families",
+        "median_physical_executions",
+        "max_physical_executions"
+      ],
+      "properties": {
+        "selector_mode": {
+          "enum": ["full", "random", "stateless", "kb_no_synthesis", "synthesis_no_kb"]
+        },
+        "fault_assignment": {"enum": ["off", "reference", "weak", "signed"]},
+        "campaigns": {"type": "integer", "minimum": 0},
+        "unique_exact": {"type": "integer", "minimum": 0},
+        "judge_accepted": {"type": "integer", "minimum": 0},
+        "false_exact": {"type": "integer", "minimum": 0},
+        "exact_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "median_logical_relation_families": {"type": "number", "minimum": 0},
+        "p95_logical_relation_families": {"type": "number", "minimum": 0},
+        "max_logical_relation_families": {"type": "integer", "minimum": 0},
+        "median_physical_executions": {"type": "number", "minimum": 0},
+        "max_physical_executions": {"type": "integer", "minimum": 0}
+      }
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selector_mode",
+        "fault_assignment",
+        "seed",
+        "challenge_id",
+        "status",
+        "judge_accepted",
+        "remaining_secret_candidates",
+        "cost",
+        "run"
+      ],
+      "properties": {
+        "selector_mode": {
+          "enum": ["full", "random", "stateless", "kb_no_synthesis", "synthesis_no_kb"]
+        },
+        "fault_assignment": {"enum": ["off", "reference", "weak", "signed"]},
+        "seed": {"type": "integer", "minimum": 0},
+        "challenge_id": {"type": "string", "minLength": 1},
+        "status": {
+          "enum": [
+            "unique_exact",
+            "unique_exact_unjudged",
+            "inconclusive",
+            "inconsistent",
+            "judge_rejected"
+          ]
+        },
+        "judge_accepted": {"type": ["boolean", "null"]},
+        "remaining_secret_candidates": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967296
+        },
+        "cost": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "logical_relation_families",
+            "physical_executions",
+            "hard_resets",
+            "last_public_physical_remaining"
+          ],
+          "properties": {
+            "logical_relation_families": {"type": "integer", "minimum": 0},
+            "physical_executions": {"type": "integer", "minimum": 0},
+            "hard_resets": {"type": "integer", "minimum": 0},
+            "last_public_physical_remaining": {"type": ["integer", "null"], "minimum": 0}
+          }
+        },
+        "run": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/standard-recovery-report.schema.json",
+  "title": "Sphinx Interrogator bounded standard recovery report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version",
+    "campaign_id",
+    "challenge_id",
+    "profile_name",
+    "semantic_version",
+    "campaign_seed",
+    "selector_mode",
+    "status",
+    "unique_secret_hex",
+    "remaining_secret_candidates",
+    "uniqueness",
+    "solver",
+    "cost",
+    "evidence",
+    "judge",
+    "timing_seconds",
+    "artifacts"
+  ],
+  "properties": {
+    "report_version": {"const": "1.0"},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "challenge_id": {"type": "string", "minLength": 1},
+    "profile_name": {"const": "standard"},
+    "semantic_version": {"type": "string", "minLength": 1},
+    "campaign_seed": {"type": "integer", "minimum": 0},
+    "selector_mode": {
+      "enum": ["full", "random", "stateless", "kb_no_synthesis", "synthesis_no_kb"]
+    },
+    "status": {
+      "enum": [
+        "unique_exact",
+        "unique_exact_unjudged",
+        "inconclusive",
+        "inconsistent",
+        "judge_rejected"
+      ]
+    },
+    "unique_secret_hex": {"type": ["string", "null"], "pattern": "^[0-9a-f]{8}$"},
+    "remaining_secret_candidates": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4294967296
+    },
+    "uniqueness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "solver_status",
+        "unique",
+        "alternative_model_unsat",
+        "candidate_secret_hex",
+        "reason"
+      ],
+      "properties": {
+        "solver_status": {"enum": ["sat", "unsat", "unknown"]},
+        "unique": {"type": ["boolean", "null"]},
+        "alternative_model_unsat": {"type": "boolean"},
+        "candidate_secret_hex": {"type": ["string", "null"], "pattern": "^[0-9a-f]{8}$"},
+        "reason": {"type": ["string", "null"]}
+      }
+    },
+    "solver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "candidate_approximation",
+        "exact_full_model_count",
+        "active_fault_variants"
+      ],
+      "properties": {
+        "status": {"enum": ["sat", "unsat", "unknown"]},
+        "candidate_approximation": {"const": "factorized-exact-bounded"},
+        "exact_full_model_count": {"type": "integer", "minimum": 0},
+        "active_fault_variants": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["off", "reference", "weak", "signed"]}
+        }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_relation_families",
+        "physical_executions",
+        "hard_resets",
+        "last_public_physical_remaining"
+      ],
+      "properties": {
+        "logical_relation_families": {"type": "integer", "minimum": 0},
+        "physical_executions": {"type": "integer", "minimum": 0},
+        "hard_resets": {"type": "integer", "minimum": 0},
+        "last_public_physical_remaining": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hard_bounded_constraints",
+        "stochastic_soft_groups",
+        "cegis_refinements",
+        "result_class"
+      ],
+      "properties": {
+        "hard_bounded_constraints": {"type": "integer", "minimum": 0},
+        "stochastic_soft_groups": {"type": "integer", "minimum": 0},
+        "cegis_refinements": {"type": "integer", "minimum": 0},
+        "result_class": {"const": "bounded-hard-exact"}
+      }
+    },
+    "judge": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "judge_version",
+            "challenge_id",
+            "campaign_token",
+            "submission_recorded",
+            "accepted"
+          ],
+          "properties": {
+            "judge_version": {"const": "1.0"},
+            "challenge_id": {"type": "string"},
+            "campaign_token": {"type": "string"},
+            "submission_recorded": {"type": "boolean"},
+            "accepted": {"type": "boolean"}
+          }
+        }
+      ]
+    },
+    "timing_seconds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "measurement_method",
+        "total",
+        "synthesis",
+        "vm_and_wire_persistence",
+        "solver",
+        "statistics",
+        "learning",
+        "report_persistence"
+      ],
+      "properties": {
+        "measurement_method": {"const": "wall-clock-segments/v1"},
+        "total": {"type": "number", "minimum": 0},
+        "synthesis": {"type": "number", "minimum": 0},
+        "vm_and_wire_persistence": {"type": "number", "minimum": 0},
+        "solver": {"type": "number", "minimum": 0},
+        "statistics": {"type": "number", "minimum": 0},
+        "learning": {"type": "number", "minimum": 0},
+        "report_persistence": {"type": "number", "minimum": 0}
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest",
+        "events",
+        "database",
+        "raw_directory",
+        "materialized_digest"
+      ],
+      "properties": {
+        "manifest": {"const": "manifest.json"},
+        "events": {"const": "events.jsonl"},
+        "database": {"const": "campaign.sqlite3"},
+        "raw_directory": {"const": "raw"},
+        "materialized_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 03:00Z**
+Last updated: **2026-07-16 04:52Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -473,3 +473,114 @@ just demo-tutorial   pass; unique_exact e905; judge accepted; 16 logical/32 phys
   contradiction quarantine/repair, and execute the standard/reference/control matrix.
 - Persistent-state learning/retraction, relation-aware reduction, baselines/ablations,
   and final release evidence remain M8–M9.
+
+## M7 noise, repair, and standard benchmark checkpoint
+
+M7 completes the bounded/statistical evidence layer and the published standard
+benchmark flow. Sequential sign decisions now use fixed checkpoints, Bonferroni
+family-wise alpha, a dead zone, minimum nonzero observations, and median-of-means
+aggregation. They explicitly return positive, negative, or inconclusive probabilistic
+soft evidence; nonsignificance never becomes hard equality. Soft evidence is capped,
+grouped, and ranked through MaxSMT weights. High-influence soft groups can be replayed
+from provenance, quarantined with a persistent reason, repaired, and reactivated.
+
+Standard recovery uses the public `standard` profile only, reads no private challenge
+state, and launches the Rust VM as a separate process. It lowers certified
+`repeat-amplify/v1` relations through the M6 grammar, uses exact bounded nuisance
+elimination over width-four buckets and `[-1,1]` seeded noise, persists raw wire bytes,
+stores factorized finite lane domains, proves alternative-secret `unsat` before
+submitting one judge guess, and resumes from a completed report without a second judge
+submission. The VM session limit bug found during smoke testing was fixed by reusing
+two stable public sessions, `standard-source` and `standard-follow_up`, while retaining
+stable per-execution IDs for replay.
+
+Focused M7 evidence includes:
+
+- 1,000 deterministic null simulations with at most 5/1,000 directional sequential
+  false positives, and 977/1,000 positive decisions under a size-two effect;
+- grouped soft MaxSMT tests proving capped weights do not duplicate evidence;
+- replay/quarantine/repair tests for high-influence soft groups;
+- exhaustive standard repeat-schedule soundness over all nibbles, epochs, anchors,
+  public fault-family members, and bounded noise pairs;
+- live standard reference recovery with schema validation, alternative-secret `unsat`,
+  accepted one-shot judge, database rebuild, and completed-report resume;
+- live blind standard off-control recovery with 64 logical families, 128 executions,
+  all `16**8` secrets retained, no constraints, and no judge call.
+
+The public standard profile audit is generated at
+`runs/standard-profile-audit-m7/standard-profile-audit.json`:
+
+```text
+maximum one-shot partition: 1.5 bits
+median useful partition:    1.5 bits
+repeat partition example:   [12, 4] = 0.811278 bits
+anchor-switch example:      [8, 4, 4] = 1.5 bits
+oracle collision bound:     16 logical relations
+blind scan worst bound:     64 logical relations
+```
+
+The one-seed mutation ladder at
+`runs/standard-mutation-ladder-smoke-m7/standard-benchmark-report.json` recovered
+`reference`, `weak`, and `signed` exactly. The audit records that these three active
+variants all have the same drained-repeat margin of 15 cycles, while `off` has margin
+0. M7 therefore keeps the active variant latent and treats only `off` as the release
+negative control; active-variant identification remains an M8 state/history problem.
+
+The full published standard matrix was run with:
+
+```text
+CARGO_HOME="$PWD/.cache/cargo-home" \
+CARGO_TARGET_DIR="$PWD/.cache/sphinx-target" \
+CARGO_BUILD_JOBS=2 \
+  .tools/bin/just benchmark-standard
+```
+
+Artifact: `runs/standard-benchmark-v1/standard-benchmark-report.json`.
+
+Results:
+
+```text
+campaigns:                         600
+full/reference exact rate:         100/100
+full/reference median logical:     40
+full/reference p95 logical:        48
+full/reference median physical:    80
+off-control false exact:           0/100
+off-control status:                100/100 inconclusive
+targets_met:                       true
+```
+
+All reference selector modes also recovered 100/100 exactly:
+
+```text
+full              median 40 logical, p95 48, max 51
+random            median 40 logical, p95 48, max 52
+stateless         median 40 logical, p95 47, max 51
+kb_no_synthesis   median 40 logical, p95 46, max 50
+synthesis_no_kb   median 40 logical, p95 48, max 51
+```
+
+This is reported as robustness rather than a large selector gap for the frozen
+standard profile.
+
+The final M7 suite used the repository-local Cargo home/target, two build jobs, and no
+concurrent Cargo/rustc process:
+
+```text
+just fmt             pass (52 Python/script files and Rustfmt clean)
+just lint            pass (Clippy -D warnings, Ruff, strict mypy over 25 modules)
+just test            pass (42 Rust lib + 2 Rust binary; 149 Python)
+just schema-check    pass (including standard recovery and benchmark report schemas)
+just verify-formal   pass (Z3 unsat x3; TLC 70,557 generated/2,276 distinct;
+                          131,072 guarded-replay cells; mutation rejected)
+just boundary-audit  pass; binary sha256=628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b
+just demo-tutorial   pass; unique_exact e905; judge accepted; 16 logical/32 physical
+just benchmark-standard pass; targets_met true
+```
+
+## Remaining limitations after M7
+
+- M8 must add exact-history and AALpy-backed soft-reset state learning, conformance
+  counterexamples, and safe retraction/replay of state-dependent constraints.
+- M9 must add relation-aware witness reduction, final release baselines/ablations,
+  minimized artifacts, docs polish, and the release manifest/audit bundle.
