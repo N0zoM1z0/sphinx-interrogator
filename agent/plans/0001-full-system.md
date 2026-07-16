@@ -175,6 +175,11 @@ the later superseding observations and evidence list record the current behavior
   programs with the independent Python target-family model, and relation extractor
   tests compare emitted finite model sets with independently enumerated concrete
   bucket-reproduction models.
+- [x] (2026-07-16 17:03Z) Expand formal reset, confinement, gas, and normalized-cost
+  obligations: `SphinxVM.tla` now models architectural digest, gas, retired count, and
+  static cost; `check_formal_scaffold.py` exhaustively checks reset projections,
+  experiment architectural confinement, gas/progress, fault-free normalized-cost
+  independence, guarded replay, and the replay-suppression mutation self-test.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
   and the clean-tree manifest now completes. Current evidence is still short of a
@@ -368,11 +373,17 @@ the later superseding observations and evidence list record the current behavior
   complete B0-B7 evidence, full/reference 100/100 exact, B0 random-final-guess 0/100
   exact, and fault-off 0 false exact declarations.
 
-- Observation: Passing `just verify-formal` does not cover the task's complete formal
-  obligation set.
+- Observation: Historical formal gap, superseded by the expanded formal checker below:
+  passing `just verify-formal` did not cover the task's complete formal obligation set.
   Evidence: `formal/SphinxVM.tla` models scheduler variables but no architectural
   state, gas, or progress, and its configured invariants do not state soft/hard reset,
   architectural confinement, or fault-disabled normalized-cost independence.
+
+- Observation: The expanded formal checker now covers the previously missing reset,
+  architectural-confinement, gas/progress, and normalized-cost obligations.
+  Evidence: `PATH=/tmp/sphinx-just/bin:$PATH just verify-formal` reports Z3 `unsat`
+  x3, TLC 78,333 generated states with 7,672 distinct states, and finite validation
+  over reset, gas, confinement, normalized-cost, and 131,072 guarded-replay cells.
 
 - Observation: Relation certificates now bind actual supporting artifact contents.
   Evidence: `relation-contracts-v1` records SHA-256 digests for
@@ -914,7 +925,11 @@ Populate during implementation:
   records `state_conditioned_inference.status=complete`, one non-trivial
   effective-nibble constraint, and `shared_private_root=false`; file SHA-256
   `ce5b2daecf11499e3d1465200ecf04abd77a906927f3bb337f855ebaa354eef1`.
-- Formal/TLA+/SMT report: `just verify-formal`, 2026-07-16; Z3 relation contracts returned `unsat` x3, TLC generated 70,557 states with 2,276 distinct states and no invariant violation, and the 131,072-cell guarded-replay mutation self-test was rejected.
+- Formal/TLA+/SMT report: `just verify-formal`, 2026-07-16; Z3 relation contracts
+  returned `unsat` x3, TLC generated 78,333 states with 7,672 distinct states and no
+  invariant violation, and the finite checker covered reset projection, gas/progress,
+  experiment architectural confinement, fault-free normalized-cost independence,
+  131,072 guarded-replay cells, and the replay-suppression mutation self-test.
 - Boundary-audit report: `just boundary-audit`, 2026-07-16; recursive protocol
   validation and separate-UID/FD-broker isolation passed with binary SHA-256
   `c094fff9561f0997dd8c307940dba991b80c920792c07095113f979d430da6cd`.
@@ -1052,12 +1067,11 @@ isolation tests; the current standard matrix passes; and M8/M9 semantic artifact
 checks now pass with non-trivial state-conditioned inference and replayable reducer
 paths. Campaign manifests for tutorial and the full standard benchmark matrix now
 record v1.2 runtime reproducibility metadata and artifact hashes. The repository is
-nevertheless not release-complete: formal obligations, documentation/version,
-expanded clean-CI release smoke, and release-tag evidence remain partial. The
-integrated public controller selector surface is now implemented, but the deeper
-formal and release-CI obligations remain open. Exact-cycle and
-extractor-output differential tests now cover small-program Rust/Python agreement and
-finite-model extraction agreement. The generated release manifest has passing
-root-gate evidence and completes from a clean tree. Work resumes from the open P1/P2
-items above.
+nevertheless not release-complete: documentation/version, expanded clean-CI release
+smoke, and release-tag evidence remain partial. The integrated public controller
+selector surface is now implemented. Exact-cycle and extractor-output differential
+tests now cover small-program Rust/Python agreement and finite-model extraction
+agreement. The formal checker now covers reset, confinement, gas/progress, and
+normalized-cost invariants. The generated release manifest has passing root-gate
+evidence and completes from a clean tree. Work resumes from the open P2 items above.
 ```

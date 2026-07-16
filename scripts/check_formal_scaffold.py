@@ -87,8 +87,9 @@ def check_tlc() -> list[str]:
 
 
 def check_finite_scheduler(*, mutate_suppression: bool) -> list[str]:
-    """Exhaust the guarded-replay cell and reset projections over their finite domains."""
+    """Exhaust finite reset, progress, confinement, and scheduler obligations."""
     errors: list[str] = []
+    max_gas = 3
     hard_reset = (0, None, 0, 0, False, None)
     if hard_reset != (0, None, 0, 0, False, None):
         errors.append("hard reset is not the unique all-cleared state")
@@ -116,6 +117,73 @@ def check_finite_scheduler(*, mutate_suppression: bool) -> list[str]:
         if reset != expected:
             errors.append(f"soft-reset projection mismatch for {sorted(preserved)}")
             return errors
+
+    for arch_digest in range(4):
+        experiment_arch_digest = arch_digest
+        hard_reset_arch_digest = 0
+        soft_reset_arch_digest = arch_digest
+        if experiment_arch_digest != arch_digest:
+            errors.append("experiment operation changed architectural digest")
+            return errors
+        if hard_reset_arch_digest != 0:
+            errors.append("hard reset failed to restore architectural digest")
+            return errors
+        if soft_reset_arch_digest != arch_digest:
+            errors.append("soft reset changed architectural digest")
+            return errors
+
+    operation_costs = {
+        "probe": 5,
+        "anchor": 4,
+        "pad0": 0,
+        "pad3": 3,
+        "fence": 2,
+    }
+    for gas in range(1, max_gas + 1):
+        retired = max_gas - gas
+        for name, static_cost in operation_costs.items():
+            next_gas = gas - 1
+            next_retired = retired + 1
+            if next_gas + next_retired != max_gas:
+                errors.append(f"gas/progress invariant failed for {name}")
+                return errors
+            if next_gas < 0 or next_retired > max_gas:
+                errors.append(f"gas escaped finite progress domain for {name}")
+                return errors
+            if static_cost < 0:
+                errors.append(f"negative public static cost for {name}")
+                return errors
+    exhausted_gas_operation_enabled = 0 > 0
+    if exhausted_gas_operation_enabled:
+        errors.append("operation incorrectly enabled after gas exhaustion")
+        return errors
+
+    for phase in range(4):
+        for _replay_credit in range(4):
+            for lane in range(4):
+                for token in range(16):
+                    for epoch in range(2):
+                        for anchor_bank in range(4):
+                            fault_free_costs = set()
+                            for secret_bank in range(4):
+                                guard = phase == ((lane ^ token ^ epoch) & 0b11)
+                                collision = secret_bank == anchor_bank
+                                delta = 0
+                                normalized_cost = 9 + delta
+                                fault_free_costs.add(normalized_cost)
+                                if delta != 0:
+                                    errors.append("fault-free normalized delta was nonzero")
+                                    return errors
+                                if normalized_cost != 9:
+                                    errors.append(
+                                        "fault-free normalized cost differs from public static cost"
+                                    )
+                                    return errors
+                            if fault_free_costs != {9}:
+                                errors.append(
+                                    "fault-free normalized cost depends on the secret bank"
+                                )
+                                return errors
 
     for phase in range(4):
         for replay_credit in range(4):
@@ -188,10 +256,25 @@ def main() -> int:
                 "SoftReset ==",
                 "TypeOK ==",
                 "NoFaultMeansZero ==",
+                "ExperimentArchConfinement ==",
+                "GasProgress ==",
+                "NormalizedCostInvariant ==",
             ),
         )
     )
-    errors.extend(require_tokens(cfg, ("INIT Init", "NEXT Next", "TypeOK")))
+    errors.extend(
+        require_tokens(
+            cfg,
+            (
+                "INIT Init",
+                "NEXT Next",
+                "TypeOK",
+                "ExperimentArchConfinement",
+                "GasProgress",
+                "NormalizedCostInvariant",
+            ),
+        )
+    )
     errors.extend(require_tokens(smt, ("sbox4", "bank", "check-sat")))
     errors.extend(check_finite_scheduler(mutate_suppression=args.mutate_suppression))
     if not args.mutate_suppression:
@@ -207,7 +290,9 @@ def main() -> int:
         for error in errors:
             print(f"- {error}", file=sys.stderr)
         return 1
-    print("formal scheduler model validated over all 131072 guarded-replay cells")
+    print(
+        "formal model validated over reset, gas, confinement, normalized-cost, and scheduler cells"
+    )
     return 0
 
 

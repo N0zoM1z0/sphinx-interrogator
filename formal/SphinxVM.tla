@@ -1,7 +1,7 @@
 ------------------------------ MODULE SphinxVM ------------------------------
 EXTENDS Integers, FiniteSets, TLC
 
-CONSTANTS Lanes, Tokens, Epochs, Banks, FaultEnabled, SoftPreserved
+CONSTANTS Lanes, Tokens, Epochs, Banks, FaultEnabled, SoftPreserved, MaxGas
 
 ASSUME /\ Lanes # {}
        /\ Tokens # {}
@@ -16,10 +16,15 @@ VARIABLES phase,
           pendingBank,
           pendingEpoch,
           pendingGuard,
-          faultCycles
+          faultCycles,
+          archDigest,
+          gas,
+          retired,
+          staticCost
 
 vars == <<phase, replayCredit, lastBank, uopCacheTag, uopCacheValid,
-          pendingBank, pendingEpoch, pendingGuard, faultCycles>>
+          pendingBank, pendingEpoch, pendingGuard, faultCycles,
+          archDigest, gas, retired, staticCost>>
 
 None == -1
 
@@ -43,8 +48,13 @@ Init ==
     /\ pendingEpoch = None
     /\ pendingGuard = FALSE
     /\ faultCycles = 0
+    /\ archDigest = 0
+    /\ gas = MaxGas
+    /\ retired = 0
+    /\ staticCost = 0
 
 Probe(lane, token, epoch) ==
+    /\ gas > 0
     /\ lane \in Lanes
     /\ token \in Tokens
     /\ epoch \in Epochs
@@ -54,6 +64,10 @@ Probe(lane, token, epoch) ==
     /\ phase' = (phase + 1 + epoch) % 4
     /\ uopCacheTag' = 12
     /\ uopCacheValid' = TRUE
+    /\ gas' = gas - 1
+    /\ retired' = retired + 1
+    /\ staticCost' = staticCost + 5
+    /\ archDigest' = archDigest
     /\ UNCHANGED <<replayCredit, lastBank, faultCycles>>
 
 Anchor(bank, epoch) ==
@@ -61,7 +75,8 @@ Anchor(bank, epoch) ==
         collision == matched /\ pendingBank = bank
         delta == IF FaultEnabled /\ collision /\ pendingGuard /\ replayCredit # 3
                  THEN 1 ELSE 0
-    IN /\ bank \in Banks
+    IN /\ gas > 0
+       /\ bank \in Banks
        /\ epoch \in Epochs
        /\ faultCycles' = faultCycles + delta
        /\ replayCredit' = IF matched
@@ -75,23 +90,37 @@ Anchor(bank, epoch) ==
        /\ pendingGuard' = FALSE
        /\ uopCacheTag' = 13
        /\ uopCacheValid' = TRUE
+       /\ gas' = gas - 1
+       /\ retired' = retired + 1
+       /\ staticCost' = staticCost + 4
+       /\ archDigest' = archDigest
        /\ UNCHANGED phase
 
 Pad(amount) ==
+    /\ gas > 0
     /\ amount \in 0..3
     /\ phase' = (phase + amount) % 4
     /\ uopCacheTag' = 14
     /\ uopCacheValid' = TRUE
+    /\ gas' = gas - 1
+    /\ retired' = retired + 1
+    /\ staticCost' = staticCost + amount
+    /\ archDigest' = archDigest
     /\ UNCHANGED <<replayCredit, lastBank, pendingBank, pendingEpoch,
                     pendingGuard, faultCycles>>
 
 Fence ==
+    /\ gas > 0
     /\ replayCredit' = 0
     /\ pendingBank' = None
     /\ pendingEpoch' = None
     /\ pendingGuard' = FALSE
     /\ uopCacheTag' = 15
     /\ uopCacheValid' = TRUE
+    /\ gas' = gas - 1
+    /\ retired' = retired + 1
+    /\ staticCost' = staticCost + 2
+    /\ archDigest' = archDigest
     /\ UNCHANGED <<phase, lastBank, faultCycles>>
 
 HardReset ==
@@ -104,6 +133,10 @@ HardReset ==
     /\ pendingEpoch' = None
     /\ pendingGuard' = FALSE
     /\ faultCycles' = 0
+    /\ archDigest' = 0
+    /\ gas' = MaxGas
+    /\ retired' = 0
+    /\ staticCost' = 0
 
 SoftReset ==
     /\ phase' = IF "phase" \in SoftPreserved THEN phase ELSE 0
@@ -114,6 +147,10 @@ SoftReset ==
     /\ pendingBank' = None
     /\ pendingEpoch' = None
     /\ pendingGuard' = FALSE
+    /\ archDigest' = archDigest
+    /\ gas' = MaxGas
+    /\ retired' = 0
+    /\ staticCost' = 0
     /\ UNCHANGED faultCycles
 
 Next ==
@@ -135,8 +172,15 @@ TypeOK ==
     /\ pendingEpoch \in Epochs \cup {None}
     /\ pendingGuard \in BOOLEAN
     /\ faultCycles \in Nat
+    /\ archDigest \in Nat
+    /\ gas \in 0..MaxGas
+    /\ retired \in 0..MaxGas
+    /\ staticCost \in Nat
 
 NoFaultMeansZero == ~FaultEnabled => faultCycles = 0
+ExperimentArchConfinement == archDigest = 0
+GasProgress == gas + retired = MaxGas
+NormalizedCostInvariant == ~FaultEnabled => staticCost + faultCycles = staticCost
 
 Spec == Init /\ [][Next]_vars
 

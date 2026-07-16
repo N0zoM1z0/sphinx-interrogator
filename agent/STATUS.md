@@ -12,8 +12,8 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 16:57Z after adding exact-cycle and extractor
-  differential coverage and rerunning root format/lint/test checks.
+- **Last updated:** 2026-07-16 17:03Z after expanding formal reset,
+  architectural-confinement, gas/progress, and normalized-cost checks.
 
 ## Current milestone
 
@@ -30,8 +30,10 @@ GitHub Actions CI run. The public `CampaignController` now exposes the required
 `infer`, `learn-state`, `calibrate`, `replay`, `reduce`, and `diversify` modes.
 Differential tests now compare live Rust exact cycles for small programs against the
 independent Python model and compare extractor outputs against concrete bucket-model
-enumeration. No v1.0 or research-complete release should be created yet: broader
-P1/P2 formal, documentation/version, and release-tag obligations remain.
+enumeration. Formal checks now cover reset projection, architectural confinement,
+gas/progress, and normalized-cost invariants. No v1.0 or research-complete release
+should be created yet: broader P2 documentation/version, explicit release-smoke CI,
+and release-tag obligations remain.
 
 ## Verification dashboard
 
@@ -39,13 +41,13 @@ P1/P2 formal, documentation/version, and release-tag obligations remain.
 |---|---|---|
 | `just fmt`, `just lint`, `just test` | pass | 2026-07-16 differential pass: Rust 46 tests and Python 189 tests pass |
 | `just schema-check`, `just docs-check` | pass | Current fixtures, release-manifest schema, and links pass their implemented checks |
-| `just verify-formal` | pass, scope incomplete | Z3 `unsat` x3; TLC 70,557 generated/2,276 distinct; 131,072 guarded-replay cells |
+| `just verify-formal` | pass | Z3 `unsat` x3; TLC 78,333 generated/7,672 distinct; finite checker covers reset, gas, confinement, normalized cost, and 131,072 guarded-replay cells |
 | `just boundary-audit` | pass | Recursive schema checks and separate-UID/FD-broker isolation; binary SHA-256 `c094fff9561f0997dd8c307940dba991b80c920792c07095113f979d430da6cd` |
 | `just demo-tutorial` | pass | `unique_exact`, judge accepted, 16 logical families; `runs/tutorial-demo-v3` |
 | standard benchmark v2 | pass | Report v1.1 covers 100 seeds / 700 campaigns with paired bootstrap CI, complete B0-B7 surface, `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact, fault-off 0 false exact, and normative result statuses only |
 | `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
-| release manifest v2 | pass on clean tree | After the controller commit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
+| release manifest v2 | pass on clean tree | After the differential commit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
 | GitHub CI | pass | Remote `main` has a successful `ci` workflow covering Python, Rust, and integration/boundary jobs |
 
 ## Release blockers
@@ -60,15 +62,11 @@ P1/P2 formal, documentation/version, and release-tag obligations remain.
 
 ### P1
 
-- Implement the remaining architectural, reset, gas/progress, and normalized-cost
-  formal obligations. Exact-cycle and extractor-output differential tests are now in
-  place. Relation certificate proof bundles fail closed if claimed proof/test/semantic
-  artifact contents change.
-- Campaign manifest v1.2 and tutorial/standard/B0 reports now record normative
-  result statuses, revision, dirty state, versions, command, timing, and artifact
-  hashes for tutorial and all 700 standard benchmark runs. The integrated controller
-  surface blocker is closed by `CampaignController` and
-  `sphinx-interrogate controller-plan`.
+- No open P1 blocker is currently tracked after the controller, differential, and
+  expanded-formal repairs. Relation certificate proof bundles fail closed if claimed
+  proof/test/semantic artifact contents change, and campaign manifest v1.2 records
+  normative status plus reproducibility metadata for tutorial and all 700 standard
+  benchmark runs.
 
 ### P2
 

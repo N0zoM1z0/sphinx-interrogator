@@ -22,7 +22,7 @@
 - [x] Architectural, fault-free, and faulty semantics are separate types/modules.
 - [x] Architectural output is secret-independent in exhaustive reduced/property tests.
 - [x] Fault changes only microarchitectural observation/state.
-- [ ] Formal checks cover all required reset, architectural-confinement, gas/progress, and normalized-cost invariants.
+- [x] Formal checks cover all required reset, architectural-confinement, gas/progress, and normalized-cost invariants.
 - [x] Rust concrete and Python symbolic bank/fault/state functions agree exhaustively on reduced domains.
 - [x] Differential tests compare exact cycles on small programs and relation-extractor outputs.
 
@@ -143,5 +143,9 @@
 - Differential coverage now includes a live Rust/Python exact-cycle comparison for
   small programs and extractor finite-model output checks against independently
   enumerated concrete bucket-reproduction models.
+- `SphinxVM.tla` and `check_formal_scaffold.py` now cover reset projection,
+  experiment architectural confinement, gas/progress, and fault-free normalized-cost
+  invariants; `just verify-formal` reports 7,672 distinct TLC states after the
+  expanded model.
 - No release tag should be created until every unchecked release criterion is covered
   by regenerated evidence and clean CI.

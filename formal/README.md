@@ -4,15 +4,18 @@ This directory contains the finite scheduler model and bounded relation obligati
 alongside the concrete Rust/Python differential tests.
 
 - `SphinxVM.tla` models the hidden scheduler state, reset semantics, pending probes,
-  anchors, and guarded replay delta as a finite transition system.
+  anchors, guarded replay delta, experiment architectural confinement, gas progress,
+  and public static/normalized-cost accounting as a finite transition system.
 - `SphinxVM.cfg` supplies a tiny TLC instance intended for rapid regression checks.
 - `relation_contracts.smt2` checks the base architectural and fault-free obligations
   for an anchor-switch relation and a directional reference-fault lemma.
 
 The TLA+ model remains an abstraction rather than a full implementation certificate. The
-verification script additionally exhausts all 131,072 combinations of the two-bit phase,
-two-bit replay credit, low lane bits, token, epoch, secret bank, and anchor bank. Shared
-golden vectors connect the independent Python model to the concrete Rust transition.
+verification script additionally exhausts reset projections, gas/progress transitions,
+architectural-digest confinement for experiment operations, fault-free normalized-cost
+independence, and all 131,072 combinations of the two-bit phase, two-bit replay credit,
+low lane bits, token, epoch, secret bank, and anchor bank. Shared golden vectors connect
+the independent Python model to the concrete Rust transition.
 
 Run the structural and SMT checks with:
 

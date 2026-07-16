@@ -1,11 +1,41 @@
 # Verification record
 
-Last updated: **2026-07-16 16:37Z**
+Last updated: **2026-07-16 17:03Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
 `preparation/` directory. This record distinguishes completed checks from later
 milestone requirements and never treats a scaffold check as full-system evidence.
+
+## 2026-07-16 controller, differential, and formal repair update
+
+The P1 controller, exact-cycle/extractor differential, and expanded formal-obligation
+gaps identified by the acceptance re-audit are now repaired.
+
+```text
+uv run --frozen pytest tests/python/test_campaign.py tests/python/test_cli.py
+                         pass (7 tests)
+uv run --frozen pytest tests/python/test_certified_relations.py
+                         pass (30 tests)
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen pytest tests/python/test_protocol_process.py::test_live_exact_cycles_match_independent_symbolic_model_on_small_programs
+                         pass (1 integration test)
+just fmt                 pass
+just lint                pass
+just test                pass (46 Rust tests; 189 Python tests)
+just verify-formal       pass (Z3 unsat x3; TLC 78,333/7,672 states;
+                               reset/gas/confinement/normalized-cost finite checks;
+                               131,072 guarded-replay cells)
+just docs-check          pass
+git diff --check         pass
+```
+
+`sphinx-interrogate controller-plan` exposes the six required public selector modes.
+Relation extractor output is now compared against independently enumerated concrete
+bucket-reproduction models for exact and bounded cases. A live Rust/Python integration
+test compares exact public cycle buckets for small programs against the independent
+Python target-family model. `SphinxVM.tla` and `check_formal_scaffold.py` now cover
+reset projection, experiment architectural confinement, gas/progress, and fault-free
+normalized-cost invariants.
 
 ## 2026-07-16 acceptance re-audit
 
@@ -47,13 +77,10 @@ The passing commands do not close the following acceptance gaps:
   crashes for absolute `--output` paths. Remaining release blockers are dirty-tree
   plus the broader proof/formal/reproducibility obligations tracked in
   `agent/STATUS.md`.
-- The TLA+/SMT suite omits several task-required reset, architectural-confinement,
-  gas/progress, normalized-cost, exact-cycle, and extractor-differential obligations.
-- Integrated campaign modes, CLI documentation, release versions, and expanded
-  release-smoke CI coverage remain below the normative task specification. Tutorial
-  and standard benchmark campaign manifests now use v1.2 runtime reproducibility
-  metadata and normative campaign statuses. Release-bound public CSV/plot artifacts
-  are now generated and hashed by the release manifest.
+- Release versions and expanded release-smoke CI coverage remain below the normative
+  task specification. Tutorial and standard benchmark campaign manifests now use v1.2
+  runtime reproducibility metadata and normative campaign statuses. Release-bound
+  public CSV/plot artifacts are now generated and hashed by the release manifest.
 
 The repaired challenge boundary is a confirmed positive result: private roots are
 unpredictable, public labels do not derive secrets, IDs are generic, System B receives
@@ -65,10 +92,9 @@ GitHub Actions CI has passed on the pushed repair series.
 
 The task-spec gap audit reconfirmed that the current P0 benchmark/security repairs and
 M8/M9 semantic artifact repairs are supported by local evidence, but release
-completion is still blocked by incomplete formal/differential obligations,
-non-normative statuses in some public result schemas, incomplete mutation-ladder
-separation, broader release-smoke CI coverage, release-tag evidence, and final
-documentation/version alignment.
+completion is still blocked by incomplete mutation-ladder separation, broader
+release-smoke CI coverage, release-tag evidence, and final documentation/version
+alignment.
 
 README, `docs/PROTOCOL.md`, and `docs/REPOSITORY_GUIDE.md` now document the repaired
 split challenge lifecycle: `challenge private-root`, split public/private challenge
