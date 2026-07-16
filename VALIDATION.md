@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 04:52Z**
+Last updated: **2026-07-16 05:08Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -584,3 +584,80 @@ just benchmark-standard pass; targets_met true
   counterexamples, and safe retraction/replay of state-dependent constraints.
 - M9 must add relation-aware witness reduction, final release baselines/ablations,
   minimized artifacts, docs polish, and the release manifest/audit bundle.
+
+## M8 active state-learning checkpoint
+
+M8 implements the project-owned state-learning boundary in
+`python/sphinx_interrogator/learner.py`. It includes versioned macro input/output
+alphabets, stable membership-cache digests, a one-state hard-reset learner, a bounded
+exact-history Mealy learner, an AALpy-backed deterministic L* Mealy learner, learned
+model serialization with artifact digests, held-out conformance metrics,
+counterexample records, access-sequence lookup, bounded distinguishing suffixes, and
+transition coverage. AALpy objects are converted into this repository-owned format;
+they are not persisted directly.
+
+`soft-history-contrast/v1` is now enabled in `relations.py` for research-mode
+soft-reset experiments. It composes two public architecture-silent history prefixes
+with one certified measurement suffix, uses reset policy `soft`, records a named
+state-model ID and source/follow-up state labels, and cannot emit a standalone hard
+secret constraint. Any downstream state-conditioned group must include
+`state-model:<id>` provenance.
+
+`CampaignHypotheses.record_state_model` persists learned model artifacts through the
+existing `state_model_recorded` event. `retract_state_model_constraints` retracts all
+active groups with the invalidated `state-model:<id>` marker through append-only
+constraint-state events, preserving independent hard-reset evidence.
+
+Focused M8 tests cover:
+
+- exact-history suffix tracking and hard-versus-soft reset behavior;
+- one-state hard-reset model serialization and prediction;
+- stable membership-cache deduplication/digesting;
+- AALpy L* learning of a deterministic two-state Mealy fixture;
+- exact-history prediction beating the no-learner baseline;
+- state-model artifact persistence and counterexample-driven group retraction after
+  replay/reopen;
+- `soft-history-contrast/v1` preconditions, schema validation, soft reset policy, and
+  no-standalone-hard-constraint behavior.
+
+The state-learning comparison was run with:
+
+```text
+just evaluate-state-learning
+```
+
+Artifact: `runs/state-learning-m8/state-learning-report.json`.
+
+Results:
+
+```text
+held-out macro sequences: 30
+no_learner:       1 state,  accuracy 0.13333333333333333, counterexamples 26
+exact_history:   31 states, accuracy 1.0,                 counterexamples 0
+learned_state:   2 states,  accuracy 1.0,                 counterexamples 0
+targets_met:     exact_history_accuracy_eq_1,
+                 learned_state_accuracy_ge_0_95,
+                 learned_state_beats_no_learner
+```
+
+The final M8 suite used the repository-local Cargo home/target, two build jobs, and no
+concurrent Cargo/rustc process:
+
+```text
+just fmt                    pass (54 Python/script files and Rustfmt clean)
+just lint                   pass (Clippy -D warnings, Ruff, strict mypy over 25 modules)
+just test                   pass (42 Rust lib + 2 Rust binary; 156 Python)
+just schema-check           pass (including state-conditioned relation schema)
+just docs-check             pass
+just verify-formal          pass (Z3 unsat x3; TLC 70,557 generated/2,276 distinct;
+                                 131,072 guarded-replay cells; mutation rejected)
+just boundary-audit         pass; binary sha256=628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b
+just demo-tutorial          pass; unique_exact e905; judge accepted; 16 logical/32 physical
+just evaluate-state-learning pass; learned-state and exact-history targets met
+```
+
+## Remaining limitations after M8
+
+- M9 must implement relation-aware witness reduction, minimized witness artifacts,
+  final release/report packaging, review checklist completion, and release audit
+  evidence.

@@ -73,6 +73,7 @@
         "equal_after_static_normalization",
         "less_equal",
         "greater_equal",
+        "state_conditioned_difference",
         "custom"
       ]
     },

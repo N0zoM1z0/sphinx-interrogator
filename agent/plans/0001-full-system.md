@@ -63,8 +63,10 @@ filling, diverse exact/proxy committees, pair-separating CEGIS, conservative mar
 resource objectives, cache identity, and durable frontier score logs. The verified M7
 checkpoint adds calibrated sequential soft evidence, capped grouped MaxSMT weights,
 soft-group replay/quarantine/repair, bounded standard-profile recovery, public
-leakage/learnability audit, and the full published standard benchmark. M8–M9 remain
-outstanding.
+leakage/learnability audit, and the full published standard benchmark. The verified
+M8 checkpoint adds one-state, exact-history, and AALpy-backed learned-state Mealy
+models; membership caching; conformance/counterexample evidence; state-model
+constraint retraction; and `soft-history-contrast/v1`. M9 remains outstanding.
 
 ## Progress
 
@@ -78,7 +80,7 @@ outstanding.
 - [x] (2026-07-16 02:34Z) Complete M5 deterministic tutorial recovery and blind fault-free negative control: 100/100 exact accepted reference seeds and 100/100 inconclusive off-fault seeds at 16 logical families each.
 - [x] (2026-07-16 03:00Z) Complete M6 grammar-guided CEGIS: typed anchor/repeat skeletons, bounded enumeration, Z3 hole filling, diverse hypothesis-store committees, real counterexample refinement, interval/resource objectives, deterministic cache/ties, frontier integration, live Rust execution, and 20-seed random-hole calibration.
 - [x] (2026-07-16 04:52Z) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance: 600-campaign standard matrix passed with 100/100 full-reference exact, p95 48 logical families, and 100/100 off-control inconclusive.
-- [ ] (date) Complete M8 soft-reset state, exact-history mode, AALpy learner, and retraction semantics.
+- [x] (2026-07-16 05:08Z) Complete M8 soft-reset state, exact-history mode, AALpy learner, and retraction semantics: deterministic state-learning evaluation reports no-learner accuracy 0.133, exact-history 1.0, and learned-state 1.0 on 30 held-out macro sequences.
 - [ ] (date) Complete M9 relational reducer, baselines/ablations, formal/boundary audit, and release evidence.
 
 ## Surprises & Discoveries
@@ -142,6 +144,9 @@ outstanding.
 
 - Observation: The drained hard-reset M7 grammar does not distinguish the active `reference`, `weak`, and `signed` variants.
   Evidence: `runs/standard-profile-audit-m7/standard-profile-audit.json` records repeat-amplify fault margins of 15 cycles for all three active variants and zero for `off`; a one-seed mutation ladder recovered reference/weak/signed exactly at the same cost shape.
+
+- Observation: A learned quotient can be much smaller than exact bounded history on the deterministic soft-reset fixture.
+  Evidence: `runs/state-learning-m8/state-learning-report.json` reports exact-history depth four with 31 states and 1.0 held-out accuracy, while AALpy L* learns a 2-state Mealy model with 1.0 held-out accuracy; the one-state no-learner baseline reaches 0.133.
 
 ## Decision Log
 
@@ -210,6 +215,18 @@ outstanding.
   Alternatives considered: change the published standard fault constants; add uncertified stateful probes to M7.
   Date/author: 2026-07-16, Codex implementation.
   Consequences: M7 reports `reference`, `weak`, and `signed` ambiguity honestly and does not claim active-variant identification.
+
+- Decision: Use a project-owned serializable Mealy model instead of persisting AALpy objects.
+  Rationale: model artifacts must be stable, digestible, and replayable without depending on third-party object internals.
+  Alternatives considered: pickle AALpy hypotheses; store only screenshots/metrics.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: every learned model records alphabet/discretizer versions, transitions, membership-cache digest, conformance metrics, counterexamples, and an artifact digest.
+
+- Decision: Make state-conditioned constraints retract by provenance marker.
+  Rationale: a conformance counterexample invalidates all evidence that assumed a learned state label, but independent hard-reset evidence should remain active.
+  Alternatives considered: rebuild all constraints after every learner update; delete invalid evidence.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: groups with `state-model:<id>` provenance are disabled through append-only state-change events when that model is invalidated.
 
 Record every later material deviation here before or with implementation.
 
@@ -578,6 +595,7 @@ Populate during implementation:
 - M5 fault-free control report: `runs/tutorial-fault-free-v2/summary.json`, 2026-07-16; 100/100 blind off-fault campaigns are inconclusive with zero judge submissions.
 - One-shot leakage audit: `runs/standard-profile-audit-m7/standard-profile-audit.json`, 2026-07-16; max public one-shot partition is 1.5 bits, median useful partition is 1.5 bits, oracle collision bound is 16 logical relations, and blind scan worst-case is 64.
 - Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; M7 one-seed campaign ladder in `runs/standard-mutation-ladder-smoke-m7/standard-benchmark-report.json` confirms active variants recover and `runs/standard-profile-audit-m7/standard-profile-audit.json` records the active-variant latent equivalence under drained repeats.
+- M8 state-learning report: `runs/state-learning-m8/state-learning-report.json`, 2026-07-16; no-learner accuracy 0.133, exact-history accuracy 1.0 with 31 states, and AALpy learned-state accuracy 1.0 with 2 states on 30 deterministic held-out macro sequences.
 - Formal/TLA+/SMT report: M2 scheduler, M3 relation, and M4 concrete-versus-Z3 bank/fault/state evidence in `VALIDATION.md`; final mutation/release obligations remain M9.
 - Boundary-audit report: M2 artifact permission/public-key/live-response evidence in `VALIDATION.md`; final release rerun remains pending M9.
 - Minimized witness collection: pending.

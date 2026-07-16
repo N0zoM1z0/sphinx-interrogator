@@ -70,3 +70,6 @@ test-tutorial-fault-free:
 benchmark-standard:
     cargo build --locked --bin sphinx-vm
     SPHINX_VM_BINARY="$CARGO_TARGET_DIR/debug/sphinx-vm" uv run --frozen python scripts/benchmark_standard.py --output runs/standard-benchmark-v1 --require-full-targets
+
+evaluate-state-learning:
+    uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8

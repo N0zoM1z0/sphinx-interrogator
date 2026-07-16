@@ -140,20 +140,26 @@ A constraint that depends on learned state `q` stores this model ID. If a counte
 
 A smaller machine is not automatically better. Prefer the smallest model that passes the configured conformance budget and supports stable inference.
 
-## 11. Planned implementation
+## 11. Implemented M8 interface
 
-Wrap AALpy behind project interfaces:
+M8 wraps AALpy behind project interfaces in
+`python/sphinx_interrogator/learner.py`. The release implementation provides:
 
-```python
-class StateLearner(Protocol):
-    def observe(self, sequence: InputWord, outputs: OutputWord) -> None: ...
-    def hypothesis(self) -> LearnedMachine: ...
-    def access_sequence(self, state: StateId) -> InputWord | None: ...
-    def distinguish(self, states: frozenset[StateId]) -> AdaptiveSequence | None: ...
-    def find_counterexample(self, budget: Budget) -> Counterexample | None: ...
-```
+- `OneStateLearner` for hard-reset/no-learner baselines;
+- `ExactHistoryTracker` and `ExactHistoryLearner` for bounded explicit public history;
+- `AalpyMealyLearner`, a deterministic L* wrapper using AALpy and a W-method
+  conformance oracle;
+- versioned `MacroAlphabet`, `LearnedMealyMachine` serialization, membership cache
+  digests, access sequences, bounded distinguishing suffixes, held-out conformance,
+  and counterexample records;
+- `state_model_provenance(model_id, state_id)` markers used by the hypothesis store
+  to retract state-conditioned groups after a counterexample.
 
-Provide a fake learner for deterministic tests and a one-state learner for hard-reset campaigns.
+`just evaluate-state-learning` runs a deterministic soft-reset fixture comparing
+no-learner, exact-history, and learned-state variants. It writes
+`runs/state-learning-m8/state-learning-report.json` and requires exact-history
+accuracy 1.0, learned-state accuracy at least 0.95, and learned-state accuracy greater
+than the one-state baseline.
 
 ## 12. Research variants
 

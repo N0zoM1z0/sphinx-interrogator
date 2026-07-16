@@ -5,22 +5,19 @@ This file is a concise, living project checkpoint. The active ExecPlan contains 
 ## Overall state
 
 - **Specification/design package:** complete.
-- **Executable system:** M0–M7 are implemented through deterministic recovery, grammar-guided CEGIS, robust bounded/statistical evidence handling, and the published standard benchmark; M8–M9 learning, reduction, and release layers remain incomplete.
-- **Implementation:** active; M7 is verified locally and ready to commit.
+- **Executable system:** M0–M8 are implemented through deterministic recovery, grammar-guided CEGIS, robust bounded/statistical evidence handling, the published standard benchmark, and active state-learning abstractions; M9 reduction and release packaging remain incomplete.
+- **Implementation:** active; M8 is verified locally and ready to commit.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
 - **Last updated:** 2026-07-16.
 
 ## Current milestone
 
-Milestone 7 complete — bounded standard recovery uses certified repeat amplification
-with exact nuisance/noise elimination, stable paired sessions, factorized finite
-hypotheses, explicit alternative-secret `unsat`, and one-shot judge submission.
-Sequential statistical decisions now label positive/negative/inconclusive outcomes
-without inferring equality from nonsignificance; soft evidence is capped and grouped;
-high-influence soft groups can be replayed, quarantined, repaired, and reactivated.
-The published standard matrix passes with 100/100 full-reference exact recoveries,
-median 40 logical families, p95 48 logical families, median 80 physical executions,
-and 100/100 off-control inconclusive campaigns.
+Milestone 8 complete — state learning now has versioned macro alphabets,
+membership-cache digests, one-state hard-reset mode, bounded exact-history Mealy
+models, an AALpy-backed deterministic L* Mealy learner, held-out conformance,
+access/distinguishing support, serialized learned machines, and counterexample-driven
+retraction of `state-model:<id>` constraint groups. `soft-history-contrast/v1` is
+enabled as a research-mode soft-reset relation that cannot emit standalone hard facts.
 
 ## Verification dashboard
 
@@ -28,7 +25,7 @@ and 100/100 off-control inconclusive campaigns.
 |---|---|---|
 | `just fmt` | pass | Rustfmt and Ruff; 2026-07-16 |
 | `just lint` | pass | Clippy `-D warnings`, Ruff, strict mypy; 2026-07-16 |
-| `just test` | pass | 44 Rust + 149 Python, including live standard recovery/control process tests; 2026-07-16 |
+| `just test` | pass | 44 Rust + 156 Python, including M8 learner/retraction and soft-history relation tests; 2026-07-16 |
 | `just schema-check` | pass | All public fixtures, including tutorial, standard recovery, and standard benchmark reports |
 | `just verify-formal` | pass | Z3 `unsat` x3; TLC 70,557 generated/2,276 distinct states; 131,072-cell exhaustive check; mutation rejected |
 | `just demo-tutorial` | pass | `unique_exact`, secret `e905`, judge accepted, 16 logical/32 physical executions; verified idempotent rerun |
@@ -38,17 +35,17 @@ and 100/100 off-control inconclusive campaigns.
 | M6 selector calibration | pass | mean worst bucket 3.00 vs random 7.15; strict win on 19/20 public model subsets |
 | standard benchmark | pass | `runs/standard-benchmark-v1/standard-benchmark-report.json`: 600 campaigns, targets met, full/reference 100/100 exact, off 100/100 inconclusive |
 | standard profile audit | pass | `runs/standard-profile-audit-m7/standard-profile-audit.json`: max one-shot 1.5 bits, blind scan <=64 logical, oracle path 16 logical |
+| state-learning evaluation | pass | `runs/state-learning-m8/state-learning-report.json`: no-learner accuracy 0.133; exact-history 1.0; AALpy learned-state 1.0 |
 
 ## Active blockers
 
 None. Sphinx builds remain isolated to this repository and limited to two jobs. No
-other Cargo process was active during the M7 command suite.
+other Cargo process was active during the M8 command suite.
 
 ## Next concrete actions
 
-1. Preserve the M7 implementation and evidence in a detailed English Git commit without pushing.
-2. Implement M8 soft-reset state learning, exact-history mode, AALpy adapter, and safe retraction semantics.
-3. Implement M9 witness reduction, release manifest, final ablations, docs, and release audit evidence.
+1. Preserve the M8 implementation and evidence in a detailed English Git commit without pushing.
+2. Implement M9 witness reduction, final release baselines/ablations, docs polish, review checklist, and release manifest/audit evidence.
 
 ## Decision summary
 
@@ -80,6 +77,9 @@ other Cargo process was active during the M7 command suite.
 - Standard recovery reuses two stable public sessions (`standard-source` and `standard-follow_up`) so it stays below the protocol session limit while preserving hard-reset pairing.
 - The M7 drained hard-reset grammar intentionally leaves `reference`, `weak`, and `signed` latent-equivalent; the off variant is the required negative control.
 - Standard selector baselines are reported fairly: every reference selector mode reached 100/100 exact on the published seeds, so M7 does not claim a large selector gap for the frozen standard profile.
+- State-learning membership queries are ordinary public macro words; model artifacts bind alphabet/discretizer versions and membership-cache digests.
+- Learned-state constraints carry `state-model:<id>` provenance and are retracted by append-only state events after conformance counterexamples.
+- `soft-history-contrast/v1` is enabled only as state-conditioned research evidence and cannot emit hard secret constraints by itself.
 - The repository remains synthetic-only; no real-target adapters.
 
 ## How to update

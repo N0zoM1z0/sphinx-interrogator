@@ -134,7 +134,7 @@ The first implementation uses bounded template enumeration plus SMT-filled holes
 
 ### 4.7 State learner
 
-The learner maps concrete input sequences to a finite alphabet and quantized output symbols. It should be replaceable: a trivial one-state model for hard-reset mode, an explicit-history adapter, and an AALpy-backed Mealy learner for soft-reset mode.
+The learner maps concrete input sequences to a finite alphabet and quantized output symbols. The M8 implementation is replaceable: a trivial one-state model for hard-reset mode, a bounded exact-history Mealy model, and an AALpy-backed deterministic L* Mealy learner for soft-reset mode. Learned models serialize with membership-cache digests, conformance metrics, access/distinguishing support, and counterexamples that retract state-conditioned constraint groups.
 
 ## 5. Data flow for one logical interrogation
 

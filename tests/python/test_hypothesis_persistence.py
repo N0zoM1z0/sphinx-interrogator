@@ -12,6 +12,7 @@ from sphinx_interrogator.constraints import (
     FiniteModelConstraint,
 )
 from sphinx_interrogator.hypothesis_persistence import CampaignHypotheses
+from sphinx_interrogator.learner import MacroAlphabet, OneStateLearner, state_model_provenance
 from sphinx_interrogator.persistence import CampaignManifest, CampaignRepository
 from sphinx_interrogator.solver import (
     ConstraintGroup,
@@ -231,5 +232,60 @@ def test_high_influence_soft_replay_quarantines_repairs_and_persists(tmp_path: P
     assert state_events[-2].payload["reason"].startswith("high-influence replay disagreed")
     assert state_events[-1].payload["reason"] == (
         "reviewed replay reproduced the declared evidence"
+    )
+    reopened.close()
+
+
+def test_state_model_counterexample_retracts_dependent_groups(tmp_path: Path) -> None:
+    """State-conditioned constraints are grouped by model version and safely retracted."""
+    repository = _repository(tmp_path)
+    hypotheses = CampaignHypotheses(repository)
+    alphabet = MacroAlphabet(
+        abstraction_version="state-test/v1",
+        input_symbols=("measure",),
+        output_symbols=("PUBLIC_OK",),
+    )
+    model = OneStateLearner().learn(model_id="state-model-1", alphabet=alphabet)
+    hypotheses.record_state_model(model, logical_time=3)
+    constraint = _constraint("constraint:444444444444444444444444", 4)
+    group = ConstraintGroup(
+        constraint.constraint_id,
+        finite_model_program(constraint, secret_cells=1),
+        hard=True,
+        provenance=(
+            *constraint.source_request_ids,
+            *state_model_provenance(model.model_id, "q0"),
+        ),
+    )
+    hypotheses.add_group(
+        constraint_id=constraint.constraint_id,
+        group=group,
+        relation_instance_id=constraint.relation_instance_id,
+        certificate_id=constraint.certificate_id,
+        source_request_ids=constraint.source_request_ids,
+        approximation="exact-history",
+        logical_time=4,
+    )
+    assert repository.database.table_count("state_models") == 1
+    assert repository.database.active_constraint_ids() == (constraint.constraint_id,)
+
+    assert hypotheses.retract_state_model_constraints(
+        model.model_id,
+        logical_time=5,
+        reason="held-out counterexample split q0",
+    ) == (constraint.constraint_id,)
+    assert hypotheses.store.state(group.group_id) is GroupState.RETRACTED
+    assert repository.database.active_constraint_ids() == ()
+    repository.close()
+
+    reopened = CampaignRepository.open(tmp_path / "run")
+    replayed = CampaignHypotheses(reopened)
+    assert reopened.database.table_count("state_models") == 1
+    assert replayed.store.state(group.group_id) is GroupState.RETRACTED
+    state_events = tuple(
+        event for event in reopened.events if event.kind == "constraint_state_changed"
+    )
+    assert state_events[-1].payload["reason"] == (
+        "state model state-model-1 invalidated: held-out counterexample split q0"
     )
     reopened.close()

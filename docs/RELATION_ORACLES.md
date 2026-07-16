@@ -9,11 +9,12 @@ A relation oracle decides whether a family of executions satisfies a relation th
 
 The first responsibility is testing. The second turns testing into inference.
 
-The M3 implementation lives in `python/sphinx_interrogator/relations.py`, with
+The implementation lives in `python/sphinx_interrogator/relations.py`, with
 certificate, normalization, finite extraction, and solver-independent expression IR
 types split into adjacent modules. The nine hard-reset templates in Section 4.1–4.9
-are enabled. `soft-history-contrast/v1` remains intentionally disabled until the M8
-state learner can supply a checked history/state certificate.
+are enabled, and M8 enables `soft-history-contrast/v1` for research-mode soft-reset
+state experiments. State-conditioned evidence must carry a learned or exact
+state-model provenance marker and remain retractable after counterexamples.
 
 ## 2. Relation-template interface
 
@@ -179,11 +180,17 @@ This relation validates the experimental apparatus rather than separating secret
 
 Compare the same measurement suffix after two different certified history prefixes.
 
-- Architectural relation: equal at suffix entry.
-- Fault-free observation relation: depends on a state abstraction or exact transition proof.
-- Use: produce counterexamples for the active learner and identify replay/cache state.
+- Architectural relation: the public programs are architecture-silent; only the hidden
+  entry history differs.
+- Fault-free observation relation: zero residual under the documented fault-free model
+  after subtracting public static costs.
+- Use: produce counterexamples for the active learner, identify replay/cache state, and
+  condition later soft/exact-history evidence on a named state-model version.
 
-It cannot emit a hard secret constraint solely from a learned-state guess.
+It cannot emit a hard secret constraint solely from a learned-state guess. Any
+downstream state-conditioned group includes `state-model:<id>` provenance and is
+retracted by `CampaignHypotheses.retract_state_model_constraints` when a conformance
+counterexample invalidates the model.
 
 ## 5. Certificates
 

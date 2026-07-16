@@ -8,6 +8,7 @@ from typing import cast
 
 from sphinx_interrogator.constraint_ir import ConstraintProgram
 from sphinx_interrogator.constraints import FiniteModelConstraint
+from sphinx_interrogator.learner import LearnedMealyMachine
 from sphinx_interrogator.persistence import CampaignRepository, PersistenceError
 from sphinx_interrogator.solver import (
     CandidateSnapshot,
@@ -183,6 +184,52 @@ class CampaignHypotheses:
             reason="high-influence replay disagreed: " + ",".join(replay_request_ids),
         )
         return GroupState.QUARANTINED
+
+    def record_state_model(
+        self,
+        model: LearnedMealyMachine,
+        *,
+        logical_time: int,
+    ) -> None:
+        """Persist one learned state-model artifact and its digest."""
+        self.repository.append_event(
+            event_id=f"state-model:{model.model_id}:{logical_time}",
+            kind="state_model_recorded",
+            logical_time=logical_time,
+            payload={
+                "state_model_id": model.model_id,
+                "status": model.status,
+                "artifact_digest": model.artifact_digest(),
+                "model": model.to_data(),
+            },
+        )
+
+    def retract_state_model_constraints(
+        self,
+        state_model_id: str,
+        *,
+        logical_time: int,
+        reason: str,
+    ) -> tuple[str, ...]:
+        """Retract every active group conditioned on an invalidated state model."""
+        if not state_model_id or not reason:
+            raise ValueError("state-model retraction requires an ID and reason")
+        marker = f"state-model:{state_model_id}"
+        retracted: list[str] = []
+        for group in self.store.groups:
+            if marker not in group.provenance:
+                continue
+            if self.store.state(group.group_id) is GroupState.RETRACTED:
+                continue
+            self.store.retract(group.group_id)
+            self._record_state(
+                group.group_id,
+                GroupState.RETRACTED,
+                logical_time,
+                reason=f"state model {state_model_id} invalidated: {reason}",
+            )
+            retracted.append(group.group_id)
+        return tuple(sorted(retracted))
 
     def _record_state(
         self,

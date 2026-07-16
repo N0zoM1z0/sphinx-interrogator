@@ -28,6 +28,7 @@ from sphinx_interrogator.relations import (
     RegisterRenameTemplate,
     RelationInstance,
     RepeatAmplifyTemplate,
+    SoftHistoryContrastTemplate,
     TokenSwitchTemplate,
 )
 from sphinx_interrogator.target_model import (
@@ -177,6 +178,7 @@ def test_template_registry_and_every_precondition_path() -> None:
         "context-lift/v1",
         "register-rename/v1",
         "hard-replay/v1",
+        "soft-history-contrast/v1",
     }
     assert AnchorSwitchTemplate().applicable(bank_a=0, bank_b=1).accepted
     assert not AnchorSwitchTemplate().applicable(bank_a=1, bank_b=1).accepted
@@ -204,6 +206,16 @@ def test_template_registry_and_every_precondition_path() -> None:
     assert (
         not HardReplayTemplate().applicable(repetitions=2, deterministic_observation=False).accepted
     )
+    assert (
+        SoftHistoryContrastTemplate()
+        .applicable(
+            history_a=Program.parse("PAD 1\nFENCE\nHALT\n", lanes=2),
+            history_b=Program.parse("PAD 2\nFENCE\nHALT\n", lanes=2),
+            measurement=_sample_relations()[0],
+            state_model_id="model-1",
+        )
+        .accepted
+    )
     with pytest.raises(ValueError, match="distinct banks"):
         AnchorSwitchTemplate().instantiate(
             instance_id="bad",
@@ -214,6 +226,47 @@ def test_template_registry_and_every_precondition_path() -> None:
             bank_b=1,
             pad=0,
         )
+
+
+def test_soft_history_contrast_is_state_conditioned_and_retractable() -> None:
+    """M8 enables a soft-reset relation that cannot emit standalone hard facts."""
+    measurement = AnchorSwitchTemplate().instantiate(
+        instance_id="soft-measurement",
+        lane=0,
+        token=0,
+        epoch=0,
+        bank_a=0,
+        bank_b=2,
+        pad=0,
+    )
+    history_a = Program.parse("PAD 1\nFENCE\nHALT\n", lanes=2)
+    history_b = Program.parse("PAD 2\nFENCE\nHALT\n", lanes=2)
+    relation = SoftHistoryContrastTemplate().instantiate(
+        instance_id="soft-history",
+        history_a=history_a,
+        history_b=history_b,
+        measurement=measurement,
+        state_model_id="state-model-1",
+        source_state="q0",
+        follow_up_state="q1",
+    )
+
+    assert relation.reset_policy == "soft"
+    assert relation.expected_observation_relation == "state_conditioned_difference"
+    assert relation.holes["state_model_id"] == "state-model-1"
+    assert not relation.emits_secret_constraints
+    assert relation.architectural_precheck()
+    assert relation.fault_free_precheck()
+    jsonschema.Draft202012Validator(RELATION_SCHEMA).validate(relation.to_data())
+
+    rejected = SoftHistoryContrastTemplate().applicable(
+        history_a=Program.parse("MOVI r0, 1\nHALT\n", lanes=2),
+        history_b=history_b,
+        measurement=measurement,
+        state_model_id="state-model-1",
+    )
+    assert not rejected.accepted
+    assert "source history is not architecture-silent" in rejected.reasons
 
 
 def test_instances_are_certified_serializable_and_registry_cached() -> None:

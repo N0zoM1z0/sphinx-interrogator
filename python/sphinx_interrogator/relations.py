@@ -811,6 +811,92 @@ class HardReplayTemplate(CertifiedTemplate):
         )
 
 
+class SoftHistoryContrastTemplate(CertifiedTemplate):
+    """Compare one measurement suffix after two certified soft-reset histories."""
+
+    relation_id = "soft-history-contrast/v1"
+
+    def applicable(
+        self,
+        *,
+        history_a: Program,
+        history_b: Program,
+        measurement: RelationInstance,
+        state_model_id: str,
+    ) -> Applicability:
+        """Check that histories and the measured suffix are public-silent."""
+        reasons = []
+        if not state_model_id:
+            reasons.append("soft-history contrast requires a learned/exact state-model ID")
+        if not program_has_silent_architecture(history_a):
+            reasons.append("source history is not architecture-silent")
+        if not program_has_silent_architecture(history_b):
+            reasons.append("follow-up history is not architecture-silent")
+        if len(measurement.follow_up_programs) != 1:
+            reasons.append("measurement relation must have exactly one follow-up")
+        if not measurement.architectural_precheck():
+            reasons.append("measurement lacks an architectural certificate")
+        if reasons:
+            return Applicability.reject(*reasons)
+        return Applicability.accept(
+            "soft reset entry",
+            "public architecture-silent histories",
+            "shared certified measurement suffix",
+            "named state-model provenance",
+            "state-conditioned constraints are retractable",
+        )
+
+    def instantiate(
+        self,
+        *,
+        instance_id: str,
+        history_a: Program,
+        history_b: Program,
+        measurement: RelationInstance,
+        state_model_id: str,
+        source_state: str,
+        follow_up_state: str,
+    ) -> RelationInstance:
+        """Construct a state-conditioned contrast around a certified measurement."""
+        applicability = self.applicable(
+            history_a=history_a,
+            history_b=history_b,
+            measurement=measurement,
+            state_model_id=state_model_id,
+        )
+        applicability.require()
+        if not source_state or not follow_up_state:
+            raise ValueError("soft-history contrast requires named source/follow-up states")
+        source = _compose_history_measurement(history_a, measurement.source_program)
+        follow_up = _compose_history_measurement(history_b, measurement.source_program)
+        return _build_instance(
+            relation_id=self.relation_id,
+            instance_id=instance_id,
+            source=source,
+            follow_ups=(follow_up,),
+            holes={
+                "state_model_id": state_model_id,
+                "source_state": source_state,
+                "follow_up_state": follow_up_state,
+                "measurement_relation": measurement.relation_id,
+                "measurement_hash": measurement.instance_hash,
+            },
+            reset_policy="soft",
+            involved_lanes=measurement.involved_lanes,
+            preconditions=applicability.certified_preconditions,
+            reducer_rules=("shorten-history-prefix", "preserve-measurement-suffix"),
+            emits_secret_constraints=False,
+            profile_scope=("research@0.1.0",),
+            architectural_claim=(
+                "public architecture remains silent; only certified hidden history differs"
+            ),
+            fault_free_claim=(
+                "fault-free residual is zero after subtracting each public static cost"
+            ),
+            expected_observation_relation="state_conditioned_difference",
+        )
+
+
 TEMPLATE_REGISTRY: Mapping[str, RelationTemplate] = MappingProxyType(
     {
         template.relation_id: template
@@ -824,6 +910,7 @@ TEMPLATE_REGISTRY: Mapping[str, RelationTemplate] = MappingProxyType(
             ContextLiftTemplate(),
             RegisterRenameTemplate(),
             HardReplayTemplate(),
+            SoftHistoryContrastTemplate(),
         )
     }
 )
@@ -845,11 +932,13 @@ def _build_instance(
     involved_lanes: tuple[int, ...],
     preconditions: tuple[str, ...],
     reducer_rules: tuple[str, ...],
+    reset_policy: str = "hard",
     emits_secret_constraints: bool = True,
     proof_method: ProofMethod = ProofMethod.EXHAUSTIVE_ENUMERATION,
     profile_scope: tuple[str, ...] = _IDENTITY_PROFILE_SCOPE,
     architectural_claim: str = "final public architecture is equal",
     fault_free_claim: str = "subtracting each public static cost yields equal zero residual",
+    expected_observation_relation: str = "equal_after_static_normalization",
 ) -> RelationInstance:
     canonical_holes = dict(sorted(holes.items()))
     instance_hash = _instance_hash(
@@ -857,7 +946,7 @@ def _build_instance(
         source,
         follow_ups,
         canonical_holes,
-        "hard",
+        reset_policy,
         involved_lanes,
     )
     certificate = DEFAULT_CERTIFICATE_REGISTRY.issue(
@@ -884,8 +973,8 @@ def _build_instance(
         source_program=source,
         follow_up_programs=follow_ups,
         holes=MappingProxyType(canonical_holes),
-        expected_observation_relation="equal_after_static_normalization",
-        reset_policy="hard",
+        expected_observation_relation=expected_observation_relation,
+        reset_policy=reset_policy,
         involved_lanes=tuple(sorted(set(involved_lanes))),
         emits_secret_constraints=emits_secret_constraints,
         reducer_rules=reducer_rules,
@@ -932,6 +1021,13 @@ def _drained_repetitions_program(cell: Cell, repeats: int) -> Program:
             instructions.append(Instruction.pad(restore))
     instructions.append(Instruction.halt())
     return Program(tuple(instructions))
+
+
+def _compose_history_measurement(history: Program, measurement: Program) -> Program:
+    history_body = history.instructions
+    if history.instructions[-1].op is Op.HALT:
+        history_body = history.instructions[:-1]
+    return Program((*history_body, *measurement.instructions))
 
 
 def _lift_program(program: Program, prefix_pad: int, suffix_fence: bool) -> Program:
