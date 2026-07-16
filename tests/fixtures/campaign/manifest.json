@@ -1,5 +1,5 @@
 {
-  "manifest_version": "1.1",
+  "manifest_version": "1.2",
   "campaign_id": "fixture-campaign",
   "challenge_id": "fixture-challenge",
   "challenge_commitment": "2222222222222222222222222222222222222222222222222222222222222222",
@@ -12,5 +12,34 @@
     "logical_queries": 80,
     "physical_executions": 240,
     "hard_resets": 240
+  },
+  "repository": {
+    "revision": "7c48385b9028dc781de50a4b92dc4e6370e71a05",
+    "dirty": true,
+    "status_short": [
+      "M python/sphinx_interrogator/persistence.py"
+    ]
+  },
+  "versions": {
+    "python": "3.12.13",
+    "platform": "Linux",
+    "uv": "uv 0.11.28"
+  },
+  "command": {
+    "argv": [
+      "sphinx-interrogate",
+      "recover"
+    ],
+    "cwd": "/workspace/sphinx-interrogator"
+  },
+  "timing": {
+    "started_at": "2026-07-16T15:00:00Z",
+    "ended_at": "2026-07-16T15:00:01Z",
+    "duration_ms": 1000
+  },
+  "status": "unique_exact",
+  "artifact_hashes": {
+    "report.json": "3333333333333333333333333333333333333333333333333333333333333333",
+    "events.jsonl": "4444444444444444444444444444444444444444444444444444444444444444"
   }
 }

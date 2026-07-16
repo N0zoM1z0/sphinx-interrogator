@@ -36,10 +36,12 @@
     "status": {
       "enum": [
         "unique_exact",
-        "unique_exact_unjudged",
-        "inconclusive",
-        "inconsistent",
-        "judge_rejected"
+        "candidate_set",
+        "ranked_soft",
+        "budget_exhausted",
+        "model_inconsistent",
+        "target_error",
+        "blocked"
       ]
     },
     "unique_secret_hex": {"type": ["string", "null"], "pattern": "^[0-9a-f]{8}$"},
@@ -109,12 +111,16 @@
         "hard_bounded_constraints",
         "stochastic_soft_groups",
         "cegis_refinements",
+        "knowledge_relations",
+        "frontier_candidates",
         "result_class"
       ],
       "properties": {
         "hard_bounded_constraints": {"type": "integer", "minimum": 0},
         "stochastic_soft_groups": {"type": "integer", "minimum": 0},
         "cegis_refinements": {"type": "integer", "minimum": 0},
+        "knowledge_relations": {"type": "integer", "minimum": 0},
+        "frontier_candidates": {"type": "integer", "minimum": 0},
         "result_class": {"const": "bounded-hard-exact"}
       }
     },

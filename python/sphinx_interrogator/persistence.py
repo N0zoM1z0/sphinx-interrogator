@@ -6,16 +6,22 @@ import hashlib
 import json
 import math
 import os
+import platform
 import sqlite3
+import subprocess
+import sys
+import time
 from collections.abc import Callable, Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import cast
 
 from sphinx_interrogator.certificates import ProofMethod
 
 _EVENT_VERSION = "1.0"
-_MANIFEST_VERSION = "1.1"
+_MANIFEST_VERSION = "1.2"
 _RAW_VERSION = "1.0"
 _DATABASE_VERSION = 2
 _MATERIALIZED_TABLES = (
@@ -39,6 +45,35 @@ class PersistenceError(RuntimeError):
     """Raised when durable campaign state is malformed or conflicting."""
 
 
+class CampaignResultStatus(StrEnum):
+    """Normative campaign result statuses from the task specification."""
+
+    UNIQUE_EXACT = "unique_exact"
+    CANDIDATE_SET = "candidate_set"
+    RANKED_SOFT = "ranked_soft"
+    BUDGET_EXHAUSTED = "budget_exhausted"
+    MODEL_INCONSISTENT = "model_inconsistent"
+    TARGET_ERROR = "target_error"
+    BLOCKED = "blocked"
+
+
+def normalize_campaign_result_status(status: str) -> CampaignResultStatus:
+    """Map legacy recovery report statuses onto the normative public vocabulary."""
+    try:
+        return CampaignResultStatus(status)
+    except ValueError:
+        legacy = {
+            "unique_exact_unjudged": CampaignResultStatus.UNIQUE_EXACT,
+            "inconclusive": CampaignResultStatus.CANDIDATE_SET,
+            "inconsistent": CampaignResultStatus.MODEL_INCONSISTENT,
+            "judge_rejected": CampaignResultStatus.TARGET_ERROR,
+        }
+        try:
+            return legacy[status]
+        except KeyError as error:
+            raise ValueError("unknown campaign result status") from error
+
+
 @dataclass(frozen=True, slots=True)
 class CampaignManifest:
     """Immutable public inputs needed to resume one campaign reproducibly."""
@@ -54,6 +89,17 @@ class CampaignManifest:
     logical_query_budget: int
     physical_execution_budget: int
     hard_reset_budget: int
+    repository_revision: str | None = None
+    repository_dirty: bool | None = None
+    repository_status_short: tuple[str, ...] = ()
+    versions: tuple[tuple[str, str], ...] = ()
+    command_argv: tuple[str, ...] = ()
+    command_cwd: str | None = None
+    started_at: str | None = None
+    ended_at: str | None = None
+    duration_ms: int | None = None
+    status: str | None = None
+    artifact_hashes: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -83,13 +129,13 @@ class CampaignManifest:
             < 0
         ):
             raise ValueError("campaign budgets must be nonnegative")
+        if self._has_runtime_metadata():
+            self._validate_runtime_metadata()
 
     def to_data(self) -> dict[str, object]:
         """Return the strict public campaign manifest document."""
         document: dict[str, object] = {
-            "manifest_version": (
-                _MANIFEST_VERSION if self.challenge_commitment is not None else "1.0"
-            ),
+            "manifest_version": self._manifest_version(),
             "campaign_id": self.campaign_id,
             "challenge_id": self.challenge_id,
             "profile_name": self.profile_name,
@@ -105,7 +151,126 @@ class CampaignManifest:
         }
         if self.challenge_commitment is not None:
             document["challenge_commitment"] = self.challenge_commitment
+        if self._has_runtime_metadata():
+            document.update(
+                {
+                    "repository": {
+                        "revision": self.repository_revision,
+                        "dirty": self.repository_dirty,
+                        "status_short": list(self.repository_status_short),
+                    },
+                    "versions": dict(self.versions),
+                    "command": {
+                        "argv": list(self.command_argv),
+                        "cwd": self.command_cwd,
+                    },
+                    "timing": {
+                        "started_at": self.started_at,
+                        "ended_at": self.ended_at,
+                        "duration_ms": self.duration_ms,
+                    },
+                    "status": self.status,
+                    "artifact_hashes": dict(self.artifact_hashes),
+                }
+            )
         return document
+
+    def same_public_inputs(self, other: CampaignManifest) -> bool:
+        """Return whether two manifests describe the same immutable campaign inputs."""
+        return (
+            self.campaign_id == other.campaign_id
+            and self.challenge_id == other.challenge_id
+            and self.challenge_commitment == other.challenge_commitment
+            and self.profile_name == other.profile_name
+            and self.semantic_version == other.semantic_version
+            and self.public_profile_sha256 == other.public_profile_sha256
+            and self.seed == other.seed
+            and self.minimum_certificate_strength == other.minimum_certificate_strength
+            and self.logical_query_budget == other.logical_query_budget
+            and self.physical_execution_budget == other.physical_execution_budget
+            and self.hard_reset_budget == other.hard_reset_budget
+        )
+
+    def with_runtime_metadata(
+        self,
+        *,
+        status: CampaignResultStatus,
+        artifact_paths: Mapping[str, Path],
+        started_at: str | None = None,
+        ended_at: str | None = None,
+        duration_ms: int | None = None,
+        command_argv: tuple[str, ...] | None = None,
+        command_cwd: str | None = None,
+    ) -> CampaignManifest:
+        """Return a v1.2 manifest with revision, versions, command, timing, and hashes."""
+        end_time = time.time()
+        ended = ended_at or _iso_time(end_time)
+        started = started_at or ended
+        duration = 0 if duration_ms is None else duration_ms
+        return replace(
+            self,
+            repository_revision=_git_output(("git", "rev-parse", "HEAD")),
+            repository_dirty=bool(_git_output(("git", "status", "--short"))),
+            repository_status_short=tuple(_git_output(("git", "status", "--short")).splitlines()),
+            versions=tuple(sorted(_tool_versions().items())),
+            command_argv=command_argv if command_argv is not None else tuple(sys.argv),
+            command_cwd=command_cwd or str(Path.cwd()),
+            started_at=started,
+            ended_at=ended,
+            duration_ms=duration,
+            status=status.value,
+            artifact_hashes=tuple(sorted(_artifact_hashes(artifact_paths).items())),
+        )
+
+    def _manifest_version(self) -> str:
+        if self._has_runtime_metadata():
+            return _MANIFEST_VERSION
+        return "1.1" if self.challenge_commitment is not None else "1.0"
+
+    def _has_runtime_metadata(self) -> bool:
+        return any(
+            value is not None
+            for value in (
+                self.repository_revision,
+                self.repository_dirty,
+                self.command_cwd,
+                self.started_at,
+                self.ended_at,
+                self.duration_ms,
+                self.status,
+            )
+        ) or bool(
+            self.repository_status_short
+            or self.versions
+            or self.command_argv
+            or self.artifact_hashes
+        )
+
+    def _validate_runtime_metadata(self) -> None:
+        if not self.repository_revision:
+            raise ValueError("repository_revision is required for manifest v1.2")
+        if self.repository_dirty is None:
+            raise ValueError("repository_dirty is required for manifest v1.2")
+        if any(not item for item in self.repository_status_short):
+            raise ValueError("repository_status_short entries must not be empty")
+        if not self.versions or any(not key or not value for key, value in self.versions):
+            raise ValueError("versions are required for manifest v1.2")
+        if not self.command_argv or not self.command_cwd:
+            raise ValueError("command argv/cwd are required for manifest v1.2")
+        if not self.started_at or not self.ended_at:
+            raise ValueError("started_at and ended_at are required for manifest v1.2")
+        if self.duration_ms is None or self.duration_ms < 0:
+            raise ValueError("duration_ms must be nonnegative for manifest v1.2")
+        try:
+            CampaignResultStatus(self.status or "")
+        except ValueError as error:
+            raise ValueError("unknown campaign result status") from error
+        if not self.artifact_hashes:
+            raise ValueError("artifact hashes are required for manifest v1.2")
+        for path, digest in self.artifact_hashes:
+            if not path:
+                raise ValueError("artifact hash paths must not be empty")
+            _require_digest(digest, f"artifact hash for {path}")
 
     @classmethod
     def from_data(cls, data: Mapping[str, object]) -> CampaignManifest:
@@ -123,14 +288,21 @@ class CampaignManifest:
                 "seed",
                 "minimum_certificate_strength",
                 "budgets",
+                "repository",
+                "versions",
+                "command",
+                "timing",
+                "status",
+                "artifact_hashes",
             },
             "campaign manifest",
         )
         manifest_version = _string(data, "manifest_version")
-        if manifest_version not in {"1.0", _MANIFEST_VERSION}:
+        if manifest_version not in {"1.0", "1.1", _MANIFEST_VERSION}:
             raise PersistenceError("unsupported campaign manifest version")
-        if manifest_version == _MANIFEST_VERSION and "challenge_commitment" not in data:
-            raise PersistenceError("campaign manifest 1.1 requires challenge_commitment")
+        if manifest_version in {"1.1", _MANIFEST_VERSION} and "challenge_commitment" not in data:
+            raise PersistenceError("campaign manifest version requires challenge_commitment")
+        runtime = _runtime_manifest_fields(data) if manifest_version == _MANIFEST_VERSION else {}
         commitment = (
             _string(data, "challenge_commitment") if "challenge_commitment" in data else None
         )
@@ -152,6 +324,19 @@ class CampaignManifest:
             logical_query_budget=_integer(budgets, "logical_queries"),
             physical_execution_budget=_integer(budgets, "physical_executions"),
             hard_reset_budget=_integer(budgets, "hard_resets"),
+            repository_revision=cast("str | None", runtime.get("repository_revision")),
+            repository_dirty=cast("bool | None", runtime.get("repository_dirty")),
+            repository_status_short=cast(
+                "tuple[str, ...]", runtime.get("repository_status_short", ())
+            ),
+            versions=cast("tuple[tuple[str, str], ...]", runtime.get("versions", ())),
+            command_argv=cast("tuple[str, ...]", runtime.get("command_argv", ())),
+            command_cwd=cast("str | None", runtime.get("command_cwd")),
+            started_at=cast("str | None", runtime.get("started_at")),
+            ended_at=cast("str | None", runtime.get("ended_at")),
+            duration_ms=cast("int | None", runtime.get("duration_ms")),
+            status=cast("str | None", runtime.get("status")),
+            artifact_hashes=cast("tuple[tuple[str, str], ...]", runtime.get("artifact_hashes", ())),
         )
 
 
@@ -766,8 +951,9 @@ class CampaignRepository:
         path = root / "manifest.json"
         if path.exists():
             loaded = cls._load_manifest(path)
-            if loaded != manifest:
+            if not loaded.same_public_inputs(manifest):
                 raise PersistenceError("campaign manifest conflicts with existing run")
+            return cls(root, loaded)
         else:
             _atomic_json_write(path, manifest.to_data())
         return cls(root, manifest)
@@ -820,6 +1006,31 @@ class CampaignRepository:
         self.database = CampaignDatabase(self.root / "campaign.sqlite3")
         self.recover()
         return self.database.digest()
+
+    def finalize_manifest(
+        self,
+        *,
+        status: CampaignResultStatus,
+        artifact_paths: Mapping[str, Path],
+        started_at: str | None = None,
+        ended_at: str | None = None,
+        duration_ms: int | None = None,
+        command_argv: tuple[str, ...] | None = None,
+        command_cwd: str | None = None,
+    ) -> CampaignManifest:
+        """Persist a v1.2 manifest with reproducibility metadata and artifact hashes."""
+        finalized = self.manifest.with_runtime_metadata(
+            status=status,
+            artifact_paths=artifact_paths,
+            started_at=started_at,
+            ended_at=ended_at,
+            duration_ms=duration_ms,
+            command_argv=command_argv,
+            command_cwd=command_cwd,
+        )
+        _atomic_json_write(self.root / "manifest.json", finalized.to_data())
+        self.manifest = finalized
+        return finalized
 
     def record_raw_execution(
         self,
@@ -1029,6 +1240,77 @@ def _raw_digest(execution_id: str, request_line: str, response_line: str) -> str
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _runtime_manifest_fields(data: Mapping[str, object]) -> dict[str, object]:
+    repository = _mapping(data, "repository")
+    _reject_extra(repository, {"revision", "dirty", "status_short"}, "manifest repository")
+    versions = _string_mapping(data, "versions")
+    command = _mapping(data, "command")
+    _reject_extra(command, {"argv", "cwd"}, "manifest command")
+    timing = _mapping(data, "timing")
+    _reject_extra(timing, {"started_at", "ended_at", "duration_ms"}, "manifest timing")
+    artifact_hashes = _string_mapping(data, "artifact_hashes")
+    return {
+        "repository_revision": _string(repository, "revision"),
+        "repository_dirty": _boolean(repository, "dirty"),
+        "repository_status_short": _string_sequence(repository, "status_short"),
+        "versions": tuple(sorted(versions.items())),
+        "command_argv": _string_sequence(command, "argv"),
+        "command_cwd": _string(command, "cwd"),
+        "started_at": _string(timing, "started_at"),
+        "ended_at": _string(timing, "ended_at"),
+        "duration_ms": _integer(timing, "duration_ms"),
+        "status": _string(data, "status"),
+        "artifact_hashes": tuple(sorted(artifact_hashes.items())),
+    }
+
+
+def _artifact_hashes(paths: Mapping[str, Path]) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for name, path in paths.items():
+        if not name:
+            raise ValueError("artifact hash key must not be empty")
+        try:
+            hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError as error:
+            raise ValueError(f"cannot hash campaign artifact {name}: {path}") from error
+    return hashes
+
+
+def _tool_versions() -> dict[str, str]:
+    return {
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "uv": _command_version(("uv", "--version")),
+        "rustc": _command_version(("rustc", "--version")),
+        "cargo": _command_version(("cargo", "--version")),
+    }
+
+
+def _command_version(command: tuple[str, ...]) -> str:
+    return _git_output(command, first_line=True)
+
+
+def _git_output(command: tuple[str, ...], *, first_line: bool = False) -> str:
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    except OSError as error:
+        return f"unavailable: {error}"
+    output = completed.stdout or completed.stderr
+    stripped = output.strip()
+    if not stripped:
+        return "unavailable"
+    return stripped.splitlines()[0] if first_line else stripped
+
+
+def _iso_time(timestamp: float) -> str:
+    return datetime.fromtimestamp(timestamp, UTC).isoformat().replace("+00:00", "Z")
+
+
 def _canonical_json(value: object) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -1147,3 +1429,25 @@ def _string_list(data: Mapping[str, object], key: str) -> tuple[str, ...]:
     if not values or any(not isinstance(value, str) for value in values):
         raise PersistenceError(f"{key} must be a nonempty string list")
     return tuple(cast("list[str]", values))
+
+
+def _string_sequence(data: Mapping[str, object], key: str) -> tuple[str, ...]:
+    values = _list(data, key)
+    if any(not isinstance(value, str) or not value for value in values):
+        raise PersistenceError(f"{key} must be a string list")
+    return tuple(cast("list[str]", values))
+
+
+def _string_mapping(data: Mapping[str, object], key: str) -> dict[str, str]:
+    value = data.get(key)
+    if not isinstance(value, dict) or any(
+        not isinstance(item_key, str)
+        or not item_key
+        or not isinstance(item_value, str)
+        or not item_value
+        for item_key, item_value in value.items()
+    ):
+        raise PersistenceError(f"{key} must be a nonempty string object")
+    if not value:
+        raise PersistenceError(f"{key} must not be empty")
+    return cast("dict[str, str]", value)

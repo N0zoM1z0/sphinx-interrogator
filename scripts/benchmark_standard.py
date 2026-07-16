@@ -4,11 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import os
+import random
 import statistics
-import subprocess
 import sys
 import time
 import tomllib
@@ -18,12 +19,49 @@ from typing import Any
 
 import jsonschema
 
+from sphinx_interrogator.certificates import ProofMethod
+from sphinx_interrogator.persistence import (
+    CampaignManifest,
+    CampaignRepository,
+    CampaignResultStatus,
+    normalize_campaign_result_status,
+)
+from sphinx_interrogator.protocol import submit_judge as submit_judge_request
 from sphinx_interrogator.standard import StandardSelectorMode, recover_standard
+from sphinx_trusted_runtime import (
+    ChallengeBundle,
+    create_challenge,
+    create_private_root,
+    launch_endpoints,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_MATRIX = ROOT / "benchmarks/matrices/standard.toml"
+DEFAULT_UPPER_BOUND_ARTIFACT = ROOT / "runs/standard-profile-audit-m7/standard-profile-audit.json"
 REFERENCE_FAULTS = ("reference", "weak", "signed")
-ALL_VARIANTS = tuple(mode.value for mode in StandardSelectorMode)
+RANDOM_FINAL_GUESS_VARIANT = "random_final_guess"
+ALL_BLACK_BOX_VARIANTS = tuple(mode.value for mode in StandardSelectorMode)
+ALL_VARIANTS = (RANDOM_FINAL_GUESS_VARIANT, *ALL_BLACK_BOX_VARIANTS)
+BOOTSTRAP_METRICS = (
+    "exact_rate",
+    "logical_relation_families",
+    "physical_executions",
+)
+PAIRED_DELTA_METRICS = (
+    "exact_success_delta",
+    "logical_relation_families_delta",
+    "physical_executions_delta",
+)
+BASELINE_DEFINITIONS = (
+    ("B0", "random-final-guess", RANDOM_FINAL_GUESS_VARIANT),
+    ("B1", "random-valid-probes", StandardSelectorMode.RANDOM.value),
+    ("B2", "stateless-metamorphic-testing", StandardSelectorMode.STATELESS.value),
+    ("B3", "knowledge-base-without-synthesis", StandardSelectorMode.KB_NO_SYNTHESIS.value),
+    ("B4", "synthesis-without-kb-selection", StandardSelectorMode.SYNTHESIS_NO_KB.value),
+    ("B5", "without-active-state-learning", None),
+    ("B6", "without-robust-sequential-sampling", None),
+    ("B7", "whitebox-greedy-oracle-upper-bound", None),
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,7 +69,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--matrix", type=Path, default=DEFAULT_MATRIX)
     parser.add_argument("--seeds", type=Path)
-    parser.add_argument("--output", type=Path, default=ROOT / "runs/standard-benchmark-v1")
+    parser.add_argument("--output", type=Path, default=ROOT / "runs/standard-benchmark-v2")
+    parser.add_argument("--upper-bound-artifact", type=Path, default=DEFAULT_UPPER_BOUND_ARTIFACT)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--variants", nargs="+", choices=ALL_VARIANTS)
     parser.add_argument("--faults", nargs="+", choices=REFERENCE_FAULTS, default=("reference",))
@@ -49,6 +88,18 @@ def parse_args() -> argparse.Namespace:
         "--require-full-targets",
         action="store_true",
         help="fail unless the selected run is the full published acceptance matrix",
+    )
+    parser.add_argument(
+        "--bootstrap-samples",
+        type=int,
+        default=2000,
+        help="paired seed-level bootstrap resamples to record in the aggregate report",
+    )
+    parser.add_argument(
+        "--bootstrap-seed",
+        type=int,
+        default=901_337,
+        help="deterministic seed for paired bootstrap confidence intervals",
     )
     return parser.parse_args()
 
@@ -78,10 +129,14 @@ def main() -> int:
         seeds = seeds[: args.limit]
     if not variants:
         raise ValueError("at least one selector variant is required")
+    if args.bootstrap_samples < 1:
+        raise ValueError("--bootstrap-samples must be positive")
 
     output = args.output.resolve()
-    (output / "challenges").mkdir(parents=True, exist_ok=True)
+    campaign_namespace = hashlib.sha256(str(output).encode()).hexdigest()[:16]
     (output / "runs").mkdir(parents=True, exist_ok=True)
+    trusted_root = ROOT / "runs/.trusted-standard-v2"
+    trusted_root.mkdir(parents=True, exist_ok=True)
     results: list[dict[str, object]] = []
     campaign_plan = _campaign_plan(
         variants,
@@ -90,41 +145,66 @@ def main() -> int:
         include_off_control=not args.skip_off_control,
     )
     for index, (mode, fault, seed) in enumerate(campaign_plan, start=1):
-        challenge_id = f"standard-{mode.value}-{fault}-{seed:05d}"
-        challenge = output / "challenges" / f"{mode.value}-{fault}-seed-{seed:05d}"
-        run = output / "runs" / f"{mode.value}-{fault}-seed-{seed:05d}"
-        profile = (
-            ROOT / "benchmarks/profiles/fault_free.toml"
-            if fault == "off"
-            else ROOT / "benchmarks/profiles/standard.toml"
+        seed_ordinal = seeds.index(seed) + 1
+        challenge_id = f"challenge-{seed_ordinal:04d}"
+        private_root = trusted_root / f"root-{seed_ordinal:04d}.bin"
+        if not private_root.exists():
+            create_private_root(binary, private_root)
+        opaque_campaign = _opaque_campaign_id(
+            campaign_namespace,
+            mode,
+            fault,
+            seed,
         )
-        _ensure_challenge(
+        challenge = trusted_root / f"bundle-{opaque_campaign}"
+        run = output / "runs" / f"{mode}-{fault}-seed-{seed:05d}"
+        bundle = _ensure_challenge(
             binary,
-            profile=profile,
+            profile=ROOT / "benchmarks/profiles/standard.toml",
             output=challenge,
+            private_root_file=private_root,
             challenge_id=challenge_id,
-            seed=seed,
+            campaign_label=f"campaign-{opaque_campaign}",
             fault=fault,
         )
         started = time.perf_counter()
-        recovered = recover_standard(
-            vm_binary=binary,
-            challenge=challenge,
-            run_directory=run,
-            campaign_seed=_campaign_seed(mode, fault, seed),
-            selector_mode=mode,
-            submit_judge=fault != "off",
-        )
+        socket_directory = trusted_root / f"sockets-{opaque_campaign}"
+        with launch_endpoints(
+            binary,
+            bundle,
+            socket_directory=socket_directory,
+            with_judge=fault != "off",
+        ) as endpoints:
+            if mode == RANDOM_FINAL_GUESS_VARIANT:
+                if endpoints.judge_socket is None:
+                    raise RuntimeError("B0 random final guess requires a judge endpoint")
+                recovered_status, report = _recover_random_final_guess(
+                    public_challenge=endpoints.public_directory,
+                    judge_socket=endpoints.judge_socket,
+                    run_directory=run,
+                    campaign_seed=_campaign_seed(seed),
+                )
+            else:
+                recovered = recover_standard(
+                    public_challenge=endpoints.public_directory,
+                    vm_socket=endpoints.vm_socket,
+                    judge_socket=endpoints.judge_socket,
+                    run_directory=run,
+                    campaign_seed=_campaign_seed(seed),
+                    selector_mode=StandardSelectorMode(mode),
+                    submit_judge=fault != "off",
+                )
+                recovered_status = recovered.status
+                report = recovered.report
         elapsed = time.perf_counter() - started
-        report = recovered.report
         cost = _mapping(report, "cost")
         judge = report.get("judge")
         result = {
-            "selector_mode": mode.value,
+            "selector_mode": mode,
             "fault_assignment": fault,
             "seed": seed,
             "challenge_id": challenge_id,
-            "status": recovered.status,
+            "status": recovered_status,
             "judge_accepted": None if judge is None else _boolean(judge, "accepted"),
             "remaining_secret_candidates": _integer(report, "remaining_secret_candidates"),
             "cost": {
@@ -139,8 +219,8 @@ def main() -> int:
         print(
             "["
             f"{index:04d}/{len(campaign_plan):04d}] "
-            f"mode={mode.value} fault={fault} seed={seed} "
-            f"status={recovered.status} elapsed={elapsed:.2f}s",
+            f"mode={mode} fault={fault} seed={seed} "
+            f"status={recovered_status} elapsed={elapsed:.2f}s",
             flush=True,
         )
 
@@ -154,7 +234,7 @@ def main() -> int:
         off_control=not args.skip_off_control,
     )
     report = {
-        "report_version": "1.0",
+        "report_version": "1.1",
         "matrix_name": _string(matrix, "name"),
         "profile_name": "standard",
         "seed_file": _portable_path(seed_file.resolve(), ROOT),
@@ -169,12 +249,23 @@ def main() -> int:
             full_published_matrix=full_matrix,
             selected_thresholds_met=selected_ok,
         ),
+        "paired_bootstrap_confidence_intervals": _paired_bootstrap_confidence_intervals(
+            results,
+            samples=args.bootstrap_samples,
+            seed=args.bootstrap_seed,
+            confidence_level=0.95,
+        ),
+        "baseline_surface": _baseline_surface(
+            results,
+            variants=variants,
+            upper_bound_artifact=args.upper_bound_artifact,
+        ),
         "summaries": summaries,
         "results": results,
         "artifacts": {
-            "challenges": "challenges",
             "runs": "runs",
             "markdown_report": "standard-benchmark-report.md",
+            "private_challenges_included": False,
         },
     }
     schema = json.loads(
@@ -196,17 +287,149 @@ def _campaign_plan(
     seeds: Iterable[int],
     *,
     include_off_control: bool,
-) -> list[tuple[StandardSelectorMode, str, int]]:
-    plan: list[tuple[StandardSelectorMode, str, int]] = []
-    for variant in variants:
-        mode = StandardSelectorMode(variant)
+) -> list[tuple[str, str, int]]:
+    plan: list[tuple[str, str, int]] = []
+    selected_modes = tuple(variants)
+    for seed in seeds:
         for fault in faults:
-            for seed in seeds:
-                plan.append((mode, fault, seed))
-    if include_off_control and StandardSelectorMode.FULL.value in set(variants):
-        for seed in seeds:
-            plan.append((StandardSelectorMode.FULL, "off", seed))
+            paired = [(mode, fault, seed) for mode in selected_modes]
+            random.Random(_campaign_seed(seed)).shuffle(paired)
+            plan.extend(paired)
+        if include_off_control and StandardSelectorMode.FULL.value in selected_modes:
+            plan.append((StandardSelectorMode.FULL.value, "off", seed))
     return plan
+
+
+def _recover_random_final_guess(
+    *,
+    public_challenge: Path,
+    judge_socket: Path,
+    run_directory: Path,
+    campaign_seed: int,
+) -> tuple[str, Mapping[str, object]]:
+    report_path = run_directory / "report.json"
+    public = _load_json(public_challenge / "challenge.json")
+    if report_path.is_file():
+        existing = _load_json(report_path)
+        existing_status = _string(existing, "status")
+        normative_status = normalize_campaign_result_status(existing_status)
+        if existing_status != normative_status.value:
+            existing = dict(existing)
+            existing["status"] = normative_status.value
+            _write_json(report_path, existing)
+        _ensure_random_final_guess_manifest(
+            public_challenge=public_challenge,
+            run_directory=run_directory,
+            campaign_seed=campaign_seed,
+            report=existing,
+        )
+        return normative_status.value, existing
+    run_directory.mkdir(parents=True, exist_ok=True)
+    profile = _load_matrix(public_challenge / "profile.toml")
+    secret_cells = _integer(profile, "secret_cells")
+    guess = _deterministic_guess(campaign_seed, secret_cells)
+    judge = submit_judge_request(
+        judge_socket,
+        campaign_token=_string(public, "campaign_token"),
+        guess=guess,
+    )
+    accepted = _boolean(judge, "accepted")
+    status = (
+        CampaignResultStatus.UNIQUE_EXACT.value
+        if accepted
+        else CampaignResultStatus.CANDIDATE_SET.value
+    )
+    report: dict[str, object] = {
+        "report_version": "1.0",
+        "campaign_seed": campaign_seed,
+        "selector_mode": RANDOM_FINAL_GUESS_VARIANT,
+        "status": status,
+        "unique_secret_hex": guess if accepted else None,
+        "remaining_secret_candidates": 1 if accepted else 16**secret_cells,
+        "cost": {
+            "logical_relation_families": 0,
+            "physical_executions": 0,
+            "hard_resets": 0,
+            "last_public_physical_remaining": None,
+        },
+        "evidence": {
+            "baseline_id": "B0",
+            "method": "deterministic-public-seed-final-guess/v1",
+            "black_box_queries": 0,
+            "uses_private_state": False,
+        },
+        "judge": dict(judge),
+    }
+    _write_json(report_path, report)
+    _ensure_random_final_guess_manifest(
+        public_challenge=public_challenge,
+        run_directory=run_directory,
+        campaign_seed=campaign_seed,
+        report=report,
+    )
+    return status, report
+
+
+def _ensure_random_final_guess_manifest(
+    *,
+    public_challenge: Path,
+    run_directory: Path,
+    campaign_seed: int,
+    report: Mapping[str, object],
+) -> None:
+    public = _load_json(public_challenge / "challenge.json")
+    budgets = _mapping(public, "budgets")
+    challenge_id = _string(public, "challenge_id")
+    status = _string(report, "status")
+    manifest = CampaignManifest(
+        campaign_id=f"standard-{RANDOM_FINAL_GUESS_VARIANT}-{challenge_id}-{campaign_seed}",
+        challenge_id=challenge_id,
+        challenge_commitment=_string(public, "commitment"),
+        profile_name="standard",
+        semantic_version="0.1.0",
+        public_profile_sha256=_file_sha256(public_challenge / "profile.toml"),
+        seed=campaign_seed,
+        minimum_certificate_strength=ProofMethod.EMPIRICAL_ONLY.value,
+        logical_query_budget=_integer(budgets, "logical_queries"),
+        physical_execution_budget=_integer(budgets, "physical_executions"),
+        hard_reset_budget=_integer(budgets, "hard_resets"),
+    )
+    repository = CampaignRepository.create(run_directory, manifest)
+    try:
+        judge = _mapping(report, "judge")
+        if repository.database.table_count("judge_submissions") == 0:
+            repository.append_event(
+                event_id="judge:random-final-guess",
+                kind="judge_recorded",
+                logical_time=0,
+                payload={
+                    "submission_id": "random-final-guess",
+                    "challenge_id": challenge_id,
+                    "submission_recorded": _boolean(judge, "submission_recorded"),
+                    "accepted": _boolean(judge, "accepted"),
+                    "response": dict(judge),
+                },
+            )
+        if repository.manifest.to_data()["manifest_version"] != "1.2":
+            repository.finalize_manifest(
+                status=normalize_campaign_result_status(status),
+                artifact_paths={
+                    "report.json": run_directory / "report.json",
+                    "events.jsonl": run_directory / "events.jsonl",
+                    "campaign.sqlite3": run_directory / "campaign.sqlite3",
+                },
+            )
+    finally:
+        repository.close()
+
+
+def _deterministic_guess(seed: int, cells: int) -> str:
+    rng = random.Random(f"standard-b0:{seed}")
+    return "".join(f"{rng.randrange(16):x}" for _ in range(cells))
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _ensure_challenge(
@@ -214,43 +437,30 @@ def _ensure_challenge(
     *,
     profile: Path,
     output: Path,
+    private_root_file: Path,
     challenge_id: str,
-    seed: int,
+    campaign_label: str,
     fault: str,
-) -> None:
+) -> ChallengeBundle:
     if (output / "public/challenge.json").is_file():
-        return
+        return ChallengeBundle(
+            output / "public",
+            output / "private",
+            private_root_file,
+        )
     if output.exists() and any(output.iterdir()):
         raise RuntimeError(f"challenge directory is partial or incompatible: {output}")
     if output.exists():
         output.rmdir()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    completed = subprocess.run(
-        [
-            str(binary),
-            "challenge",
-            "create",
-            "--profile",
-            str(profile),
-            "--output",
-            str(output),
-            "--challenge-id",
-            challenge_id,
-            "--seed",
-            str(seed),
-            "--fault",
-            fault,
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=10,
+    return create_challenge(
+        binary,
+        profile=profile,
+        root=output,
+        private_root_file=private_root_file,
+        challenge_id=challenge_id,
+        campaign_label=campaign_label,
+        fault=fault,
     )
-    if completed.returncode != 0:
-        raise RuntimeError(
-            f"standard challenge creation failed for {challenge_id}: {completed.stderr.strip()}"
-        )
 
 
 def _summaries(results: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -291,6 +501,317 @@ def _summaries(results: list[dict[str, object]]) -> list[dict[str, object]]:
             }
         )
     return summaries
+
+
+def _paired_bootstrap_confidence_intervals(
+    results: list[dict[str, object]],
+    *,
+    samples: int,
+    seed: int,
+    confidence_level: float,
+) -> dict[str, object]:
+    if samples < 1:
+        raise ValueError("bootstrap samples must be positive")
+    if not 0.0 < confidence_level < 1.0:
+        raise ValueError("confidence level must be between 0 and 1")
+    rng = random.Random(seed)
+    metrics: list[dict[str, object]] = []
+    keys = sorted(
+        {
+            (_string(result, "selector_mode"), _string(result, "fault_assignment"))
+            for result in results
+        }
+    )
+    for mode, fault in keys:
+        group = [
+            result
+            for result in results
+            if result["selector_mode"] == mode and result["fault_assignment"] == fault
+        ]
+        for metric in BOOTSTRAP_METRICS:
+            values = _metric_values(group, metric)
+            interval = _bootstrap_interval(
+                values,
+                samples=samples,
+                confidence_level=confidence_level,
+                rng=rng,
+                statistic=_mean if metric == "exact_rate" else _median,
+            )
+            metrics.append(
+                {
+                    "selector_mode": mode,
+                    "fault_assignment": fault,
+                    "metric": metric,
+                    "estimate": interval["estimate"],
+                    "ci_low": interval["ci_low"],
+                    "ci_high": interval["ci_high"],
+                    "unit_count": len(values),
+                }
+            )
+    return {
+        "method": "paired-seed-percentile/v1",
+        "unit": "challenge_seed",
+        "confidence_level": confidence_level,
+        "bootstrap_samples": samples,
+        "seed": seed,
+        "metrics": metrics,
+        "comparisons": _paired_bootstrap_comparisons(
+            results,
+            samples=samples,
+            confidence_level=confidence_level,
+            rng=rng,
+        ),
+    }
+
+
+def _paired_bootstrap_comparisons(
+    results: list[dict[str, object]],
+    *,
+    samples: int,
+    confidence_level: float,
+    rng: random.Random,
+) -> list[dict[str, object]]:
+    comparisons: list[dict[str, object]] = []
+    by_key = {
+        (
+            _string(result, "selector_mode"),
+            _string(result, "fault_assignment"),
+            _integer(result, "seed"),
+        ): result
+        for result in results
+    }
+    pair_keys = sorted(
+        {
+            (_string(result, "selector_mode"), _string(result, "fault_assignment"))
+            for result in results
+            if _string(result, "selector_mode") != StandardSelectorMode.FULL.value
+        }
+    )
+    for baseline, fault in pair_keys:
+        common_seeds = sorted(
+            seed
+            for mode, candidate_fault, seed in by_key
+            if mode == StandardSelectorMode.FULL.value
+            and candidate_fault == fault
+            and (baseline, fault, seed) in by_key
+        )
+        if not common_seeds:
+            continue
+        for metric in PAIRED_DELTA_METRICS:
+            deltas = [
+                _paired_metric_delta(
+                    by_key[(StandardSelectorMode.FULL.value, fault, paired_seed)],
+                    by_key[(baseline, fault, paired_seed)],
+                    metric,
+                )
+                for paired_seed in common_seeds
+            ]
+            interval = _bootstrap_interval(
+                deltas,
+                samples=samples,
+                confidence_level=confidence_level,
+                rng=rng,
+                statistic=_mean,
+            )
+            comparisons.append(
+                {
+                    "variant": StandardSelectorMode.FULL.value,
+                    "baseline": baseline,
+                    "fault_assignment": fault,
+                    "metric": metric,
+                    "estimate": interval["estimate"],
+                    "ci_low": interval["ci_low"],
+                    "ci_high": interval["ci_high"],
+                    "paired_seed_count": len(common_seeds),
+                }
+            )
+    return comparisons
+
+
+def _baseline_surface(
+    results: list[dict[str, object]],
+    *,
+    variants: list[str],
+    upper_bound_artifact: Path,
+) -> dict[str, object]:
+    entries: list[dict[str, object]] = []
+    for baseline_id, name, selector in BASELINE_DEFINITIONS:
+        if baseline_id in {"B5", "B6"}:
+            entries.append(
+                {
+                    "baseline_id": baseline_id,
+                    "name": name,
+                    "status": "not_applicable",
+                    "selector_mode": None,
+                    "profile_scope": "research" if baseline_id == "B5" else "stochastic",
+                    "evidence": {
+                        "reason": (
+                            "active state learning is evaluated in research mode"
+                            if baseline_id == "B5"
+                            else "robust sequential sampling is evaluated in stochastic profiles"
+                        )
+                    },
+                }
+            )
+            continue
+        if baseline_id == "B7":
+            entries.append(_whitebox_upper_bound_entry(upper_bound_artifact))
+            continue
+        if selector is None:
+            raise RuntimeError(f"baseline {baseline_id} has no selector mapping")
+        matching_results = [
+            result
+            for result in results
+            if result["selector_mode"] == selector and result["fault_assignment"] != "off"
+        ]
+        entries.append(
+            {
+                "baseline_id": baseline_id,
+                "name": name,
+                "status": "measured" if matching_results else "missing",
+                "selector_mode": selector,
+                "profile_scope": "standard",
+                "evidence": {
+                    "campaigns": len(matching_results),
+                    "selected": selector in variants,
+                    "fault_assignments": sorted(
+                        {_string(result, "fault_assignment") for result in matching_results}
+                    ),
+                },
+            }
+        )
+    required_ids = {f"B{index}" for index in range(8)}
+    present_ids = {_string(entry, "baseline_id") for entry in entries}
+    b0_b4_b7 = {"B0", "B1", "B2", "B3", "B4", "B7"}
+    complete = (
+        present_ids == required_ids
+        and all(
+            _string(entry, "status") == "measured"
+            for entry in entries
+            if _string(entry, "baseline_id") in b0_b4_b7
+        )
+        and all(
+            _string(entry, "status") in {"measured", "not_applicable"}
+            for entry in entries
+            if _string(entry, "baseline_id") in {"B5", "B6"}
+        )
+    )
+    return {
+        "surface_version": "B0-B7/v1",
+        "complete": complete,
+        "entries": entries,
+    }
+
+
+def _whitebox_upper_bound_entry(path: Path) -> dict[str, object]:
+    absolute = path if path.is_absolute() else ROOT / path
+    if not absolute.is_file():
+        return {
+            "baseline_id": "B7",
+            "name": "whitebox-greedy-oracle-upper-bound",
+            "status": "missing",
+            "selector_mode": None,
+            "profile_scope": "development",
+            "evidence": {"artifact": _portable_path(absolute, ROOT), "reason": "artifact missing"},
+        }
+    decoded = _load_json(absolute)
+    targets = decoded.get("targets_met")
+    passed = isinstance(targets, dict) and all(value is True for value in targets.values())
+    learnability = decoded.get("learnability_bound")
+    return {
+        "baseline_id": "B7",
+        "name": "whitebox-greedy-oracle-upper-bound",
+        "status": "measured" if passed else "missing",
+        "selector_mode": None,
+        "profile_scope": "development",
+        "evidence": {
+            "artifact": _portable_path(absolute, ROOT),
+            "analysis_scope": decoded.get("analysis_scope"),
+            "uses_black_box_recovery": False,
+            "targets_met": targets if isinstance(targets, dict) else {},
+            "oracle_collision_logical_relations": (
+                learnability.get("oracle_collision_logical_relations")
+                if isinstance(learnability, dict)
+                else None
+            ),
+        },
+    }
+
+
+def _metric_values(group: list[dict[str, object]], metric: str) -> list[float]:
+    if metric == "exact_rate":
+        return [1.0 if result["status"] == "unique_exact" else 0.0 for result in group]
+    if metric == "logical_relation_families":
+        return [
+            float(_integer(_mapping(result, "cost"), "logical_relation_families"))
+            for result in group
+        ]
+    if metric == "physical_executions":
+        return [
+            float(_integer(_mapping(result, "cost"), "physical_executions")) for result in group
+        ]
+    raise ValueError(f"unsupported bootstrap metric: {metric}")
+
+
+def _paired_metric_delta(
+    variant: dict[str, object],
+    baseline: dict[str, object],
+    metric: str,
+) -> float:
+    if metric == "exact_success_delta":
+        return float(variant["status"] == "unique_exact") - float(
+            baseline["status"] == "unique_exact"
+        )
+    if metric == "logical_relation_families_delta":
+        return float(
+            _integer(_mapping(variant, "cost"), "logical_relation_families")
+            - _integer(_mapping(baseline, "cost"), "logical_relation_families")
+        )
+    if metric == "physical_executions_delta":
+        return float(
+            _integer(_mapping(variant, "cost"), "physical_executions")
+            - _integer(_mapping(baseline, "cost"), "physical_executions")
+        )
+    raise ValueError(f"unsupported paired delta metric: {metric}")
+
+
+def _bootstrap_interval(
+    values: list[float],
+    *,
+    samples: int,
+    confidence_level: float,
+    rng: random.Random,
+    statistic: Any,
+) -> dict[str, float]:
+    if not values:
+        raise ValueError("bootstrap interval requires at least one value")
+    estimate = statistic(values)
+    if len(values) == 1:
+        return {"estimate": estimate, "ci_low": estimate, "ci_high": estimate}
+    bootstrap_values = []
+    for _ in range(samples):
+        resampled = [values[rng.randrange(len(values))] for _ in values]
+        bootstrap_values.append(statistic(resampled))
+    bootstrap_values.sort()
+    alpha = (1.0 - confidence_level) / 2.0
+    low_index = min(len(bootstrap_values) - 1, max(0, math.floor(alpha * samples)))
+    high_index = min(
+        len(bootstrap_values) - 1,
+        max(0, math.ceil((1.0 - alpha) * samples) - 1),
+    )
+    return {
+        "estimate": estimate,
+        "ci_low": bootstrap_values[low_index],
+        "ci_high": bootstrap_values[high_index],
+    }
+
+
+def _mean(values: list[float]) -> float:
+    return float(statistics.fmean(values))
+
+
+def _median(values: list[float]) -> float:
+    return float(statistics.median(values))
 
 
 def _acceptance(
@@ -367,9 +888,18 @@ def _find_summary(
     return None
 
 
-def _campaign_seed(mode: StandardSelectorMode, fault: str, seed: int) -> int:
-    fault_index = ("reference", "weak", "signed", "off").index(fault)
-    return 600_000 + seed + 1009 * list(StandardSelectorMode).index(mode) + 7919 * fault_index
+def _campaign_seed(seed: int) -> int:
+    return 600_000 + seed
+
+
+def _opaque_campaign_id(
+    namespace: str,
+    mode: str,
+    fault: str,
+    seed: int,
+) -> str:
+    material = f"standard-v2:{namespace}:{mode}:{fault}:{seed}".encode()
+    return hashlib.sha256(material).hexdigest()[:20]
 
 
 def _percentile(values: list[int], fraction: float) -> int:
@@ -386,6 +916,13 @@ def _load_matrix(path: Path) -> Mapping[str, object]:
     if not isinstance(data, dict):
         raise ValueError("standard benchmark matrix is not a TOML table")
     return data
+
+
+def _load_json(path: Path) -> dict[str, object]:
+    decoded: object = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(decoded, dict):
+        raise ValueError(f"{path} is not a JSON object")
+    return decoded
 
 
 def _load_seeds(path: Path) -> list[int]:

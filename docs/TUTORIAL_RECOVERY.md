@@ -45,7 +45,7 @@ written to schema-valid `report.json`.
 
 Under `off`, all relation deltas are equal. Because the extractor retains the latent
 off model, all 65,536 secrets remain possible. The alternative-model query is `sat`,
-the report is `inconclusive`, and the judge is never invoked.
+the public campaign result is `candidate_set`, and the judge is never invoked.
 
 ## Commands and measured M5 result
 
@@ -58,8 +58,10 @@ just test-tutorial-fault-free
 The published seeds are `benchmarks/seeds/tutorial-evaluation.txt`. On 2026-07-16 the
 reference matrix recovered and judge-accepted 100/100 generated challenges. Median and
 maximum logical relation families were both 16, versus targets of at most 48 and 80.
-The paired off-fault matrix produced 100/100 `inconclusive` reports and zero exact
-declarations or judge submissions. Aggregate summaries are generated under
+The paired off-fault matrix produced 100/100 `candidate_set` reports and zero exact
+declarations or judge submissions. The underlying relation decisions are
+inconclusive, but the public campaign status uses the normative result vocabulary.
+Aggregate summaries are generated under
 `runs/tutorial-evaluation-v2/summary.json` and
 `runs/tutorial-fault-free-v2/summary.json`; the directory is intentionally ignored by
 Git while exact command evidence is recorded in `VALIDATION.md`.

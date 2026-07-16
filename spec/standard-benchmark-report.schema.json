@@ -14,12 +14,14 @@
     "off_control",
     "campaigns",
     "acceptance",
+    "paired_bootstrap_confidence_intervals",
+    "baseline_surface",
     "summaries",
     "results",
     "artifacts"
   ],
   "properties": {
-    "report_version": {"const": "1.0"},
+    "report_version": {"const": "1.1"},
     "matrix_name": {"type": "string", "minLength": 1},
     "profile_name": {"const": "standard"},
     "seed_file": {"type": "string", "minLength": 1},
@@ -28,7 +30,14 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": {
-        "enum": ["full", "random", "stateless", "kb_no_synthesis", "synthesis_no_kb"]
+        "enum": [
+          "random_final_guess",
+          "full",
+          "random",
+          "stateless",
+          "kb_no_synthesis",
+          "synthesis_no_kb"
+        ]
       }
     },
     "reference_faults": {
@@ -71,6 +80,12 @@
       "type": "array",
       "items": {"$ref": "#/$defs/summary"}
     },
+    "paired_bootstrap_confidence_intervals": {
+      "$ref": "#/$defs/bootstrap"
+    },
+    "baseline_surface": {
+      "$ref": "#/$defs/baseline_surface"
+    },
     "results": {
       "type": "array",
       "items": {"$ref": "#/$defs/result"}
@@ -78,11 +93,11 @@
     "artifacts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["challenges", "runs", "markdown_report"],
+      "required": ["runs", "markdown_report", "private_challenges_included"],
       "properties": {
-        "challenges": {"const": "challenges"},
         "runs": {"const": "runs"},
-        "markdown_report": {"const": "standard-benchmark-report.md"}
+        "markdown_report": {"const": "standard-benchmark-report.md"},
+        "private_challenges_included": {"const": false}
       }
     }
   },
@@ -106,7 +121,14 @@
       ],
       "properties": {
         "selector_mode": {
-          "enum": ["full", "random", "stateless", "kb_no_synthesis", "synthesis_no_kb"]
+          "enum": [
+            "random_final_guess",
+            "full",
+            "random",
+            "stateless",
+            "kb_no_synthesis",
+            "synthesis_no_kb"
+          ]
         },
         "fault_assignment": {"enum": ["off", "reference", "weak", "signed"]},
         "campaigns": {"type": "integer", "minimum": 0},
@@ -119,6 +141,158 @@
         "max_logical_relation_families": {"type": "integer", "minimum": 0},
         "median_physical_executions": {"type": "number", "minimum": 0},
         "max_physical_executions": {"type": "integer", "minimum": 0}
+      }
+    },
+    "bootstrap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "unit",
+        "confidence_level",
+        "bootstrap_samples",
+        "seed",
+        "metrics",
+        "comparisons"
+      ],
+      "properties": {
+        "method": {"const": "paired-seed-percentile/v1"},
+        "unit": {"const": "challenge_seed"},
+        "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1},
+        "bootstrap_samples": {"type": "integer", "minimum": 1},
+        "seed": {"type": "integer", "minimum": 0},
+        "metrics": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bootstrap_metric"}
+        },
+        "comparisons": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/bootstrap_comparison"}
+        }
+      }
+    },
+    "bootstrap_metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selector_mode",
+        "fault_assignment",
+        "metric",
+        "estimate",
+        "ci_low",
+        "ci_high",
+        "unit_count"
+      ],
+      "properties": {
+        "selector_mode": {
+          "enum": [
+            "random_final_guess",
+            "full",
+            "random",
+            "stateless",
+            "kb_no_synthesis",
+            "synthesis_no_kb"
+          ]
+        },
+        "fault_assignment": {"enum": ["off", "reference", "weak", "signed"]},
+        "metric": {
+          "enum": ["exact_rate", "logical_relation_families", "physical_executions"]
+        },
+        "estimate": {"type": "number"},
+        "ci_low": {"type": "number"},
+        "ci_high": {"type": "number"},
+        "unit_count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "bootstrap_comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variant",
+        "baseline",
+        "fault_assignment",
+        "metric",
+        "estimate",
+        "ci_low",
+        "ci_high",
+        "paired_seed_count"
+      ],
+      "properties": {
+        "variant": {"const": "full"},
+        "baseline": {
+          "enum": [
+            "random_final_guess",
+            "random",
+            "stateless",
+            "kb_no_synthesis",
+            "synthesis_no_kb"
+          ]
+        },
+        "fault_assignment": {"enum": ["reference", "weak", "signed"]},
+        "metric": {
+          "enum": [
+            "exact_success_delta",
+            "logical_relation_families_delta",
+            "physical_executions_delta"
+          ]
+        },
+        "estimate": {"type": "number"},
+        "ci_low": {"type": "number"},
+        "ci_high": {"type": "number"},
+        "paired_seed_count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "baseline_surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface_version", "complete", "entries"],
+      "properties": {
+        "surface_version": {"const": "B0-B7/v1"},
+        "complete": {"type": "boolean"},
+        "entries": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {"$ref": "#/$defs/baseline_entry"}
+        }
+      }
+    },
+    "baseline_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_id",
+        "name",
+        "status",
+        "selector_mode",
+        "profile_scope",
+        "evidence"
+      ],
+      "properties": {
+        "baseline_id": {
+          "enum": ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7"]
+        },
+        "name": {"type": "string", "minLength": 1},
+        "status": {"enum": ["measured", "not_applicable", "missing"]},
+        "selector_mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "random_final_guess",
+                "full",
+                "random",
+                "stateless",
+                "kb_no_synthesis",
+                "synthesis_no_kb"
+              ]
+            },
+            {"type": "null"}
+          ]
+        },
+        "profile_scope": {
+          "enum": ["standard", "research", "stochastic", "development"]
+        },
+        "evidence": {"type": "object"}
       }
     },
     "result": {
@@ -137,7 +311,14 @@
       ],
       "properties": {
         "selector_mode": {
-          "enum": ["full", "random", "stateless", "kb_no_synthesis", "synthesis_no_kb"]
+          "enum": [
+            "random_final_guess",
+            "full",
+            "random",
+            "stateless",
+            "kb_no_synthesis",
+            "synthesis_no_kb"
+          ]
         },
         "fault_assignment": {"enum": ["off", "reference", "weak", "signed"]},
         "seed": {"type": "integer", "minimum": 0},
@@ -145,10 +326,12 @@
         "status": {
           "enum": [
             "unique_exact",
-            "unique_exact_unjudged",
-            "inconclusive",
-            "inconsistent",
-            "judge_rejected"
+            "candidate_set",
+            "ranked_soft",
+            "budget_exhausted",
+            "model_inconsistent",
+            "target_error",
+            "blocked"
           ]
         },
         "judge_accepted": {"type": ["boolean", "null"]},

@@ -2,9 +2,9 @@
   "acceptance": {
     "full_published_matrix": false,
     "full_reference_exact_rate": 1.0,
-    "full_reference_median_logical": 34.0,
-    "full_reference_median_physical": 68.0,
-    "full_reference_p95_logical": 34.0,
+    "full_reference_median_logical": 45.0,
+    "full_reference_median_physical": 90.0,
+    "full_reference_p95_logical": 45.0,
     "off_false_exact_declarations": 0,
     "published_seed_count": 100,
     "selected_seed_count": 1,
@@ -12,26 +12,571 @@
     "targets_met": false
   },
   "artifacts": {
-    "challenges": "challenges",
     "markdown_report": "standard-benchmark-report.md",
+    "private_challenges_included": false,
     "runs": "runs"
   },
-  "campaigns": 2,
+  "baseline_surface": {
+    "complete": true,
+    "entries": [
+      {
+        "baseline_id": "B0",
+        "evidence": {
+          "campaigns": 1,
+          "fault_assignments": [
+            "reference"
+          ],
+          "selected": true
+        },
+        "name": "random-final-guess",
+        "profile_scope": "standard",
+        "selector_mode": "random_final_guess",
+        "status": "measured"
+      },
+      {
+        "baseline_id": "B1",
+        "evidence": {
+          "campaigns": 1,
+          "fault_assignments": [
+            "reference"
+          ],
+          "selected": true
+        },
+        "name": "random-valid-probes",
+        "profile_scope": "standard",
+        "selector_mode": "random",
+        "status": "measured"
+      },
+      {
+        "baseline_id": "B2",
+        "evidence": {
+          "campaigns": 1,
+          "fault_assignments": [
+            "reference"
+          ],
+          "selected": true
+        },
+        "name": "stateless-metamorphic-testing",
+        "profile_scope": "standard",
+        "selector_mode": "stateless",
+        "status": "measured"
+      },
+      {
+        "baseline_id": "B3",
+        "evidence": {
+          "campaigns": 1,
+          "fault_assignments": [
+            "reference"
+          ],
+          "selected": true
+        },
+        "name": "knowledge-base-without-synthesis",
+        "profile_scope": "standard",
+        "selector_mode": "kb_no_synthesis",
+        "status": "measured"
+      },
+      {
+        "baseline_id": "B4",
+        "evidence": {
+          "campaigns": 1,
+          "fault_assignments": [
+            "reference"
+          ],
+          "selected": true
+        },
+        "name": "synthesis-without-kb-selection",
+        "profile_scope": "standard",
+        "selector_mode": "synthesis_no_kb",
+        "status": "measured"
+      },
+      {
+        "baseline_id": "B5",
+        "evidence": {
+          "reason": "active state learning is evaluated in research mode"
+        },
+        "name": "without-active-state-learning",
+        "profile_scope": "research",
+        "selector_mode": null,
+        "status": "not_applicable"
+      },
+      {
+        "baseline_id": "B6",
+        "evidence": {
+          "reason": "robust sequential sampling is evaluated in stochastic profiles"
+        },
+        "name": "without-robust-sequential-sampling",
+        "profile_scope": "stochastic",
+        "selector_mode": null,
+        "status": "not_applicable"
+      },
+      {
+        "baseline_id": "B7",
+        "evidence": {
+          "analysis_scope": "public-symbolic-development-audit",
+          "artifact": "runs/standard-profile-audit-m7/standard-profile-audit.json",
+          "oracle_collision_logical_relations": 16,
+          "targets_met": {
+            "blind_scan_worst_logical_le_64": true,
+            "median_useful_bits_in_range": true,
+            "one_shot_max_bits_le_4": true,
+            "oracle_collision_logical_eq_16": true
+          },
+          "uses_black_box_recovery": false
+        },
+        "name": "whitebox-greedy-oracle-upper-bound",
+        "profile_scope": "development",
+        "selector_mode": null,
+        "status": "measured"
+      }
+    ],
+    "surface_version": "B0-B7/v1"
+  },
+  "campaigns": 7,
   "matrix_name": "standard-primary",
   "off_control": true,
+  "paired_bootstrap_confidence_intervals": {
+    "bootstrap_samples": 2000,
+    "comparisons": [
+      {
+        "baseline": "kb_no_synthesis",
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "exact_success_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "kb_no_synthesis",
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "kb_no_synthesis",
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "random",
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "exact_success_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "random",
+        "ci_high": 5.0,
+        "ci_low": 5.0,
+        "estimate": 5.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "random",
+        "ci_high": 10.0,
+        "ci_low": 10.0,
+        "estimate": 10.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "random_final_guess",
+        "ci_high": 1.0,
+        "ci_low": 1.0,
+        "estimate": 1.0,
+        "fault_assignment": "reference",
+        "metric": "exact_success_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "random_final_guess",
+        "ci_high": 45.0,
+        "ci_low": 45.0,
+        "estimate": 45.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "random_final_guess",
+        "ci_high": 90.0,
+        "ci_low": 90.0,
+        "estimate": 90.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "stateless",
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "exact_success_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "stateless",
+        "ci_high": 4.0,
+        "ci_low": 4.0,
+        "estimate": 4.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "stateless",
+        "ci_high": 8.0,
+        "ci_low": 8.0,
+        "estimate": 8.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "synthesis_no_kb",
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "exact_success_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "synthesis_no_kb",
+        "ci_high": 11.0,
+        "ci_low": 11.0,
+        "estimate": 11.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      },
+      {
+        "baseline": "synthesis_no_kb",
+        "ci_high": 22.0,
+        "ci_low": 22.0,
+        "estimate": 22.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions_delta",
+        "paired_seed_count": 1,
+        "variant": "full"
+      }
+    ],
+    "confidence_level": 0.95,
+    "method": "paired-seed-percentile/v1",
+    "metrics": [
+      {
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "off",
+        "metric": "exact_rate",
+        "selector_mode": "full",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 64.0,
+        "ci_low": 64.0,
+        "estimate": 64.0,
+        "fault_assignment": "off",
+        "metric": "logical_relation_families",
+        "selector_mode": "full",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 128.0,
+        "ci_low": 128.0,
+        "estimate": 128.0,
+        "fault_assignment": "off",
+        "metric": "physical_executions",
+        "selector_mode": "full",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 1.0,
+        "ci_low": 1.0,
+        "estimate": 1.0,
+        "fault_assignment": "reference",
+        "metric": "exact_rate",
+        "selector_mode": "full",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 45.0,
+        "ci_low": 45.0,
+        "estimate": 45.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families",
+        "selector_mode": "full",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 90.0,
+        "ci_low": 90.0,
+        "estimate": 90.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions",
+        "selector_mode": "full",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 1.0,
+        "ci_low": 1.0,
+        "estimate": 1.0,
+        "fault_assignment": "reference",
+        "metric": "exact_rate",
+        "selector_mode": "kb_no_synthesis",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 45.0,
+        "ci_low": 45.0,
+        "estimate": 45.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families",
+        "selector_mode": "kb_no_synthesis",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 90.0,
+        "ci_low": 90.0,
+        "estimate": 90.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions",
+        "selector_mode": "kb_no_synthesis",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 1.0,
+        "ci_low": 1.0,
+        "estimate": 1.0,
+        "fault_assignment": "reference",
+        "metric": "exact_rate",
+        "selector_mode": "random",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 40.0,
+        "ci_low": 40.0,
+        "estimate": 40.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families",
+        "selector_mode": "random",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 80.0,
+        "ci_low": 80.0,
+        "estimate": 80.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions",
+        "selector_mode": "random",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "exact_rate",
+        "selector_mode": "random_final_guess",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families",
+        "selector_mode": "random_final_guess",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 0.0,
+        "ci_low": 0.0,
+        "estimate": 0.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions",
+        "selector_mode": "random_final_guess",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 1.0,
+        "ci_low": 1.0,
+        "estimate": 1.0,
+        "fault_assignment": "reference",
+        "metric": "exact_rate",
+        "selector_mode": "stateless",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 41.0,
+        "ci_low": 41.0,
+        "estimate": 41.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families",
+        "selector_mode": "stateless",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 82.0,
+        "ci_low": 82.0,
+        "estimate": 82.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions",
+        "selector_mode": "stateless",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 1.0,
+        "ci_low": 1.0,
+        "estimate": 1.0,
+        "fault_assignment": "reference",
+        "metric": "exact_rate",
+        "selector_mode": "synthesis_no_kb",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 34.0,
+        "ci_low": 34.0,
+        "estimate": 34.0,
+        "fault_assignment": "reference",
+        "metric": "logical_relation_families",
+        "selector_mode": "synthesis_no_kb",
+        "unit_count": 1
+      },
+      {
+        "ci_high": 68.0,
+        "ci_low": 68.0,
+        "estimate": 68.0,
+        "fault_assignment": "reference",
+        "metric": "physical_executions",
+        "selector_mode": "synthesis_no_kb",
+        "unit_count": 1
+      }
+    ],
+    "seed": 901337,
+    "unit": "challenge_seed"
+  },
   "profile_name": "standard",
   "reference_faults": [
     "reference"
   ],
-  "report_version": "1.0",
+  "report_version": "1.1",
   "results": [
     {
-      "challenge_id": "standard-full-reference-50000",
+      "challenge_id": "challenge-0001",
+      "cost": {
+        "hard_resets": 90,
+        "last_public_physical_remaining": 4910,
+        "logical_relation_families": 45,
+        "physical_executions": 90
+      },
+      "fault_assignment": "reference",
+      "judge_accepted": true,
+      "remaining_secret_candidates": 1,
+      "run": "runs/kb_no_synthesis-reference-seed-50000",
+      "seed": 50000,
+      "selector_mode": "kb_no_synthesis",
+      "status": "unique_exact"
+    },
+    {
+      "challenge_id": "challenge-0001",
+      "cost": {
+        "hard_resets": 82,
+        "last_public_physical_remaining": 4918,
+        "logical_relation_families": 41,
+        "physical_executions": 82
+      },
+      "fault_assignment": "reference",
+      "judge_accepted": true,
+      "remaining_secret_candidates": 1,
+      "run": "runs/stateless-reference-seed-50000",
+      "seed": 50000,
+      "selector_mode": "stateless",
+      "status": "unique_exact"
+    },
+    {
+      "challenge_id": "challenge-0001",
       "cost": {
         "hard_resets": 68,
         "last_public_physical_remaining": 4932,
         "logical_relation_families": 34,
         "physical_executions": 68
+      },
+      "fault_assignment": "reference",
+      "judge_accepted": true,
+      "remaining_secret_candidates": 1,
+      "run": "runs/synthesis_no_kb-reference-seed-50000",
+      "seed": 50000,
+      "selector_mode": "synthesis_no_kb",
+      "status": "unique_exact"
+    },
+    {
+      "challenge_id": "challenge-0001",
+      "cost": {
+        "hard_resets": 80,
+        "last_public_physical_remaining": 4920,
+        "logical_relation_families": 40,
+        "physical_executions": 80
+      },
+      "fault_assignment": "reference",
+      "judge_accepted": true,
+      "remaining_secret_candidates": 1,
+      "run": "runs/random-reference-seed-50000",
+      "seed": 50000,
+      "selector_mode": "random",
+      "status": "unique_exact"
+    },
+    {
+      "challenge_id": "challenge-0001",
+      "cost": {
+        "hard_resets": 0,
+        "last_public_physical_remaining": null,
+        "logical_relation_families": 0,
+        "physical_executions": 0
+      },
+      "fault_assignment": "reference",
+      "judge_accepted": false,
+      "remaining_secret_candidates": 4294967296,
+      "run": "runs/random_final_guess-reference-seed-50000",
+      "seed": 50000,
+      "selector_mode": "random_final_guess",
+      "status": "candidate_set"
+    },
+    {
+      "challenge_id": "challenge-0001",
+      "cost": {
+        "hard_resets": 90,
+        "last_public_physical_remaining": 4910,
+        "logical_relation_families": 45,
+        "physical_executions": 90
       },
       "fault_assignment": "reference",
       "judge_accepted": true,
@@ -42,7 +587,7 @@
       "status": "unique_exact"
     },
     {
-      "challenge_id": "standard-full-off-50000",
+      "challenge_id": "challenge-0001",
       "cost": {
         "hard_resets": 128,
         "last_public_physical_remaining": 4872,
@@ -55,25 +600,11 @@
       "run": "runs/full-off-seed-50000",
       "seed": 50000,
       "selector_mode": "full",
-      "status": "inconclusive"
+      "status": "candidate_set"
     }
   ],
   "seed_file": "benchmarks/seeds/evaluation.txt",
   "summaries": [
-    {
-      "campaigns": 1,
-      "exact_rate": 1.0,
-      "false_exact": 0,
-      "fault_assignment": "reference",
-      "judge_accepted": 1,
-      "max_logical_relation_families": 34,
-      "max_physical_executions": 68,
-      "median_logical_relation_families": 34.0,
-      "median_physical_executions": 68.0,
-      "p95_logical_relation_families": 34.0,
-      "selector_mode": "full",
-      "unique_exact": 1
-    },
     {
       "campaigns": 1,
       "exact_rate": 0.0,
@@ -87,9 +618,98 @@
       "p95_logical_relation_families": 64.0,
       "selector_mode": "full",
       "unique_exact": 0
+    },
+    {
+      "campaigns": 1,
+      "exact_rate": 1.0,
+      "false_exact": 0,
+      "fault_assignment": "reference",
+      "judge_accepted": 1,
+      "max_logical_relation_families": 45,
+      "max_physical_executions": 90,
+      "median_logical_relation_families": 45.0,
+      "median_physical_executions": 90.0,
+      "p95_logical_relation_families": 45.0,
+      "selector_mode": "full",
+      "unique_exact": 1
+    },
+    {
+      "campaigns": 1,
+      "exact_rate": 1.0,
+      "false_exact": 0,
+      "fault_assignment": "reference",
+      "judge_accepted": 1,
+      "max_logical_relation_families": 45,
+      "max_physical_executions": 90,
+      "median_logical_relation_families": 45.0,
+      "median_physical_executions": 90.0,
+      "p95_logical_relation_families": 45.0,
+      "selector_mode": "kb_no_synthesis",
+      "unique_exact": 1
+    },
+    {
+      "campaigns": 1,
+      "exact_rate": 1.0,
+      "false_exact": 0,
+      "fault_assignment": "reference",
+      "judge_accepted": 1,
+      "max_logical_relation_families": 40,
+      "max_physical_executions": 80,
+      "median_logical_relation_families": 40.0,
+      "median_physical_executions": 80.0,
+      "p95_logical_relation_families": 40.0,
+      "selector_mode": "random",
+      "unique_exact": 1
+    },
+    {
+      "campaigns": 1,
+      "exact_rate": 0.0,
+      "false_exact": 0,
+      "fault_assignment": "reference",
+      "judge_accepted": 0,
+      "max_logical_relation_families": 0,
+      "max_physical_executions": 0,
+      "median_logical_relation_families": 0.0,
+      "median_physical_executions": 0.0,
+      "p95_logical_relation_families": 0.0,
+      "selector_mode": "random_final_guess",
+      "unique_exact": 0
+    },
+    {
+      "campaigns": 1,
+      "exact_rate": 1.0,
+      "false_exact": 0,
+      "fault_assignment": "reference",
+      "judge_accepted": 1,
+      "max_logical_relation_families": 41,
+      "max_physical_executions": 82,
+      "median_logical_relation_families": 41.0,
+      "median_physical_executions": 82.0,
+      "p95_logical_relation_families": 41.0,
+      "selector_mode": "stateless",
+      "unique_exact": 1
+    },
+    {
+      "campaigns": 1,
+      "exact_rate": 1.0,
+      "false_exact": 0,
+      "fault_assignment": "reference",
+      "judge_accepted": 1,
+      "max_logical_relation_families": 34,
+      "max_physical_executions": 68,
+      "median_logical_relation_families": 34.0,
+      "median_physical_executions": 68.0,
+      "p95_logical_relation_families": 34.0,
+      "selector_mode": "synthesis_no_kb",
+      "unique_exact": 1
     }
   ],
   "variants": [
-    "full"
+    "random_final_guess",
+    "full",
+    "random",
+    "stateless",
+    "kb_no_synthesis",
+    "synthesis_no_kb"
   ]
 }

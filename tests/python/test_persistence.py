@@ -8,14 +8,19 @@ import sqlite3
 from dataclasses import replace
 from pathlib import Path
 
+import jsonschema
 import pytest
 
 from sphinx_interrogator.persistence import (
     CampaignManifest,
     CampaignRepository,
+    CampaignResultStatus,
     EventLog,
     PersistenceError,
 )
+
+ROOT = Path(__file__).resolve().parents[2]
+MANIFEST_SCHEMA = json.loads((ROOT / "spec/campaign-manifest.schema.json").read_text("utf-8"))
 
 
 def _manifest() -> CampaignManifest:
@@ -140,6 +145,41 @@ def test_manifest_reads_version_one_runs_without_inventing_a_commitment(
     (transitional_root / "manifest.json").write_text(json.dumps(transitional), encoding="utf-8")
     reopened = CampaignRepository.open(transitional_root)
     assert reopened.manifest == _manifest()
+    reopened.close()
+
+
+def test_manifest_v12_records_reproducibility_status_and_artifact_hashes(tmp_path: Path) -> None:
+    """Finalized manifests bind revision, command, timing, status, versions, and artifacts."""
+    root = tmp_path / "run"
+    base = _manifest()
+    repository = CampaignRepository.create(root, base)
+    artifact = root / "report.json"
+    artifact.write_text('{"status":"unique_exact"}\n', encoding="utf-8")
+
+    finalized = repository.finalize_manifest(
+        status=CampaignResultStatus.UNIQUE_EXACT,
+        artifact_paths={"report.json": artifact},
+        started_at="2026-07-16T15:00:00Z",
+        ended_at="2026-07-16T15:00:01Z",
+        duration_ms=1000,
+        command_argv=("sphinx-interrogate", "recover"),
+        command_cwd=str(ROOT),
+    )
+    data = finalized.to_data()
+    jsonschema.Draft202012Validator(MANIFEST_SCHEMA).validate(data)
+    assert data["manifest_version"] == "1.2"
+    assert data["status"] == "unique_exact"
+    assert data["repository"]
+    assert data["versions"]
+    assert data["command"] == {"argv": ["sphinx-interrogate", "recover"], "cwd": str(ROOT)}
+    assert data["timing"]["duration_ms"] == 1000
+    assert data["artifact_hashes"] == {
+        "report.json": hashlib.sha256(artifact.read_bytes()).hexdigest()
+    }
+    repository.close()
+
+    reopened = CampaignRepository.create(root, base)
+    assert reopened.manifest == finalized
     reopened.close()
 
 

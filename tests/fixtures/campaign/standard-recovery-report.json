@@ -17,7 +17,9 @@
   },
   "evidence": {
     "cegis_refinements": 0,
+    "frontier_candidates": 136,
     "hard_bounded_constraints": 16,
+    "knowledge_relations": 34,
     "result_class": "bounded-hard-exact",
     "stochastic_soft_groups": 0
   },

@@ -5,16 +5,15 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 
 from sphinx_interrogator.tutorial import recover_tutorial
+from sphinx_trusted_runtime import create_challenge, create_private_root, launch_endpoints
 
 ROOT = Path(__file__).resolve().parents[1]
-SEED = 7
 CAMPAIGN_SEED = 17
 
 
@@ -28,41 +27,35 @@ def main() -> int:
     if not binary.is_file():
         print(f"SphinxVM binary does not exist: {binary}", file=sys.stderr)
         return 2
-    run_directory = ROOT / "runs/tutorial-demo-v2-seed-7"
+    run_directory = ROOT / "runs/tutorial-demo-v3"
+    private_root = ROOT / "runs/.private-roots/tutorial-demo-v3.root"
+    if not private_root.exists():
+        create_private_root(binary, private_root)
     with tempfile.TemporaryDirectory(prefix="sphinx-tutorial-demo-") as temporary:
-        challenge = Path(temporary) / "challenge"
-        created = subprocess.run(
-            [
-                str(binary),
-                "challenge",
-                "create",
-                "--profile",
-                str(ROOT / "benchmarks/profiles/tutorial.toml"),
-                "--output",
-                str(challenge),
-                "--challenge-id",
-                "tutorial-demo-seed-7",
-                "--seed",
-                str(SEED),
-                "--fault",
-                "reference",
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=10,
+        temporary_root = Path(temporary)
+        bundle = create_challenge(
+            binary,
+            profile=ROOT / "benchmarks/profiles/tutorial.toml",
+            root=temporary_root / "challenge",
+            private_root_file=private_root,
+            challenge_id="challenge-0001",
+            campaign_label="campaign-0001",
+            fault="reference",
         )
-        if created.returncode != 0:
-            print(created.stderr.strip(), file=sys.stderr)
-            return 1
-        result = recover_tutorial(
-            vm_binary=binary,
-            challenge=challenge,
-            run_directory=run_directory,
-            campaign_seed=CAMPAIGN_SEED,
-            submit_judge=True,
-        )
+        with launch_endpoints(
+            binary,
+            bundle,
+            socket_directory=temporary_root / "sockets",
+            with_judge=True,
+        ) as endpoints:
+            result = recover_tutorial(
+                public_challenge=endpoints.public_directory,
+                vm_socket=endpoints.vm_socket,
+                judge_socket=endpoints.judge_socket,
+                run_directory=run_directory,
+                campaign_seed=CAMPAIGN_SEED,
+                submit_judge=True,
+            )
     cost = _mapping(result.report, "cost")
     judge = _mapping(result.report, "judge")
     output = {

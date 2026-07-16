@@ -6,7 +6,10 @@ import hashlib
 import json
 import os
 import subprocess
+import tempfile
 import tomllib
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +43,13 @@ from sphinx_interrogator.synthesis import (
     SynthesisStatus,
 )
 from sphinx_interrogator.tutorial import recover_tutorial
+from sphinx_trusted_runtime import (
+    ChallengeBundle,
+    PublicEndpoints,
+    create_challenge,
+    create_private_root,
+    launch_endpoints,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = ROOT / "benchmarks/profiles/tutorial.toml"
@@ -72,65 +82,104 @@ def _create_challenge(
     challenge_id: str,
     seed: int,
     fault: str,
+    private_root_file: Path | None = None,
 ) -> Path:
-    completed = subprocess.run(
-        [
-            str(vm_binary()),
-            "challenge",
-            "create",
-            "--profile",
-            str(profile),
-            "--output",
-            str(output),
-            "--challenge-id",
-            challenge_id,
-            "--seed",
-            str(seed),
-            "--fault",
-            fault,
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=10,
+    root_file = private_root_file or output / "private-root.bin"
+    if not root_file.exists():
+        create_private_root(vm_binary(), root_file)
+    create_challenge(
+        vm_binary(),
+        profile=profile,
+        root=output,
+        private_root_file=root_file,
+        challenge_id=challenge_id,
+        campaign_label=f"campaign-{seed}",
+        fault=fault,
     )
-    assert completed.returncode == 0, completed.stderr
     return output
+
+
+def _bundle(challenge: Path) -> ChallengeBundle:
+    return ChallengeBundle(
+        challenge / "public",
+        challenge / "private",
+        challenge / "private-root.bin",
+    )
+
+
+@contextmanager
+def _endpoints(challenge: Path, *, with_judge: bool = False) -> Iterator[PublicEndpoints]:
+    with (
+        tempfile.TemporaryDirectory(prefix="sphinx-pytest-sockets-") as temporary,
+        launch_endpoints(
+            vm_binary(),
+            _bundle(challenge),
+            socket_directory=Path(temporary),
+            with_judge=with_judge,
+        ) as endpoints,
+    ):
+        yield endpoints
+
+
+@contextmanager
+def _vm_client(challenge: Path) -> Iterator[VmClient]:
+    with (
+        _endpoints(challenge) as endpoints,
+        VmClient.connect_unix(endpoints.vm_socket, timeout_seconds=2.0) as client,
+    ):
+        yield client
+
+
+def _run_tutorial(
+    challenge: Path,
+    *,
+    run_directory: Path,
+    campaign_seed: int,
+    submit_judge: bool,
+):
+    with _endpoints(challenge, with_judge=submit_judge) as endpoints:
+        return recover_tutorial(
+            public_challenge=endpoints.public_directory,
+            vm_socket=endpoints.vm_socket,
+            judge_socket=endpoints.judge_socket,
+            run_directory=run_directory,
+            campaign_seed=campaign_seed,
+            submit_judge=submit_judge,
+        )
+
+
+def _run_standard(
+    challenge: Path,
+    *,
+    run_directory: Path,
+    campaign_seed: int,
+    selector_mode: StandardSelectorMode,
+    submit_judge: bool,
+):
+    with _endpoints(challenge, with_judge=submit_judge) as endpoints:
+        return recover_standard(
+            public_challenge=endpoints.public_directory,
+            vm_socket=endpoints.vm_socket,
+            judge_socket=endpoints.judge_socket,
+            run_directory=run_directory,
+            campaign_seed=campaign_seed,
+            selector_mode=selector_mode,
+            submit_judge=submit_judge,
+        )
 
 
 @pytest.fixture
 def challenge(tmp_path: Path) -> Path:
     """Create one isolated deterministic tutorial challenge through the real CLI."""
-    output = tmp_path / "challenge"
-    completed = subprocess.run(
-        [
-            str(vm_binary()),
-            "challenge",
-            "create",
-            "--profile",
-            str(PROFILE),
-            "--output",
-            str(output),
-            "--challenge-id",
-            "pytest-challenge",
-            "--seed",
-            "20260715",
-            "--fault",
-            "reference",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=5,
+    output = _create_challenge(
+        profile=PROFILE,
+        output=tmp_path / "challenge",
+        challenge_id="pytest-challenge",
+        seed=20_260_715,
+        fault="reference",
     )
-    assert completed.returncode == 0, completed.stderr
-    generated = json.loads(completed.stdout)
     public = json.loads((output / "public/challenge.json").read_text(encoding="utf-8"))
-    jsonschema.Draft202012Validator(CHALLENGE_SCHEMA).validate(generated)
     jsonschema.Draft202012Validator(CHALLENGE_SCHEMA).validate(public)
-    assert generated == public
     with (output / "public/profile.toml").open("rb") as handle:
         public_profile = tomllib.load(handle)
     assert not {
@@ -141,6 +190,7 @@ def challenge(tmp_path: Path) -> Path:
         "secret",
     }.intersection(public_profile)
     if os.name == "posix":
+        assert (output / "private-root.bin").stat().st_mode & 0o777 == 0o600
         assert (output / "private").stat().st_mode & 0o777 == 0o700
         assert (output / "private/secret.bin").stat().st_mode & 0o777 == 0o600
     return output
@@ -149,7 +199,7 @@ def challenge(tmp_path: Path) -> Path:
 @pytest.mark.integration
 def test_client_round_trip_tracks_public_budgets_and_versions(challenge: Path) -> None:
     """Python must negotiate and execute only through the real process boundary."""
-    with VmClient.start(vm_binary(), challenge=challenge, timeout_seconds=2.0) as client:
+    with _vm_client(challenge) as client:
         hello = client.hello()
         assert hello.profile_name == "tutorial"
         assert hello.capabilities == ("close", "execute", "hard_reset", "soft_reset")
@@ -200,7 +250,14 @@ def test_server_recovers_after_malformed_and_oversized_lines(challenge: Path) ->
         ),
     ]
     completed = subprocess.run(
-        [str(vm_binary()), "serve", "--challenge", str(challenge)],
+        [
+            str(vm_binary()),
+            "serve",
+            "--public-challenge",
+            str(challenge / "public"),
+            "--private-challenge",
+            str(challenge / "private"),
+        ],
         input="\n".join(requests) + "\n",
         capture_output=True,
         text=True,
@@ -227,7 +284,7 @@ def test_python_canonical_program_and_sparse_memory_execute_in_rust(challenge: P
     """The independent Python representation is accepted by the authoritative parser."""
     source = (ROOT / "tests/fixtures/programs/full-v1.source.spx").read_text(encoding="utf-8")
     canonical = Program.parse(source, lanes=4).render()
-    with VmClient.start(vm_binary(), challenge=challenge, timeout_seconds=2.0) as client:
+    with _vm_client(challenge) as client:
         client.hello()
         golden = client.execute(
             canonical,
@@ -253,37 +310,23 @@ def test_python_canonical_program_and_sparse_memory_execute_in_rust(challenge: P
 def test_fault_assignment_changes_only_aggregate_observation(tmp_path: Path) -> None:
     """Off/reference challenges share architecture while one guarded bank gets one cycle."""
     challenges: dict[str, Path] = {}
+    private_root = tmp_path / "shared-private-root.bin"
+    create_private_root(vm_binary(), private_root)
     for variant in ("off", "reference"):
-        output = tmp_path / variant
-        completed = subprocess.run(
-            [
-                str(vm_binary()),
-                "challenge",
-                "create",
-                "--profile",
-                str(PROFILE),
-                "--output",
-                str(output),
-                "--challenge-id",
-                f"process-{variant}",
-                "--seed",
-                "314159",
-                "--fault",
-                variant,
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=5,
+        output = _create_challenge(
+            profile=PROFILE,
+            output=tmp_path / variant,
+            challenge_id="process-challenge",
+            seed=314_159,
+            fault=variant,
+            private_root_file=private_root,
         )
-        assert completed.returncode == 0, completed.stderr
         challenges[variant] = output
 
     outcomes: dict[str, list[tuple[int, str]]] = {}
     for variant, challenge_path in challenges.items():
         variant_outcomes: list[tuple[int, str]] = []
-        with VmClient.start(vm_binary(), challenge=challenge_path, timeout_seconds=2.0) as client:
+        with _vm_client(challenge_path) as client:
             client.hello()
             for bank in range(4):
                 result = client.execute(
@@ -311,8 +354,10 @@ def test_judge_records_only_one_schema_valid_submission(challenge: Path) -> None
     command = [
         str(vm_binary()),
         "judge",
-        "--challenge",
-        str(challenge),
+        "--public-challenge",
+        str(challenge / "public"),
+        "--private-challenge",
+        str(challenge / "private"),
         "--campaign-token",
         public["campaign_token"],
         "--guess",
@@ -348,34 +393,17 @@ def test_judge_records_only_one_schema_valid_submission(challenge: Path) -> None
 @pytest.mark.integration
 def test_seeded_standard_transcript_replays_across_fresh_processes(tmp_path: Path) -> None:
     """A fixed challenge and public schedule reproduce seeded jitter exactly."""
-    output = tmp_path / "standard"
-    completed = subprocess.run(
-        [
-            str(vm_binary()),
-            "challenge",
-            "create",
-            "--profile",
-            str(ROOT / "benchmarks/profiles/standard.toml"),
-            "--output",
-            str(output),
-            "--challenge-id",
-            "standard-replay",
-            "--seed",
-            "271828",
-            "--fault",
-            "reference",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=5,
+    output = _create_challenge(
+        profile=ROOT / "benchmarks/profiles/standard.toml",
+        output=tmp_path / "standard",
+        challenge_id="standard-replay",
+        seed=271_828,
+        fault="reference",
     )
-    assert completed.returncode == 0, completed.stderr
 
     def transcript() -> list[tuple[int, int, str]]:
         observations: list[tuple[int, int, str]] = []
-        with VmClient.start(vm_binary(), challenge=output, timeout_seconds=2.0) as client:
+        with _vm_client(output) as client:
             client.hello()
             for repetition in range(3):
                 result = client.execute(
@@ -479,7 +507,7 @@ def test_certified_relation_arms_match_authoritative_rust_semantics(challenge: P
         )
     )
 
-    with VmClient.start(vm_binary(), challenge=challenge, timeout_seconds=2.0) as client:
+    with _vm_client(challenge) as client:
         client.hello()
         for relation_index, relation in enumerate(relations):
             results = []
@@ -546,29 +574,29 @@ def test_durable_harness_records_real_wire_bytes_before_materialization(
             "status": "scheduled",
         },
     )
-    harness, client = DurableExecutionHarness.start_process(
-        repository,
-        vm_binary(),
-        challenge=challenge,
-        timeout_seconds=2.0,
-    )
-    try:
-        client.hello()
-        result = harness.execute(
-            ExecutionSpec(
-                execution_id="live-execution",
-                query_id="live-query",
-                batch_id="live-batch",
-                position=0,
-                program=program,
-                session_id="live-session",
-                reset="hard",
-                logical_time=1,
-                execution_seed_id="live-seed",
-            )
+    with _endpoints(challenge) as endpoints:
+        harness, client = DurableExecutionHarness.connect_unix(
+            repository,
+            socket_path=endpoints.vm_socket,
+            timeout_seconds=2.0,
         )
-    finally:
-        client.close()
+        try:
+            client.hello()
+            result = harness.execute(
+                ExecutionSpec(
+                    execution_id="live-execution",
+                    query_id="live-query",
+                    batch_id="live-batch",
+                    position=0,
+                    program=program,
+                    session_id="live-session",
+                    reset="hard",
+                    logical_time=1,
+                    execution_seed_id="live-seed",
+                )
+            )
+        finally:
+            client.close()
     assert result.request_id == "live-execution"
     raw = repository.raw.get("live-execution")
     assert raw is not None
@@ -587,9 +615,8 @@ def test_tutorial_campaign_recovers_uniquely_judges_once_and_resumes(
 ) -> None:
     """The complete M5 flow recovers through relations and reuses its accepted report."""
     run = tmp_path / "tutorial-run"
-    first = recover_tutorial(
-        vm_binary=vm_binary(),
-        challenge=challenge,
+    first = _run_tutorial(
+        challenge,
         run_directory=run,
         campaign_seed=53,
         submit_judge=True,
@@ -602,14 +629,21 @@ def test_tutorial_campaign_recovers_uniquely_judges_once_and_resumes(
     assert first.report["judge"]["submission_recorded"] is True
     assert first.report["judge"]["accepted"] is True
     repository = CampaignRepository.open(run)
+    manifest_data = repository.manifest.to_data()
+    assert manifest_data["manifest_version"] == "1.2"
+    assert manifest_data["status"] == "unique_exact"
+    assert set(manifest_data["artifact_hashes"]) == {
+        "report.json",
+        "events.jsonl",
+        "campaign.sqlite3",
+    }
     assert repository.database.table_count("judge_submissions") == 1
     digest = repository.database.digest()
     assert repository.rebuild() == digest
     repository.close()
 
-    resumed = recover_tutorial(
-        vm_binary=vm_binary(),
-        challenge=challenge,
+    resumed = _run_tutorial(
+        challenge,
         run_directory=run,
         campaign_seed=53,
         submit_judge=True,
@@ -628,9 +662,8 @@ def test_standard_campaign_recovers_judges_once_and_resumes(tmp_path: Path) -> N
         fault="reference",
     )
     run = tmp_path / "standard-reference-run"
-    first = recover_standard(
-        vm_binary=vm_binary(),
-        challenge=challenge,
+    first = _run_standard(
+        challenge,
         run_directory=run,
         campaign_seed=60_000,
         selector_mode=StandardSelectorMode.FULL,
@@ -646,14 +679,21 @@ def test_standard_campaign_recovers_judges_once_and_resumes(tmp_path: Path) -> N
     assert first.report["cost"]["physical_executions"] <= 128
     assert first.report["evidence"]["hard_bounded_constraints"] == 16
     repository = CampaignRepository.open(run)
+    manifest_data = repository.manifest.to_data()
+    assert manifest_data["manifest_version"] == "1.2"
+    assert manifest_data["status"] == "unique_exact"
+    assert set(manifest_data["artifact_hashes"]) == {
+        "report.json",
+        "events.jsonl",
+        "campaign.sqlite3",
+    }
     assert repository.database.table_count("judge_submissions") == 1
     digest = repository.database.digest()
     assert repository.rebuild() == digest
     repository.close()
 
-    resumed = recover_standard(
-        vm_binary=vm_binary(),
-        challenge=challenge,
+    resumed = _run_standard(
+        challenge,
         run_directory=run,
         campaign_seed=60_000,
         selector_mode=StandardSelectorMode.FULL,
@@ -668,39 +708,24 @@ def test_standard_campaign_recovers_judges_once_and_resumes(tmp_path: Path) -> N
 @pytest.mark.integration
 def test_fault_free_tutorial_control_never_declares_exact_recovery(tmp_path: Path) -> None:
     """All equal off-fault observations retain every secret and never invoke the judge."""
-    challenge = tmp_path / "fault-free-challenge"
-    created = subprocess.run(
-        [
-            str(vm_binary()),
-            "challenge",
-            "create",
-            "--profile",
-            str(PROFILE),
-            "--output",
-            str(challenge),
-            "--challenge-id",
-            "tutorial-fault-free",
-            "--seed",
-            "59",
-            "--fault",
-            "off",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=5,
+    challenge = _create_challenge(
+        profile=PROFILE,
+        output=tmp_path / "fault-free-challenge",
+        challenge_id="tutorial-fault-free",
+        seed=59,
+        fault="off",
     )
-    assert created.returncode == 0, created.stderr
-    result = recover_tutorial(
-        vm_binary=vm_binary(),
-        challenge=challenge,
+    result = _run_tutorial(
+        challenge,
         run_directory=tmp_path / "fault-free-run",
         campaign_seed=61,
         submit_judge=False,
     )
     jsonschema.Draft202012Validator(RECOVERY_REPORT_SCHEMA).validate(result.report)
-    assert result.status == "inconclusive"
+    assert result.status == "candidate_set"
+    repository = CampaignRepository.open(tmp_path / "fault-free-run")
+    assert repository.manifest.to_data()["status"] == "candidate_set"
+    repository.close()
     assert result.report["unique_secret_hex"] is None
     assert result.report["uniqueness"]["alternative_model_unsat"] is False
     assert result.report["judge"] is None
@@ -716,16 +741,18 @@ def test_fault_free_standard_control_never_declares_exact_recovery(tmp_path: Pat
         seed=50_000,
         fault="off",
     )
-    result = recover_standard(
-        vm_binary=vm_binary(),
-        challenge=challenge,
+    result = _run_standard(
+        challenge,
         run_directory=tmp_path / "standard-off-run",
         campaign_seed=60_001,
         selector_mode=StandardSelectorMode.FULL,
         submit_judge=True,
     )
     jsonschema.Draft202012Validator(STANDARD_RECOVERY_REPORT_SCHEMA).validate(result.report)
-    assert result.status == "inconclusive"
+    assert result.status == "candidate_set"
+    repository = CampaignRepository.open(tmp_path / "standard-off-run")
+    assert repository.manifest.to_data()["status"] == "candidate_set"
+    repository.close()
     assert result.report["unique_secret_hex"] is None
     assert result.report["remaining_secret_candidates"] == 16**8
     assert result.report["uniqueness"]["alternative_model_unsat"] is False
@@ -758,7 +785,7 @@ def test_synthesized_typed_relation_executes_through_public_process(challenge: P
     assert relation.architectural_precheck()
     assert relation.fault_free_precheck()
 
-    with VmClient.start(vm_binary(), challenge=challenge, timeout_seconds=2.0) as client:
+    with _vm_client(challenge) as client:
         hello = client.hello()
         source = client.execute(
             relation.source_program.render(),

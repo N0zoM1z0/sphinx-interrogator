@@ -6,7 +6,6 @@ import hashlib
 import json
 import math
 import os
-import subprocess
 import time
 import tomllib
 from collections.abc import Mapping
@@ -17,15 +16,31 @@ from typing import cast
 
 from sphinx_interrogator.certificates import ProofMethod
 from sphinx_interrogator.constraints import ConstraintExtraction, ExtractionStatus
-from sphinx_interrogator.frontier import ActiveFrontier, NoveltyStatus
+from sphinx_interrogator.frontier import (
+    ActiveFrontier,
+    FrontierCandidate,
+    NoveltyStatus,
+)
 from sphinx_interrogator.harness import (
     DurableExecutionHarness,
     ExecutionSpec,
     balanced_pair_schedule,
 )
 from sphinx_interrogator.hypothesis_persistence import CampaignHypotheses
-from sphinx_interrogator.model import ExecutionResult
-from sphinx_interrogator.persistence import CampaignManifest, CampaignRepository
+from sphinx_interrogator.knowledge_base import (
+    InterrogationKnowledgeBase,
+    QueryRecord,
+    RelationRecord,
+)
+from sphinx_interrogator.model import ExecutionResult, OutcomeClass, RelationEvidence
+from sphinx_interrogator.normalization import DecisionKind, PairDecision
+from sphinx_interrogator.persistence import (
+    CampaignManifest,
+    CampaignRepository,
+    CampaignResultStatus,
+    normalize_campaign_result_status,
+)
+from sphinx_interrogator.protocol import submit_judge as submit_judge_request
 from sphinx_interrogator.relations import RelationInstance, RepeatAmplifyTemplate
 from sphinx_interrogator.solver import SolverStatus
 from sphinx_interrogator.synthesis import (
@@ -37,6 +52,7 @@ from sphinx_interrogator.synthesis import (
     SynthesisModel,
     SynthesisResult,
     SynthesisStatus,
+    score_candidate,
 )
 
 _FAULT_VARIANTS = ("off", "reference", "weak", "signed")
@@ -85,22 +101,24 @@ class _Timing:
 
 def recover_standard(
     *,
-    vm_binary: Path,
-    challenge: Path,
+    public_challenge: Path,
+    vm_socket: Path,
+    judge_socket: Path | None,
     run_directory: Path,
     campaign_seed: int,
     selector_mode: StandardSelectorMode = StandardSelectorMode.FULL,
     submit_judge: bool = True,
 ) -> StandardRecoveryResult:
     """Recover one 32-bit identity-profile secret using bounded hard evidence only."""
+    wall_started = time.time()
     started = time.perf_counter()
     timing = _Timing()
     if campaign_seed < 0:
         raise ValueError("campaign seed must be nonnegative")
-    if not vm_binary.is_file():
-        raise ValueError("SphinxVM binary does not exist")
-    public = _load_object(challenge / "public/challenge.json", "public challenge")
-    profile_path = challenge / "public/profile.toml"
+    if submit_judge and judge_socket is None:
+        raise ValueError("judge socket is required when judge submission is enabled")
+    public = _load_object(public_challenge / "challenge.json", "public challenge")
+    profile_path = public_challenge / "profile.toml"
     profile = _load_profile(profile_path)
     _require_standard_profile(profile)
     challenge_id = _string(public, "challenge_id")
@@ -125,10 +143,11 @@ def recover_standard(
     repository = CampaignRepository.create(run_directory, manifest)
     try:
         hypotheses = CampaignHypotheses(repository)
-        harness, client = DurableExecutionHarness.start_process(
+        knowledge = InterrogationKnowledgeBase()
+        frontier = ActiveFrontier(repository)
+        harness, client = DurableExecutionHarness.connect_unix(
             repository,
-            vm_binary,
-            challenge=challenge,
+            socket_path=vm_socket,
             timeout_seconds=5.0,
         )
         lane_domains = [set(range(16)) for _ in range(_integer(profile, "secret_cells"))]
@@ -162,6 +181,9 @@ def recover_standard(
                             used=used,
                             campaign_seed=campaign_seed,
                             synthesizer=synthesizer,
+                            knowledge=knowledge,
+                            frontier=frontier,
+                            logical_time=relation_index,
                         )
                         timing.synthesis_seconds += time.perf_counter() - selection_started
                         if selected is None:
@@ -169,33 +191,9 @@ def recover_standard(
                         used.add(selected.canonical_key())
                         if synthesis_result is not None:
                             cegis_refinements += len(synthesis_result.counterexamples)
-                            if (
-                                selector_mode is StandardSelectorMode.FULL
-                                and synthesis_result.status is SynthesisStatus.SAT
-                            ):
-                                frontier = ActiveFrontier(repository)
-                                frontier_candidate = synthesis_result.frontier_candidate(
-                                    candidate_id=f"standard-select-{relation_index:03d}",
-                                    expires_after=relation_index,
-                                )
-                                novelty = frontier.consider(
-                                    frontier_candidate,
-                                    logical_time=relation_index,
-                                )
-                                if novelty.status is not NoveltyStatus.NOVEL:
-                                    raise RuntimeError(
-                                        f"synthesized candidate was not novel: {novelty.reason}"
-                                    )
-                                chosen = frontier.select(logical_time=relation_index)
-                                if chosen is None or chosen.candidate_id != (
-                                    f"standard-select-{relation_index:03d}"
-                                ):
-                                    raise RuntimeError(
-                                        "frontier did not select the synthesized query"
-                                    )
                         relation = selected.lower(f"standard-{relation_index:03d}-l{lane}-e{epoch}")
                         execution_started = time.perf_counter()
-                        last_results, extraction = _execute_relation(
+                        last_results, extraction, decision = _execute_relation(
                             repository,
                             hypotheses,
                             harness,
@@ -207,6 +205,12 @@ def recover_standard(
                         )
                         timing.vm_and_wire_persistence_seconds += (
                             time.perf_counter() - execution_started
+                        )
+                        _record_knowledge(
+                            knowledge,
+                            relation,
+                            last_results,
+                            decision,
                         )
                         relation_index += 1
                         if extraction.status is ExtractionStatus.EMITTED:
@@ -282,9 +286,10 @@ def recover_standard(
 
         judge_response: Mapping[str, object] | None = None
         if guessed_secret is not None and submit_judge:
-            judge_response = _submit_judge(
-                vm_binary,
-                challenge,
+            if judge_socket is None:
+                raise RuntimeError("judge socket disappeared after recovery validation")
+            judge_response = submit_judge_request(
+                judge_socket,
                 campaign_token=_string(public, "campaign_token"),
                 guess=guessed_secret,
             )
@@ -302,15 +307,13 @@ def recover_standard(
             )
 
         if solve.status is SolverStatus.UNSAT:
-            status = "inconsistent"
+            status = CampaignResultStatus.MODEL_INCONSISTENT.value
         elif guessed_secret is None:
-            status = "inconclusive"
-        elif judge_response is None:
-            status = "unique_exact_unjudged"
-        elif _boolean(judge_response, "accepted"):
-            status = "unique_exact"
+            status = CampaignResultStatus.CANDIDATE_SET.value
+        elif judge_response is None or _boolean(judge_response, "accepted"):
+            status = CampaignResultStatus.UNIQUE_EXACT.value
         else:
-            status = "judge_rejected"
+            status = CampaignResultStatus.TARGET_ERROR.value
         basic = repository.report()
         total_before_report = time.perf_counter() - started
         report: dict[str, object] = {
@@ -345,6 +348,8 @@ def recover_standard(
                 "hard_bounded_constraints": repository.database.table_count("constraints"),
                 "stochastic_soft_groups": 0,
                 "cegis_refinements": cegis_refinements,
+                "knowledge_relations": len(knowledge.relations),
+                "frontier_candidates": repository.database.table_count("frontier"),
                 "result_class": "bounded-hard-exact",
             },
             "judge": None if judge_response is None else dict(judge_response),
@@ -361,7 +366,19 @@ def recover_standard(
         _write_json(run_directory / "report.json", report)
         timing.report_persistence_seconds += time.perf_counter() - report_started
         report["timing_seconds"] = timing.to_data(time.perf_counter() - started)
-        _write_json(run_directory / "report.json", report)
+        report_path = run_directory / "report.json"
+        _write_json(report_path, report)
+        repository.finalize_manifest(
+            status=_manifest_status(status),
+            artifact_paths={
+                "report.json": report_path,
+                "events.jsonl": run_directory / "events.jsonl",
+                "campaign.sqlite3": run_directory / "campaign.sqlite3",
+            },
+            started_at=_iso_time(wall_started),
+            ended_at=_iso_time(time.time()),
+            duration_ms=int((time.perf_counter() - started) * 1000),
+        )
         return StandardRecoveryResult(status, run_directory, report)
     finally:
         repository.close()
@@ -377,6 +394,9 @@ def _select_candidate(
     used: set[str],
     campaign_seed: int,
     synthesizer: CegisSynthesizer,
+    knowledge: InterrogationKnowledgeBase,
+    frontier: ActiveFrontier,
+    logical_time: int,
 ) -> tuple[RepeatAmplifyCandidate | None, SynthesisResult | None]:
     active_pad = (lane ^ epoch) & 3
     candidates = tuple(
@@ -429,7 +449,56 @@ def _select_candidate(
             return min(candidates, key=lambda candidate: candidate.canonical_key()), result
         if not isinstance(result.score.candidate, RepeatAmplifyCandidate):
             raise RuntimeError("standard grammar returned the wrong relation skeleton")
-        return result.score.candidate, result
+        if mode is StandardSelectorMode.SYNTHESIS_NO_KB:
+            return result.score.candidate, result
+
+        scored = tuple(
+            score_candidate(candidate, committee, result.context) for candidate in candidates
+        )
+        by_key = {candidate.canonical_key(): candidate for candidate in candidates}
+        for candidate_score in scored:
+            candidate = candidate_score.candidate
+            if not isinstance(candidate, RepeatAmplifyCandidate):
+                raise RuntimeError("standard frontier received the wrong candidate type")
+            relation = candidate.lower(f"frontier-{logical_time:03d}-{candidate.anchor}")
+            usage = _knowledge_usage(knowledge, candidate)
+            frontier_candidate = FrontierCandidate(
+                candidate_id=f"standard-frontier-{logical_time:03d}-{candidate.anchor}",
+                structural_key=relation.instance_hash,
+                relation_key=relation.relation_id,
+                state_key="hard-reset/v1",
+                observation_key="bucket:4:noise:1",
+                partition_key=hashlib.sha256(
+                    json.dumps(
+                        candidate_score.to_data(),
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode()
+                ).hexdigest(),
+                semantic_key=candidate.canonical_key(),
+                score=(
+                    candidate_score.partition_score_bits
+                    - candidate_score.worst_bucket_size
+                    + candidate_score.minimum_margin * 0.01
+                    + 1.0 / (1 + usage)
+                ),
+                data={
+                    "candidate": dict(candidate.hole_values()),
+                    "synthesis_score": candidate_score.to_data(),
+                    "knowledge_prior_uses": usage,
+                },
+                expires_after=logical_time,
+            )
+            novelty = frontier.consider(frontier_candidate, logical_time=logical_time)
+            if novelty.status is not NoveltyStatus.NOVEL:
+                raise RuntimeError(f"full frontier rejected a bounded candidate: {novelty.reason}")
+        chosen = frontier.select(logical_time=logical_time)
+        if chosen is None:
+            raise RuntimeError("full frontier contained no selectable candidate")
+        try:
+            return by_key[chosen.semantic_key], result
+        except KeyError as error:
+            raise RuntimeError("frontier selected an unknown candidate") from error
     if mode is StandardSelectorMode.RANDOM:
         selected = min(
             candidates,
@@ -439,8 +508,16 @@ def _select_candidate(
         )
     elif mode is StandardSelectorMode.STATELESS:
         selected = max(candidates, key=lambda candidate: candidate.canonical_key())
+    elif mode is StandardSelectorMode.KB_NO_SYNTHESIS:
+        selected = min(
+            candidates,
+            key=lambda candidate: (
+                _knowledge_usage(knowledge, candidate),
+                candidate.canonical_key(),
+            ),
+        )
     else:
-        selected = min(candidates, key=lambda candidate: candidate.canonical_key())
+        raise RuntimeError(f"unimplemented standard selector mode: {mode.value}")
     return selected, None
 
 
@@ -454,7 +531,7 @@ def _execute_relation(
     campaign_seed: int,
     secret_cells: int,
     noise_bound: int,
-) -> tuple[tuple[ExecutionResult, ExecutionResult], ConstraintExtraction]:
+) -> tuple[tuple[ExecutionResult, ExecutionResult], ConstraintExtraction, PairDecision]:
     logical_time = relation_index + 1
     for query_id, program in zip(
         (relation.source_query_id, *relation.follow_up_query_ids),
@@ -555,7 +632,70 @@ def _execute_relation(
             secret_cells=secret_cells,
             logical_time=logical_time,
         )
-    return (source, follow_up), extraction
+    return (source, follow_up), extraction, decision
+
+
+def _knowledge_usage(
+    knowledge: InterrogationKnowledgeBase,
+    candidate: RepeatAmplifyCandidate,
+) -> int:
+    return sum(
+        record.instance.holes.get("anchor") == candidate.anchor
+        and record.instance.holes.get("epoch") == candidate.epoch
+        for record in knowledge.relations.values()
+    )
+
+
+def _record_knowledge(
+    knowledge: InterrogationKnowledgeBase,
+    relation: RelationInstance,
+    results: tuple[ExecutionResult, ExecutionResult],
+    decision: PairDecision,
+) -> None:
+    source, follow_up = results
+    knowledge.add_query(
+        QueryRecord(
+            relation.source_query_id,
+            relation.source_program.render(),
+            (source,),
+            knowledge.step,
+        )
+    )
+    knowledge.add_query(
+        QueryRecord(
+            relation.follow_up_query_ids[0],
+            relation.follow_up_programs[0].render(),
+            (follow_up,),
+            knowledge.step,
+        )
+    )
+    outcome = {
+        DecisionKind.EXACT_GREATER: OutcomeClass.VIOLATED_POSITIVE,
+        DecisionKind.BOUNDED_GREATER: OutcomeClass.VIOLATED_POSITIVE,
+        DecisionKind.EXACT_LESS: OutcomeClass.VIOLATED_NEGATIVE,
+        DecisionKind.BOUNDED_LESS: OutcomeClass.VIOLATED_NEGATIVE,
+        DecisionKind.EXACT_EQUAL: OutcomeClass.HOLDS,
+        DecisionKind.INCONCLUSIVE: OutcomeClass.INCONCLUSIVE,
+        DecisionKind.INVALID: OutcomeClass.INCONCLUSIVE,
+    }[decision.kind]
+    delta = 0.0
+    if decision.delta_interval is not None:
+        delta = (decision.delta_interval.lower + decision.delta_interval.upper) / 2
+    knowledge.add_relation(
+        RelationRecord(
+            relation,
+            RelationEvidence(
+                relation_instance_id=relation.instance_id,
+                outcome=outcome,
+                normalized_delta=delta,
+                confidence=1.0 if decision.hard_eligible else 0.0,
+                source_request_ids=decision.source_request_ids,
+                metadata={"decision_kind": decision.kind.value},
+            ),
+            (),
+        )
+    )
+    knowledge.advance()
 
 
 def _existing_report(
@@ -567,62 +707,45 @@ def _existing_report(
         return None
     report = _load_object(path, "standard report")
     status = report.get("status")
-    if report.get("campaign_id") != manifest.campaign_id or status not in {
-        "unique_exact",
-        "unique_exact_unjudged",
-        "inconclusive",
-    }:
+    if not isinstance(status, str):
         return None
+    try:
+        normative_status = normalize_campaign_result_status(status)
+    except ValueError:
+        return None
+    if report.get("campaign_id") != manifest.campaign_id:
+        return None
+    if status != normative_status.value:
+        report = dict(report)
+        report["status"] = normative_status.value
+        _write_json(path, report)
     repository = CampaignRepository.open(run_directory)
     try:
-        if repository.manifest != manifest:
+        if not repository.manifest.same_public_inputs(manifest):
             raise ValueError("standard report manifest does not match this challenge")
         artifacts = report.get("artifacts")
         if not isinstance(artifacts, dict):
             raise ValueError("standard report lacks artifact metadata")
         if artifacts.get("materialized_digest") != repository.database.digest():
             raise ValueError("standard report materialized digest does not replay")
-        expected_judges = int(status == "unique_exact")
+        expected_judges = int(
+            normative_status is CampaignResultStatus.UNIQUE_EXACT
+            and report.get("judge") is not None
+        )
         if repository.database.table_count("judge_submissions") != expected_judges:
             raise ValueError("standard report judge count does not match status")
+        if repository.manifest.to_data()["manifest_version"] != "1.2":
+            repository.finalize_manifest(
+                status=normative_status,
+                artifact_paths={
+                    "report.json": run_directory / "report.json",
+                    "events.jsonl": run_directory / "events.jsonl",
+                    "campaign.sqlite3": run_directory / "campaign.sqlite3",
+                },
+            )
     finally:
         repository.close()
     return report
-
-
-def _submit_judge(
-    vm_binary: Path,
-    challenge: Path,
-    *,
-    campaign_token: str,
-    guess: str,
-) -> Mapping[str, object]:
-    completed = subprocess.run(
-        [
-            str(vm_binary),
-            "judge",
-            "--challenge",
-            str(challenge),
-            "--campaign-token",
-            campaign_token,
-            "--guess",
-            guess,
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=10,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError(f"standard judge failed: {completed.stderr.strip()}")
-    try:
-        decoded: object = json.loads(completed.stdout)
-    except json.JSONDecodeError as error:
-        raise RuntimeError("standard judge returned invalid JSON") from error
-    if not isinstance(decoded, dict):
-        raise RuntimeError("standard judge response is not an object")
-    return cast("dict[str, object]", decoded)
 
 
 def _require_standard_profile(profile: Mapping[str, object]) -> None:
@@ -650,6 +773,16 @@ def _load_profile(path: Path) -> dict[str, object]:
     except (OSError, tomllib.TOMLDecodeError) as error:
         raise ValueError("cannot read public standard profile") from error
     return cast("dict[str, object]", decoded)
+
+
+def _manifest_status(status: str) -> CampaignResultStatus:
+    return normalize_campaign_result_status(status)
+
+
+def _iso_time(timestamp: float) -> str:
+    from datetime import UTC, datetime
+
+    return datetime.fromtimestamp(timestamp, UTC).isoformat().replace("+00:00", "Z")
 
 
 def _secret_from_domains(domains: list[set[int]]) -> str:

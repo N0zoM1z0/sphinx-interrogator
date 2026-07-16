@@ -95,11 +95,10 @@ def render_anchor_switch(
 
 
 @main.command("hello")
-@click.option("--vm", type=click.Path(path_type=Path, exists=True), required=True)
-@click.option("--challenge", type=click.Path(path_type=Path, exists=True), required=True)
-def hello(vm: Path, challenge: Path) -> None:
-    """Start a local public VM process and print its handshake as JSON."""
-    with VmClient.start(vm, challenge=challenge) as client:
+@click.option("--vm-socket", type=click.Path(path_type=Path), required=True)
+def hello(vm_socket: Path) -> None:
+    """Connect to a broker-launched public VM endpoint and print its handshake."""
+    with VmClient.connect_unix(vm_socket) as client:
         result = client.hello()
     click.echo(json.dumps(asdict(result), indent=2, sort_keys=True))
 
@@ -202,7 +201,7 @@ def reduce_witness(family: str, output: Path | None) -> None:
     "--report",
     "report_path",
     type=click.Path(path_type=Path, exists=True),
-    default=Path("runs/standard-benchmark-v1/standard-benchmark-report.json"),
+    default=Path("runs/standard-benchmark-v2/standard-benchmark-report.json"),
     show_default=True,
 )
 def benchmark_report(report_path: Path) -> None:
@@ -214,15 +213,18 @@ def benchmark_report(report_path: Path) -> None:
     variants = data.get("variants", [])
     if not isinstance(variants, list):
         raise click.ClickException("benchmark report variants must be a list")
+    acceptance = data.get("acceptance")
+    if not isinstance(acceptance, dict):
+        raise click.ClickException("benchmark report acceptance must be an object")
     click.echo(
         json.dumps(
             {
                 "benchmark_report_version": "1.0",
                 "path": str(report_path),
                 "sha256": hashlib.sha256(raw).hexdigest(),
-                "targets_met": bool(data.get("targets_met")),
+                "targets_met": acceptance.get("targets_met") is True,
                 "variant_count": len(variants),
-                "full_published_matrix": bool(data.get("full_published_matrix")),
+                "full_published_matrix": acceptance.get("full_published_matrix") is True,
             },
             indent=2,
             sort_keys=True,
@@ -231,28 +233,35 @@ def benchmark_report(report_path: Path) -> None:
 
 
 @main.command("recover")
-@click.option("--vm", type=click.Path(path_type=Path, exists=True), required=True)
-@click.option("--challenge", type=click.Path(path_type=Path, exists=True), required=True)
+@click.option(
+    "--public-challenge",
+    type=click.Path(path_type=Path, exists=True, file_okay=False),
+    required=True,
+)
+@click.option("--vm-socket", type=click.Path(path_type=Path), required=True)
+@click.option("--judge-socket", type=click.Path(path_type=Path))
 @click.option("--run", "run_directory", type=click.Path(path_type=Path), required=True)
 @click.option("--seed", type=click.IntRange(min=0), required=True)
 @click.option("--submit-judge/--no-submit-judge", default=True, show_default=True)
 def recover(
-    vm: Path,
-    challenge: Path,
+    public_challenge: Path,
+    vm_socket: Path,
+    judge_socket: Path | None,
     run_directory: Path,
     seed: int,
     submit_judge: bool,
 ) -> None:
     """Run exact tutorial recovery through the public black-box protocol."""
     result = recover_tutorial(
-        vm_binary=vm,
-        challenge=challenge,
+        public_challenge=public_challenge,
+        vm_socket=vm_socket,
+        judge_socket=judge_socket,
         run_directory=run_directory,
         campaign_seed=seed,
         submit_judge=submit_judge,
     )
     click.echo(json.dumps(result.report, indent=2, sort_keys=True))
-    if result.status not in {"unique_exact", "unique_exact_unjudged"}:
+    if result.status != "unique_exact":
         raise click.ClickException(f"tutorial recovery ended with {result.status}")
 
 

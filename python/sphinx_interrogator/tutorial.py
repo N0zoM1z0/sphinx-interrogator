@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import subprocess
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,7 +20,13 @@ from sphinx_interrogator.harness import (
 )
 from sphinx_interrogator.hypothesis_persistence import CampaignHypotheses
 from sphinx_interrogator.model import ExecutionResult
-from sphinx_interrogator.persistence import CampaignManifest, CampaignRepository
+from sphinx_interrogator.persistence import (
+    CampaignManifest,
+    CampaignRepository,
+    CampaignResultStatus,
+    normalize_campaign_result_status,
+)
+from sphinx_interrogator.protocol import submit_judge as submit_judge_request
 from sphinx_interrogator.relations import AnchorSwitchTemplate, RelationInstance
 from sphinx_interrogator.solver import SolverStatus, UniquenessResult
 
@@ -36,19 +42,22 @@ class TutorialRecoveryResult:
 
 def recover_tutorial(
     *,
-    vm_binary: Path,
-    challenge: Path,
+    public_challenge: Path,
+    vm_socket: Path,
+    judge_socket: Path | None,
     run_directory: Path,
     campaign_seed: int,
     submit_judge: bool = True,
 ) -> TutorialRecoveryResult:
     """Recover a tutorial challenge through public relation observations only."""
+    wall_started = time.time()
+    perf_started = time.perf_counter()
     if campaign_seed < 0:
         raise ValueError("campaign seed must be nonnegative")
-    if not vm_binary.is_file():
-        raise ValueError("SphinxVM binary does not exist")
-    public = _load_object(challenge / "public/challenge.json", "public challenge")
-    profile_path = challenge / "public/profile.toml"
+    if submit_judge and judge_socket is None:
+        raise ValueError("judge socket is required when judge submission is enabled")
+    public = _load_object(public_challenge / "challenge.json", "public challenge")
+    profile_path = public_challenge / "profile.toml"
     profile_digest = _sha256_file(profile_path)
     challenge_id = _string(public, "challenge_id")
     budgets = _mapping(public, "budgets")
@@ -71,10 +80,9 @@ def recover_tutorial(
 
     repository = CampaignRepository.create(run_directory, manifest)
     hypotheses = CampaignHypotheses(repository)
-    harness, client = DurableExecutionHarness.start_process(
+    harness, client = DurableExecutionHarness.connect_unix(
         repository,
-        vm_binary,
-        challenge=challenge,
+        socket_path=vm_socket,
         timeout_seconds=5.0,
     )
     final_results: tuple[ExecutionResult, ExecutionResult] | None = None
@@ -142,9 +150,10 @@ def recover_tutorial(
 
     judge_response: Mapping[str, object] | None = None
     if guessed_secret is not None and submit_judge:
-        judge_response = _submit_judge(
-            vm_binary,
-            challenge,
+        if judge_socket is None:
+            raise RuntimeError("judge socket disappeared after recovery validation")
+        judge_response = submit_judge_request(
+            judge_socket,
             campaign_token=_string(public, "campaign_token"),
             guess=guessed_secret,
         )
@@ -162,15 +171,13 @@ def recover_tutorial(
         )
 
     if solve.status is SolverStatus.UNSAT:
-        status = "inconsistent"
+        status = CampaignResultStatus.MODEL_INCONSISTENT.value
     elif guessed_secret is None:
-        status = "inconclusive"
-    elif judge_response is None:
-        status = "unique_exact_unjudged"
-    elif _boolean(judge_response, "accepted"):
-        status = "unique_exact"
+        status = CampaignResultStatus.CANDIDATE_SET.value
+    elif judge_response is None or _boolean(judge_response, "accepted"):
+        status = CampaignResultStatus.UNIQUE_EXACT.value
     else:
-        status = "judge_rejected"
+        status = CampaignResultStatus.TARGET_ERROR.value
     basic = repository.report()
     report: dict[str, object] = {
         "report_version": "1.0",
@@ -207,7 +214,19 @@ def recover_tutorial(
             "materialized_digest": basic["materialized_digest"],
         },
     }
-    _write_json(run_directory / "report.json", report)
+    report_path = run_directory / "report.json"
+    _write_json(report_path, report)
+    repository.finalize_manifest(
+        status=_manifest_status(status),
+        artifact_paths={
+            "report.json": report_path,
+            "events.jsonl": run_directory / "events.jsonl",
+            "campaign.sqlite3": run_directory / "campaign.sqlite3",
+        },
+        started_at=_iso_time(wall_started),
+        ended_at=_iso_time(time.time()),
+        duration_ms=int((time.perf_counter() - perf_started) * 1000),
+    )
     repository.close()
     return TutorialRecoveryResult(status, run_directory, report)
 
@@ -345,41 +364,6 @@ def _secret_from_uniqueness(uniqueness: UniquenessResult, secret_cells: int) -> 
     return "".join(format(value, "x") for value in values)
 
 
-def _submit_judge(
-    vm_binary: Path,
-    challenge: Path,
-    *,
-    campaign_token: str,
-    guess: str,
-) -> Mapping[str, object]:
-    completed = subprocess.run(
-        [
-            str(vm_binary),
-            "judge",
-            "--challenge",
-            str(challenge),
-            "--campaign-token",
-            campaign_token,
-            "--guess",
-            guess,
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        timeout=10,
-    )
-    if completed.returncode != 0:
-        raise RuntimeError(f"tutorial judge failed: {completed.stderr.strip()}")
-    try:
-        decoded: object = json.loads(completed.stdout)
-    except json.JSONDecodeError as error:
-        raise RuntimeError("tutorial judge returned invalid JSON") from error
-    if not isinstance(decoded, dict):
-        raise RuntimeError("tutorial judge response is not an object")
-    return cast("dict[str, object]", decoded)
-
-
 def _existing_accepted_report(
     run_directory: Path,
     manifest: CampaignManifest,
@@ -393,7 +377,7 @@ def _existing_accepted_report(
         if isinstance(judge, dict) and judge.get("accepted") is True:
             repository = CampaignRepository.open(run_directory)
             try:
-                if repository.manifest != manifest:
+                if not repository.manifest.same_public_inputs(manifest):
                     raise ValueError("accepted report manifest does not match this challenge")
                 artifacts = report.get("artifacts")
                 if not isinstance(artifacts, dict):
@@ -402,6 +386,15 @@ def _existing_accepted_report(
                     raise ValueError("accepted report materialized digest does not replay")
                 if repository.database.table_count("judge_submissions") != 1:
                     raise ValueError("accepted report lacks its one judge event")
+                if repository.manifest.to_data()["manifest_version"] != "1.2":
+                    repository.finalize_manifest(
+                        status=CampaignResultStatus.UNIQUE_EXACT,
+                        artifact_paths={
+                            "report.json": run_directory / "report.json",
+                            "events.jsonl": run_directory / "events.jsonl",
+                            "campaign.sqlite3": run_directory / "campaign.sqlite3",
+                        },
+                    )
             finally:
                 repository.close()
             return report
@@ -434,6 +427,16 @@ def _write_json(path: Path, data: Mapping[str, object]) -> None:
 
 def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _manifest_status(status: str) -> CampaignResultStatus:
+    return normalize_campaign_result_status(status)
+
+
+def _iso_time(timestamp: float) -> str:
+    from datetime import UTC, datetime
+
+    return datetime.fromtimestamp(timestamp, UTC).isoformat().replace("+00:00", "Z")
 
 
 def _mapping(data: Mapping[str, object], key: str) -> Mapping[str, object]:

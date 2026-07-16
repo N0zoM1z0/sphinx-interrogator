@@ -71,3 +71,25 @@ def test_doctor_and_reduce_commands_are_noninteractive(tmp_path: Path) -> None:
     report = json.loads(output.read_text(encoding="utf-8"))
     assert report["status"] == "minimized"
     assert report["preservation"]["uses_true_secret"] is False
+
+
+def test_benchmark_command_reads_nested_acceptance_contract(tmp_path: Path) -> None:
+    """CLI must not report false failure for a schema-valid accepted benchmark."""
+    report_path = tmp_path / "benchmark.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "variants": ["full", "random"],
+                "acceptance": {
+                    "targets_met": True,
+                    "full_published_matrix": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = CliRunner().invoke(main, ["benchmark", "--report", str(report_path)])
+    assert result.exit_code == 0, result.output
+    report = json.loads(result.output)
+    assert report["targets_met"] is True
+    assert report["full_published_matrix"] is True

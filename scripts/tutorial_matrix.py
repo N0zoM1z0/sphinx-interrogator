@@ -7,12 +7,12 @@ import argparse
 import json
 import os
 import statistics
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 from sphinx_interrogator.tutorial import recover_tutorial
+from sphinx_trusted_runtime import create_challenge, create_private_root, launch_endpoints
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -48,41 +48,36 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     results: list[dict[str, object]] = []
     for index, seed in enumerate(seeds, start=1):
-        challenge_id = f"tutorial-eval-{args.fault}-{seed:03d}"
+        challenge_id = f"challenge-{index:04d}"
+        private_root = ROOT / "runs/.private-roots/tutorial-matrix" / f"seed-{seed:04d}.root"
+        if not private_root.exists():
+            create_private_root(binary, private_root)
         with tempfile.TemporaryDirectory(prefix="sphinx-tutorial-matrix-") as temporary:
-            challenge = Path(temporary) / "challenge"
-            created = subprocess.run(
-                [
-                    str(binary),
-                    "challenge",
-                    "create",
-                    "--profile",
-                    str(ROOT / "benchmarks/profiles/tutorial.toml"),
-                    "--output",
-                    str(challenge),
-                    "--challenge-id",
-                    challenge_id,
-                    "--seed",
-                    str(seed),
-                    "--fault",
-                    args.fault,
-                ],
-                check=False,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                timeout=10,
+            temporary_root = Path(temporary)
+            bundle = create_challenge(
+                binary,
+                profile=ROOT / "benchmarks/profiles/tutorial.toml",
+                root=temporary_root / "challenge",
+                private_root_file=private_root,
+                challenge_id=challenge_id,
+                campaign_label=f"campaign-{args.fault}-{index:04d}",
+                fault=args.fault,
             )
-            if created.returncode != 0:
-                raise RuntimeError(f"challenge seed {seed} failed: {created.stderr.strip()}")
             run = output / f"seed-{seed:03d}"
-            recovered = recover_tutorial(
-                vm_binary=binary,
-                challenge=challenge,
-                run_directory=run,
-                campaign_seed=10_000 + seed,
-                submit_judge=args.fault == "reference",
-            )
+            with launch_endpoints(
+                binary,
+                bundle,
+                socket_directory=temporary_root / "sockets",
+                with_judge=args.fault == "reference",
+            ) as endpoints:
+                recovered = recover_tutorial(
+                    public_challenge=endpoints.public_directory,
+                    vm_socket=endpoints.vm_socket,
+                    judge_socket=endpoints.judge_socket,
+                    run_directory=run,
+                    campaign_seed=10_000 + seed,
+                    submit_judge=args.fault == "reference",
+                )
         cost = recovered.report.get("cost")
         if not isinstance(cost, dict):
             raise RuntimeError("tutorial report lacks a cost object")
@@ -100,7 +95,7 @@ def main() -> int:
         )
 
     logical = [int(result["logical_relation_families"]) for result in results]
-    expected = "unique_exact" if args.fault == "reference" else "inconclusive"
+    expected = "unique_exact" if args.fault == "reference" else "candidate_set"
     successes = sum(result["status"] == expected for result in results)
     summary = {
         "matrix_version": "1.0",
