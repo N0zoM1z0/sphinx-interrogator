@@ -44,3 +44,30 @@ def test_inspect_and_replay_commands_report_public_materialized_state(tmp_path: 
     replay = json.loads(replayed.output)
     assert replay["matched"] is True
     assert replay["before_digest"] == replay["after_digest"]
+
+
+def test_doctor_and_reduce_commands_are_noninteractive(tmp_path: Path) -> None:
+    """Release CLI exposes doctor and reducer reports without target-private access."""
+    runner = CliRunner()
+
+    doctor = runner.invoke(main, ["doctor"])
+    assert doctor.exit_code == 0, doctor.output
+    doctor_report = json.loads(doctor.output)
+    assert doctor_report["black_box_boundary"] == "public-jsonl-process-only"
+    assert "reduce" in doctor_report["commands"]
+
+    output = tmp_path / "reduced.json"
+    reduced = runner.invoke(
+        main,
+        [
+            "reduce",
+            "--family",
+            "repeat-amplify/v1",
+            "--output",
+            str(output),
+        ],
+    )
+    assert reduced.exit_code == 0, reduced.output
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["status"] == "minimized"
+    assert report["preservation"]["uses_true_secret"] is False

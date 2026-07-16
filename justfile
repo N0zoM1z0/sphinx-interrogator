@@ -73,3 +73,9 @@ benchmark-standard:
 
 evaluate-state-learning:
     uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
+
+reduce-witnesses:
+    uv run --frozen python scripts/reduce_witnesses.py --output runs/reduced-witnesses-m9 --require-all-minimized
+
+release-manifest:
+    uv run --frozen python scripts/release_manifest.py --output runs/release-m9/release-manifest.json --require-artifacts

@@ -661,3 +661,71 @@ just evaluate-state-learning pass; learned-state and exact-history targets met
 - M9 must implement relation-aware witness reduction, minimized witness artifacts,
   final release/report packaging, review checklist completion, and release audit
   evidence.
+
+## M9 reducer and release checkpoint
+
+M9 implements `python/sphinx_interrogator/reducer.py`, a relation-aware best-first
+reducer over typed relation families. A candidate is accepted only when it remains a
+valid certified relation instance, its architectural and fault-free prechecks pass, it
+strictly lowers `(physical executions, static cycles, AST nodes, history length,
+lexical form)`, and it preserves the configured finite public-model consequence
+(`equivalent`, `implies-core`, or `same-partition`). The reducer never uses the hidden
+challenge secret; release witnesses use bounded public-family model signatures.
+
+Release additions:
+
+- `sphinx-interrogate doctor`, `sphinx-interrogate reduce`, and
+  `sphinx-interrogate benchmark` CLI coverage;
+- `scripts/reduce_witnesses.py` and `just reduce-witnesses`;
+- `spec/reduced-witnesses-report.schema.json` plus fixture validation;
+- `scripts/release_manifest.py` and `just release-manifest`;
+- `docs/RELEASE_NOTES.md`, reducer/evaluation docs, and completed
+  `agent/REVIEW_CHECKLIST.md`.
+
+Artifact: `runs/reduced-witnesses-m9/reduced-witnesses-report.json`.
+
+Results:
+
+```text
+families:       10
+minimized:      10
+unchanged:      0
+all_minimized:  true
+artifact_sha256 3558973ce4005e6cf2e478ffa44c23b2531e395860bb08dd92e6ff395c418434
+```
+
+Release manifest: `runs/release-m9/release-manifest.json`.
+
+```text
+artifact_count: 5
+missing_count:  0
+manifest_sha256 9b05653db1954b434a870295acda8dc5338b36b31ec5e92a873ffe6ca814667f
+```
+
+The final M9 suite used the repository-local Cargo home/target, two build jobs, and no
+concurrent Cargo/rustc process:
+
+```text
+just fmt                    pass (58 Python/script files and Rustfmt clean)
+just lint                   pass (Clippy -D warnings, Ruff, strict mypy over 26 modules)
+just test                   pass (42 Rust lib + 2 Rust binary; 162 Python)
+just schema-check           pass (including reduced-witness report schema)
+just docs-check             pass
+just verify-formal          pass (Z3 unsat x3; TLC 70,557 generated/2,276 distinct;
+                                 131,072 guarded-replay cells; mutation rejected)
+just demo-tutorial          pass; unique_exact e905; judge accepted; 16 logical/32 physical
+just boundary-audit         pass; binary sha256=628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b
+just benchmark-standard     pass; 600 campaigns, targets_met true, full/reference
+                                 exact rate 1.0, p95 48 logical, off false exact 0
+just evaluate-state-learning pass; learned-state and exact-history targets met
+just reduce-witnesses       pass; 10/10 relation families minimized
+just release-manifest       pass; five public artifacts hashed, none missing
+```
+
+## Remaining limitations after M9
+
+- The standard profile remains intentionally synthetic and locally generated.
+- All published reference selector baselines recover the frozen standard profile, so
+  the release reports robustness and boundary safety rather than a large selector gap.
+- `runs/release-m9/release-manifest.json` is ignored by design; rerun
+  `just release-manifest` after a release commit to capture the committed HEAD.

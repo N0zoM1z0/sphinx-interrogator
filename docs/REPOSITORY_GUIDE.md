@@ -83,20 +83,22 @@ just lint
 just unit
 just test
 just schema-check
+just docs-check
 just verify-formal
 just demo-tutorial
 just benchmark-standard
 just boundary-audit
+just evaluate-state-learning
+just reduce-witnesses
+just release-manifest
 ```
 
 Additional useful commands:
 
 ```bash
-just vm-serve PROFILE=benchmarks/profiles/tutorial.toml
-just campaign PROFILE=... SEED=...
-just replay RUN=...
-just report RUN=...
-just boundary-audit
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/demo_tutorial.py
+uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
+uv run --frozen python scripts/reduce_witnesses.py --output runs/reduced-witnesses-m9
 ```
 
 The root commands are the verification surface used by coding agents and CI.
@@ -117,15 +119,21 @@ Challenge creation/judging are development/evaluation tools. The normal Interrog
 ### Interrogator
 
 ```text
+sphinx-interrogate doctor
 sphinx-interrogate hello --vm <binary> --challenge <dir>
 sphinx-interrogate render-cell --lane <n> --token <n> --epoch <n> --anchor <n>
 sphinx-interrogate render-anchor-switch --lane <n> --token <n> --epoch <n> \
   --bank-a <n> --bank-b <n>
+sphinx-interrogate recover --vm <binary> --challenge <dir> --run <dir> --seed <n>
+sphinx-interrogate replay --run <dir>
+sphinx-interrogate inspect --run <dir>
+sphinx-interrogate reduce --family repeat-amplify/v1
+sphinx-interrogate benchmark --report runs/standard-benchmark-v1/standard-benchmark-report.json
 ```
 
-Recovery, replay, inspection, reduction, and benchmark subcommands are introduced by
-their corresponding M4–M9 milestones; they are not placeholder commands in the current
-CLI.
+`benchmark` inspects an existing generated report. The published standard matrix is
+still executed through `just benchmark-standard`, which builds and launches the VM
+process through the same public JSONL boundary as campaigns.
 
 ## 6. Coding conventions
 

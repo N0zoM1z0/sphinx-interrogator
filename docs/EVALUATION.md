@@ -251,6 +251,23 @@ Version 1.0 should not be tagged until:
 
 Research-profile success may remain an experimental result rather than a release blocker if clearly labeled.
 
+### 8.1 Measured v1.0 evidence
+
+The current release evidence uses generated artifacts under `runs/`:
+
+- `runs/standard-benchmark-v1/standard-benchmark-report.json`: full published standard
+  matrix with selector baselines and fault-free controls.
+- `runs/state-learning-m8/state-learning-report.json`: one-state, exact-history, and
+  AALpy-backed learner comparison.
+- `runs/reduced-witnesses-m9/reduced-witnesses-report.json`: minimized witnesses for
+  every enabled relation family.
+- `runs/release-m9/release-manifest.json`: artifact hashes and repository/tool
+  metadata.
+
+The standard benchmark caveat is explicit: all reference selector baselines recover
+the frozen standard profile exactly on the published seeds, so this profile is useful
+as a reproducible recovery/boundary benchmark but does not show a large selector gap.
+
 ## 10. Reporting layout
 
 Generate:

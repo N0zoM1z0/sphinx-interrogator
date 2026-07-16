@@ -220,6 +220,14 @@ Use a best-first queue ordered by `(physical executions, gas, AST nodes, history
 
 Release witnesses should use `equivalent` or `implies-core` without access to the secret.
 
+Implementation note: `python/sphinx_interrogator/reducer.py` implements the release
+reducer as a best-first typed-family reducer. It accepts only candidates whose
+architectural and fault-free prechecks still pass, whose cost improves
+lexicographically, and whose configured consequence is preserved over a finite public
+model committee. The M9 artifact generator `scripts/reduce_witnesses.py` writes
+`runs/reduced-witnesses-m9/reduced-witnesses-report.json` and per-family witnesses.
+The report label is bounded public-model implication, not a hidden-secret comparison.
+
 ## 9. Model interrogation
 
 The system should interrogate not only SphinxVM but also its own current hypothesis.

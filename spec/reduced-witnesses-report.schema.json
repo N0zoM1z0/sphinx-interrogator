@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sphinx-interrogator.local/spec/reduced-witnesses-report.schema.json",
+  "title": "Reduced relation witness report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "report_version",
+    "kind",
+    "schema_version",
+    "generated_by",
+    "preservation",
+    "families",
+    "summary",
+    "artifact_sha256"
+  ],
+  "properties": {
+    "report_version": { "const": "1.0" },
+    "kind": { "const": "reduced-witnesses" },
+    "schema_version": { "const": "1.0" },
+    "generated_by": { "type": "string", "minLength": 1 },
+    "artifact_sha256": { "$ref": "#/$defs/sha256" },
+    "preservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "signature_kind",
+        "model_scope",
+        "uses_true_secret",
+        "result_label"
+      ],
+      "properties": {
+        "mode": { "enum": ["equivalent", "implies-core", "same-partition"] },
+        "signature_kind": { "enum": ["exact-residual", "sign", "zero-nonzero"] },
+        "model_scope": { "const": "finite-public-family-committee" },
+        "uses_true_secret": { "const": false },
+        "result_label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "families": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/family" }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family_count",
+        "minimized_count",
+        "unchanged_count",
+        "all_minimized"
+      ],
+      "properties": {
+        "family_count": { "type": "integer", "minimum": 0 },
+        "minimized_count": { "type": "integer", "minimum": 0 },
+        "unchanged_count": { "type": "integer", "minimum": 0 },
+        "all_minimized": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "family": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "family",
+        "status",
+        "preservation",
+        "original",
+        "reduced",
+        "steps",
+        "metrics",
+        "artifact_sha256"
+      ],
+      "properties": {
+        "family": { "type": "string", "pattern": "/v[0-9]+$" },
+        "status": { "enum": ["minimized", "unchanged"] },
+        "artifact_sha256": { "$ref": "#/$defs/sha256" },
+        "path": { "type": "string" },
+        "preservation": {
+          "type": "object",
+          "required": ["uses_true_secret", "model_count"],
+          "properties": {
+            "uses_true_secret": { "const": false },
+            "model_count": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "original": { "$ref": "#/$defs/witness_side" },
+        "reduced": { "$ref": "#/$defs/witness_side" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "from_hash", "to_hash", "from_cost", "to_cost"],
+            "properties": {
+              "kind": { "type": "string", "minLength": 1 },
+              "from_hash": { "$ref": "#/$defs/sha256" },
+              "to_hash": { "$ref": "#/$defs/sha256" },
+              "from_cost": { "$ref": "#/$defs/cost" },
+              "to_cost": { "$ref": "#/$defs/cost" }
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "required": ["predicate_evaluations", "cache_hits", "generated_candidates"],
+          "properties": {
+            "predicate_evaluations": { "type": "integer", "minimum": 0 },
+            "cache_hits": { "type": "integer", "minimum": 0 },
+            "generated_candidates": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "witness_side": {
+      "type": "object",
+      "required": ["relation", "cost", "programs"],
+      "properties": {
+        "relation": { "type": "object" },
+        "cost": { "$ref": "#/$defs/cost" },
+        "programs": { "type": "object" }
+      }
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "physical_executions",
+        "static_cycles",
+        "ast_nodes",
+        "history_length",
+        "lexical_key"
+      ],
+      "properties": {
+        "physical_executions": { "type": "integer", "minimum": 1 },
+        "static_cycles": { "type": "integer", "minimum": 0 },
+        "ast_nodes": { "type": "integer", "minimum": 1 },
+        "history_length": { "type": "integer", "minimum": 0 },
+        "lexical_key": { "type": "string" }
+      }
+    }
+  }
+}

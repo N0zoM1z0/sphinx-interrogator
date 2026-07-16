@@ -66,7 +66,11 @@ soft-group replay/quarantine/repair, bounded standard-profile recovery, public
 leakage/learnability audit, and the full published standard benchmark. The verified
 M8 checkpoint adds one-state, exact-history, and AALpy-backed learned-state Mealy
 models; membership caching; conformance/counterexample evidence; state-model
-constraint retraction; and `soft-history-contrast/v1`. M9 remains outstanding.
+constraint retraction; and `soft-history-contrast/v1`. The verified M9 checkpoint
+adds relation-aware best-first witness reduction, finite public-model preservation
+predicates, minimized witnesses for every enabled relation family, CLI
+doctor/reduce/benchmark coverage, reducer report schema coverage, release notes, a
+completed review checklist, and an ignored release manifest with artifact hashes.
 
 ## Progress
 
@@ -81,7 +85,7 @@ constraint retraction; and `soft-history-contrast/v1`. M9 remains outstanding.
 - [x] (2026-07-16 03:00Z) Complete M6 grammar-guided CEGIS: typed anchor/repeat skeletons, bounded enumeration, Z3 hole filling, diverse hypothesis-store committees, real counterexample refinement, interval/resource objectives, deterministic cache/ties, frontier integration, live Rust execution, and 20-seed random-hole calibration.
 - [x] (2026-07-16 04:52Z) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance: 600-campaign standard matrix passed with 100/100 full-reference exact, p95 48 logical families, and 100/100 off-control inconclusive.
 - [x] (2026-07-16 05:08Z) Complete M8 soft-reset state, exact-history mode, AALpy learner, and retraction semantics: deterministic state-learning evaluation reports no-learner accuracy 0.133, exact-history 1.0, and learned-state 1.0 on 30 held-out macro sequences.
-- [ ] (date) Complete M9 relational reducer, baselines/ablations, formal/boundary audit, and release evidence.
+- [x] (2026-07-16 06:24Z) Complete M9 relational reducer, baselines/ablations, formal/boundary audit, and release evidence: 10/10 enabled relation families minimized; full release gates and standard benchmark passed.
 
 ## Surprises & Discoveries
 
@@ -147,6 +151,12 @@ constraint retraction; and `soft-history-contrast/v1`. M9 remains outstanding.
 
 - Observation: A learned quotient can be much smaller than exact bounded history on the deterministic soft-reset fixture.
   Evidence: `runs/state-learning-m8/state-learning-report.json` reports exact-history depth four with 31 states and 1.0 held-out accuracy, while AALpy L* learns a 2-state Mealy model with 1.0 held-out accuracy; the one-state no-learner baseline reaches 0.133.
+
+- Observation: Relation reduction can be useful without violating the black-box boundary.
+  Evidence: `runs/reduced-witnesses-m9/reduced-witnesses-report.json` minimizes all ten enabled relation families using only typed public relation programs and finite public-family model signatures; the preservation record declares `uses_true_secret=false`.
+
+- Observation: The final release manifest is inherently a generated run artifact, not a tracked source file.
+  Evidence: `runs/release-m9/release-manifest.json` records the current HEAD, dirty status, tool versions, and hashes of five generated public artifacts; committing the manifest itself would immediately stale its recorded revision/dirty state.
 
 ## Decision Log
 
@@ -227,6 +237,18 @@ constraint retraction; and `soft-history-contrast/v1`. M9 remains outstanding.
   Alternatives considered: rebuild all constraints after every learner update; delete invalid evidence.
   Date/author: 2026-07-16, Codex implementation.
   Consequences: groups with `state-model:<id>` provenance are disabled through append-only state-change events when that model is invalidated.
+
+- Decision: Treat M9 witness reduction as a public-model consequence-preservation problem.
+  Rationale: release witnesses must not inspect a true challenge secret, but they still need a concrete preservation predicate stronger than syntax-only shrinking.
+  Alternatives considered: compare against hidden true configurations; accept any precheck-preserving cost decrease; require exact residual equality for every reduction.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: the reducer accepts only typed/certified candidates with lower lexicographic cost and finite public-family equivalence, same-partition, or implies-core preservation; repeat shrink uses sign-level implies-core where exact residual magnitude intentionally changes.
+
+- Decision: Keep the release manifest under ignored `runs/` and track the generator instead.
+  Rationale: the manifest records the current revision, dirty status, tool versions, and generated artifact hashes; committing it would make the recorded state stale.
+  Alternatives considered: commit one manifest snapshot; omit release artifact hashing; hand-write release notes only.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: reviewers regenerate `just release-manifest` after checkout or after a release commit, while tracked docs/status record the evidence path and current pre-commit hash.
 
 Record every later material deviation here before or with implementation.
 
@@ -550,10 +572,14 @@ Repository-wide required checks:
     just lint
     just test
     just schema-check
+    just docs-check
     just verify-formal
     just boundary-audit
     just demo-tutorial
     just benchmark-standard
+    just evaluate-state-learning
+    just reduce-witnesses
+    just release-manifest
 
 Expected final observations:
 
@@ -562,6 +588,8 @@ Expected final observations:
 - standard report records at least 95/100 exact unique recoveries and target budgets, unless an explicit approved revision is present;
 - fault-free report has no false exact recovery;
 - benchmark report includes baselines and uncertainty/failure counts;
+- reduced-witness report includes a minimized witness for every enabled relation family;
+- release manifest hashes current generated public artifacts;
 - every exact result includes an alternative-model unsat artifact;
 - no transcript contains private target state.
 
@@ -596,10 +624,10 @@ Populate during implementation:
 - One-shot leakage audit: `runs/standard-profile-audit-m7/standard-profile-audit.json`, 2026-07-16; max public one-shot partition is 1.5 bits, median useful partition is 1.5 bits, oracle collision bound is 16 logical relations, and blind scan worst-case is 64.
 - Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; M7 one-seed campaign ladder in `runs/standard-mutation-ladder-smoke-m7/standard-benchmark-report.json` confirms active variants recover and `runs/standard-profile-audit-m7/standard-profile-audit.json` records the active-variant latent equivalence under drained repeats.
 - M8 state-learning report: `runs/state-learning-m8/state-learning-report.json`, 2026-07-16; no-learner accuracy 0.133, exact-history accuracy 1.0 with 31 states, and AALpy learned-state accuracy 1.0 with 2 states on 30 deterministic held-out macro sequences.
-- Formal/TLA+/SMT report: M2 scheduler, M3 relation, and M4 concrete-versus-Z3 bank/fault/state evidence in `VALIDATION.md`; final mutation/release obligations remain M9.
-- Boundary-audit report: M2 artifact permission/public-key/live-response evidence in `VALIDATION.md`; final release rerun remains pending M9.
-- Minimized witness collection: pending.
-- Release manifest/revision: pending.
+- Formal/TLA+/SMT report: `just verify-formal`, 2026-07-16; Z3 relation contracts returned `unsat` x3, TLC generated 70,557 states with 2,276 distinct states and no invariant violation, and the 131,072-cell guarded-replay mutation self-test was rejected.
+- Boundary-audit report: `just boundary-audit`, 2026-07-16; release-mode public process audit passed with binary SHA-256 `628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b`.
+- Minimized witness collection: `runs/reduced-witnesses-m9/reduced-witnesses-report.json`, 2026-07-16; 10/10 enabled relation families minimized under bounded public-model implication, artifact SHA-256 `3558973ce4005e6cf2e478ffa44c23b2531e395860bb08dd92e6ff395c418434`.
+- Release manifest/revision: `runs/release-m9/release-manifest.json`, 2026-07-16; five public generated artifacts hashed with no missing artifacts; pre-commit manifest SHA-256 `9b05653db1954b434a870295acda8dc5338b36b31ec5e92a873ffe6ca814667f`.
 
 Each entry should contain a repository-relative or run-directory path, hash where appropriate, date, and one-sentence conclusion.
 
@@ -635,7 +663,11 @@ At completion, summarize:
 - remaining non-blocking research questions;
 - any specification changes and why.
 
-Current outcome: M0–M6 are complete and reproducible, including the accepted tutorial
-flow, blind fault-free control, and grammar-guided CEGIS synthesis. M7–M9 implementation
-and empirical results remain active.
+Current outcome: M0–M9 are complete and reproducible. The repository now provides the
+accepted tutorial flow, blind fault-free controls, grammar-guided CEGIS synthesis,
+published standard benchmark, state-learning evaluation, minimized relation witnesses,
+review checklist, and release manifest generator. The main caveat is empirical rather
+than architectural: all reference selector baselines recover the frozen standard
+profile, so the release reports robustness and boundary safety rather than a large
+selector-performance gap.
 ```

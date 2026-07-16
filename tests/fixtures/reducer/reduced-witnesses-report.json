@@ -1,0 +1,82 @@
+{
+  "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "families": [
+    {
+      "artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "family": "repeat-amplify/v1",
+      "metrics": {
+        "cache_hits": 3,
+        "generated_candidates": 4,
+        "predicate_evaluations": 4
+      },
+      "original": {
+        "cost": {
+          "ast_nodes": 14,
+          "history_length": 0,
+          "lexical_key": "original",
+          "physical_executions": 2,
+          "static_cycles": 100
+        },
+        "programs": {},
+        "relation": {}
+      },
+      "preservation": {
+        "mode": "implies-core",
+        "model_count": 64,
+        "model_scope": "finite-public-family-committee",
+        "signature_kind": "sign",
+        "uses_true_secret": false
+      },
+      "reduced": {
+        "cost": {
+          "ast_nodes": 8,
+          "history_length": 0,
+          "lexical_key": "reduced",
+          "physical_executions": 2,
+          "static_cycles": 44
+        },
+        "programs": {},
+        "relation": {}
+      },
+      "status": "minimized",
+      "steps": [
+        {
+          "from_cost": {
+            "ast_nodes": 14,
+            "history_length": 0,
+            "lexical_key": "original",
+            "physical_executions": 2,
+            "static_cycles": 100
+          },
+          "from_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "kind": "repeat-shrink",
+          "to_cost": {
+            "ast_nodes": 12,
+            "history_length": 0,
+            "lexical_key": "reduced",
+            "physical_executions": 2,
+            "static_cycles": 80
+          },
+          "to_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        }
+      ]
+    }
+  ],
+  "generated_by": "scripts/reduce_witnesses.py",
+  "kind": "reduced-witnesses",
+  "preservation": {
+    "mode": "implies-core",
+    "model_scope": "finite-public-family-committee",
+    "result_label": "bounded public-model implication, not a hidden-secret comparison",
+    "signature_kind": "sign",
+    "uses_true_secret": false
+  },
+  "report_version": "1.0",
+  "schema_version": "1.0",
+  "summary": {
+    "all_minimized": true,
+    "family_count": 1,
+    "minimized_count": 1,
+    "unchanged_count": 0
+  }
+}

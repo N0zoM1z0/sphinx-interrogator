@@ -5,19 +5,20 @@ This file is a concise, living project checkpoint. The active ExecPlan contains 
 ## Overall state
 
 - **Specification/design package:** complete.
-- **Executable system:** M0–M8 are implemented through deterministic recovery, grammar-guided CEGIS, robust bounded/statistical evidence handling, the published standard benchmark, and active state-learning abstractions; M9 reduction and release packaging remain incomplete.
-- **Implementation:** active; M8 is verified locally and ready to commit.
+- **Executable system:** M0–M9 are implemented through deterministic recovery, grammar-guided CEGIS, robust bounded/statistical evidence handling, the published standard benchmark, active state-learning abstractions, relation-aware witness reduction, and release artifact packaging.
+- **Implementation:** complete through M9; release evidence is committed locally and not pushed.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
 - **Last updated:** 2026-07-16.
 
 ## Current milestone
 
-Milestone 8 complete — state learning now has versioned macro alphabets,
-membership-cache digests, one-state hard-reset mode, bounded exact-history Mealy
-models, an AALpy-backed deterministic L* Mealy learner, held-out conformance,
-access/distinguishing support, serialized learned machines, and counterexample-driven
-retraction of `state-model:<id>` constraint groups. `soft-history-contrast/v1` is
-enabled as a research-mode soft-reset relation that cannot emit standalone hard facts.
+Milestone 9 complete — relation-aware best-first witness reduction now preserves
+typed/certified relation instances, architectural and fault-free prechecks, strict
+lexicographic cost improvement, and finite public-model implication/equivalence
+predicates without using hidden challenge state. The release includes minimized
+witness artifacts for all ten enabled relation families, schema-covered reducer
+reports, CLI `doctor/reduce/benchmark` coverage, release notes, a review checklist,
+and an ignored run manifest with artifact hashes.
 
 ## Verification dashboard
 
@@ -25,8 +26,9 @@ enabled as a research-mode soft-reset relation that cannot emit standalone hard 
 |---|---|---|
 | `just fmt` | pass | Rustfmt and Ruff; 2026-07-16 |
 | `just lint` | pass | Clippy `-D warnings`, Ruff, strict mypy; 2026-07-16 |
-| `just test` | pass | 44 Rust + 156 Python, including M8 learner/retraction and soft-history relation tests; 2026-07-16 |
-| `just schema-check` | pass | All public fixtures, including tutorial, standard recovery, and standard benchmark reports |
+| `just test` | pass | 44 Rust + 162 Python, including M9 reducer and CLI tests; 2026-07-16 |
+| `just schema-check` | pass | All public fixtures, including tutorial, standard recovery, standard benchmark, and reduced-witness reports |
+| `just docs-check` | pass | Repository-relative Markdown links valid; 2026-07-16 |
 | `just verify-formal` | pass | Z3 `unsat` x3; TLC 70,557 generated/2,276 distinct states; 131,072-cell exhaustive check; mutation rejected |
 | `just demo-tutorial` | pass | `unique_exact`, secret `e905`, judge accepted, 16 logical/32 physical executions; verified idempotent rerun |
 | `just boundary-audit` | pass | System B public-boundary audit; binary SHA-256 `628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b` |
@@ -36,16 +38,18 @@ enabled as a research-mode soft-reset relation that cannot emit standalone hard 
 | standard benchmark | pass | `runs/standard-benchmark-v1/standard-benchmark-report.json`: 600 campaigns, targets met, full/reference 100/100 exact, off 100/100 inconclusive |
 | standard profile audit | pass | `runs/standard-profile-audit-m7/standard-profile-audit.json`: max one-shot 1.5 bits, blind scan <=64 logical, oracle path 16 logical |
 | state-learning evaluation | pass | `runs/state-learning-m8/state-learning-report.json`: no-learner accuracy 0.133; exact-history 1.0; AALpy learned-state 1.0 |
+| reduced-witness report | pass | `runs/reduced-witnesses-m9/reduced-witnesses-report.json`: 10/10 enabled relation families minimized; artifact SHA-256 `3558973ce4005e6cf2e478ffa44c23b2531e395860bb08dd92e6ff395c418434` |
+| release manifest | pass | `runs/release-m9/release-manifest.json`: 5 public artifacts hashed, no missing artifacts; pre-commit manifest SHA-256 `9b05653db1954b434a870295acda8dc5338b36b31ec5e92a873ffe6ca814667f` |
 
 ## Active blockers
 
 None. Sphinx builds remain isolated to this repository and limited to two jobs. No
-other Cargo process was active during the M8 command suite.
+other Cargo process was active during the M9 Cargo-bearing command suite.
 
 ## Next concrete actions
 
-1. Preserve the M8 implementation and evidence in a detailed English Git commit without pushing.
-2. Implement M9 witness reduction, final release baselines/ablations, docs polish, review checklist, and release manifest/audit evidence.
+1. Rerun `just release-manifest` after any new commit if a refreshed ignored manifest for that revision is needed.
+2. Push/tag only if explicitly requested.
 
 ## Decision summary
 
@@ -80,6 +84,8 @@ other Cargo process was active during the M8 command suite.
 - State-learning membership queries are ordinary public macro words; model artifacts bind alphabet/discretizer versions and membership-cache digests.
 - Learned-state constraints carry `state-model:<id>` provenance and are retracted by append-only state events after conformance counterexamples.
 - `soft-history-contrast/v1` is enabled only as state-conditioned research evidence and cannot emit hard secret constraints by itself.
+- Witness reduction is a public-model optimizer: accepted candidates must remain typed/certified, lower cost, and preserve configured finite public-family implication/equivalence; it never compares against the hidden challenge secret.
+- The M9 release manifest is an ignored generated artifact under `runs/`; tracked source records schemas, scripts, docs, review checklist, and reproducible commands.
 - The repository remains synthetic-only; no real-target adapters.
 
 ## How to update
