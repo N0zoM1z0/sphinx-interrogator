@@ -43,7 +43,7 @@ differential, documentation/version, and release-tag obligations remain.
 | standard benchmark v2 | pass | Report v1.1 covers 100 seeds / 700 campaigns with paired bootstrap CI, complete B0-B7 surface, `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact, fault-off 0 false exact, and normative result statuses only |
 | `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
-| release manifest v2 | pass on clean tree | `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
+| release manifest v2 | pass on clean tree | After the controller commit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
 | GitHub CI | pass | Remote `main` has a successful `ci` workflow covering Python, Rust, and integration/boundary jobs |
 
 ## Release blockers

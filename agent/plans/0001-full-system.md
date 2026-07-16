@@ -935,11 +935,11 @@ Populate during implementation:
   reducer steps; file SHA-256
   `c7ff125818abd7b8d0a895a897a994638b54cc5c5c32086fe73f0ca1cf8ba367`.
 - Release manifest/revision: `runs/release-m9/release-manifest.json`, 2026-07-16;
-  five aggregate files are hashed and release checks are fail-closed. Current
-  `status=blocked`, `semantic_checks_pass=false`, `validation_gates_pass=true`,
-  one release check fails (`repository.clean`), and all 12 root gates have passing
-  evidence; file SHA-256
-  `056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042`.
+  five aggregate files are hashed and release checks are fail-closed. The manifest is
+  an ignored generated artifact and must be regenerated after each release commit or
+  tag. After the integrated controller commit, `just release-manifest` completed on a
+  clean tree with `repository.clean`, all semantic checks, and all 12 validation gates
+  passing.
 - Campaign manifest v1.2 reproducibility repair, 2026-07-16:
   `python/sphinx_interrogator/persistence.py`, `tutorial.py`, `standard.py`,
   `scripts/benchmark_standard.py`, `spec/campaign-manifest.schema.json`, and focused
