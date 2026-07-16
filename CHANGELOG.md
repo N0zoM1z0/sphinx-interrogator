@@ -22,9 +22,13 @@ All notable changes should be recorded here after implementation begins.
 - Regenerate the current-code standard benchmark v2 full matrix: 100 seeds / 700
   campaigns, `targets_met=true`, complete B0-B7 evidence, and zero fault-off false
   exact declarations.
+- Add the certified `drained-anchor-switch/v1` relation and connect it to standard
+  CEGIS selection. The refreshed full benchmark now recovers 100/100 reference
+  challenges with median/p95 28/33 logical families and shows paired cost
+  improvements over B1-B3 while remaining tied with B4 synthesis-without-KB.
 - Regenerate M8/M9 artifacts with non-trivial learned-state effective-nibble
-  constraints, independent M8 campaign private roots, continuous reducer parent paths,
-  and reset-policy-aware measured replay.
+  constraints, independent M8 campaign private roots, 11 minimized reducer families,
+  continuous reducer parent paths, and reset-policy-aware measured replay.
 - Add a public `CampaignController` facade and `sphinx-interrogate controller-plan`
   CLI for the integrated infer, learn-state, calibrate, replay, reduce, and diversify
   selector modes.

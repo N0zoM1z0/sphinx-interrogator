@@ -48,6 +48,13 @@ standard campaign targets below.
 - Median physical executions: at most 3,000.
 - Per-campaign wall-clock target on the reference machine: documented rather than hard-coded until implementation is profiled.
 
+Current measured result (2026-07-16, `runs/standard-benchmark-v2`): the full
+selector recovered 100/100 reference challenges exactly with median/p95 28/33
+logical relation families and median 56 physical executions. The paired 100-seed
+fault-off control produced 100/100 `candidate_set` results with zero false exact
+declarations. The benchmark covers 700 campaigns: B0 no-query final guess, B1-B4
+black-box selector variants, and the full-selector off control.
+
 ### 2.3 Research
 
 - At least 30 generated challenges.
@@ -260,6 +267,14 @@ Version 1.0 should not be tagged until:
 
 Research-profile success may remain an experimental result rather than a release blocker if clearly labeled.
 
+Release-claim revision for the current `0.1.0` state: do not tag or describe it as
+v1.0/research-complete. The standard profile now demonstrates a cost contribution
+from bounded synthesis plus the amplified drained-anchor relation family over B1
+random valid probes, B2 stateless testing, and B3 knowledge-base-without-synthesis,
+but it intentionally does not demonstrate a knowledge-base/frontier advantage over
+B4 synthesis-without-KB selection. That B4/KB-frontier contribution remains a future
+v1.0 claim gate rather than a blocker for the current task-spec recovery artifact.
+
 ### 8.1 Measured v1.0 evidence
 
 The current release evidence uses generated artifacts under `runs/`:
@@ -267,7 +282,12 @@ The current release evidence uses generated artifacts under `runs/`:
 - `runs/standard-benchmark-v2/standard-benchmark-report.json`: full v2 standard
   benchmark matrix with paired seed-level bootstrap confidence intervals and B0-B7
   surface evidence. The current repair-pass artifact covers 100 seeds / 700 campaigns
-  and records `full_published_matrix=true` and `targets_met=true`.
+  and records `full_published_matrix=true` and `targets_met=true`. Full/reference
+  achieves 100/100 exact recovery with median/p95 28/33 logical families and median
+  56 physical executions. Paired bootstrap deltas versus B1/B2/B3 are strictly
+  negative for cost: logical deltas are -11.93 versus random, -12.53 versus
+  stateless, and -11.55 versus KB-no-synthesis; physical deltas are -23.86, -25.06,
+  and -23.10 respectively. Full and B4 synthesis-no-KB are tied at zero cost delta.
 - `runs/tutorial-demo-v3/report.json`: fresh tutorial recovery and judge acceptance.
 - `runs/state-learning-m8/state-learning-report.json`: one-state, exact-history, and
   AALpy-backed learner comparison measured on real research-profile SphinxVM campaigns.
@@ -281,9 +301,10 @@ The current release evidence uses generated artifacts under `runs/`:
   generated manifest is `complete`; all 12 root validation gates are recorded as
   passing.
 
-The standard benchmark caveat is explicit: all reference selector baselines recover
-the frozen standard profile exactly on the published seeds, so this profile is useful
-as a reproducible recovery/boundary benchmark but does not show a large selector gap.
+The standard benchmark caveat is explicit: all non-B0 reference selector baselines
+recover the frozen standard profile exactly on the published seeds. The profile now
+shows a clear synthesis/relation-family cost gap over B1-B3, but not a KB/frontier
+cost gap over B4.
 
 ## 10. Reporting layout
 

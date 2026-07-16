@@ -815,8 +815,8 @@ def test_fault_free_standard_control_never_declares_exact_recovery(tmp_path: Pat
     assert result.report["uniqueness"]["alternative_model_unsat"] is False
     assert result.report["judge"] is None
     assert result.report["evidence"]["hard_bounded_constraints"] == 0
-    assert result.report["cost"]["logical_relation_families"] == 64
-    assert result.report["cost"]["physical_executions"] == 128
+    assert result.report["cost"]["logical_relation_families"] == 160
+    assert result.report["cost"]["physical_executions"] == 320
 
 
 @pytest.mark.integration

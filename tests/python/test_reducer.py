@@ -18,6 +18,7 @@ from sphinx_interrogator.reducer import (
 from sphinx_interrogator.relations import (
     AnchorSwitchTemplate,
     ContextLiftTemplate,
+    DrainedAnchorSwitchTemplate,
     RegisterRenameTemplate,
     RepeatAmplifyTemplate,
     SoftHistoryContrastTemplate,
@@ -105,6 +106,38 @@ def test_repeat_and_padding_reduction_preserves_sign_consequence() -> None:
     data = result.to_data()
     assert data["preservation"]["uses_true_secret"] is False
     assert data["replay_path"]["continuous"] is True
+
+
+def test_drained_anchor_reduction_preserves_sign_consequence() -> None:
+    """Amplified anchor-switch witnesses reduce through the same public reducer path."""
+    relation = DrainedAnchorSwitchTemplate().instantiate(
+        instance_id="drained-anchor-reduce",
+        lane=0,
+        token=0,
+        epoch=0,
+        bank_a=0,
+        bank_b=2,
+        pad=8,
+        repeats=6,
+    )
+    reducer = RelationReducer(
+        models=default_model_committee(
+            relation.involved_lanes,
+            fault_variants=(FaultVariant.OFF, FaultVariant.REFERENCE),
+        ),
+        config=_config(),
+    )
+
+    result = reducer.reduce(relation)
+
+    assert result.status == "minimized"
+    assert result.reduced_relation.relation_id == "drained-anchor-switch/v1"
+    assert result.reduced_relation.holes["repeats"] == 2
+    assert result.reduced_relation.holes["pad"] == 0
+    assert {step.kind for step in result.steps} >= {
+        ReductionKind.REPEAT_SHRINK,
+        ReductionKind.PADDING_SIMPLIFICATION,
+    }
 
 
 def test_context_lift_can_collapse_to_known_base_relation() -> None:

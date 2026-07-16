@@ -25,6 +25,7 @@ from sphinx_interrogator.relations import (
     AnchorSwitchTemplate,
     Cell,
     ContextLiftTemplate,
+    DrainedAnchorSwitchTemplate,
     EpochSwitchTemplate,
     HardReplayTemplate,
     IndependentSwapTemplate,
@@ -490,6 +491,8 @@ class RelationReducer:
         relation_id = relation.relation_id
         if relation_id == AnchorSwitchTemplate.relation_id:
             yield from _anchor_neighbors(relation)
+        elif relation_id == DrainedAnchorSwitchTemplate.relation_id:
+            yield from _drained_anchor_neighbors(relation)
         elif relation_id == TokenSwitchTemplate.relation_id:
             yield from _token_neighbors(relation)
         elif relation_id == EpochSwitchTemplate.relation_id:
@@ -793,6 +796,46 @@ def _repeat_neighbors(
         )
 
 
+def _drained_anchor_neighbors(
+    relation: RelationInstance,
+) -> Iterable[tuple[ReductionKind, RelationInstance, str]]:
+    holes = relation.holes
+    repeats = _int_hole(holes, "repeats")
+    pad = _int_hole(holes, "pad")
+    if repeats > 2:
+        yield (
+            ReductionKind.REPEAT_SHRINK,
+            DrainedAnchorSwitchTemplate().instantiate(
+                instance_id=_child_id(relation, "repeat", repeats - 1),
+                lane=_int_hole(holes, "lane"),
+                token=_int_hole(holes, "token"),
+                epoch=_int_hole(holes, "epoch"),
+                bank_a=_int_hole(holes, "bank_a"),
+                bank_b=_int_hole(holes, "bank_b"),
+                pad=pad,
+                repeats=repeats - 1,
+                drain_between=bool(_int_hole(holes, "drain_between")),
+            ),
+            "lower drained anchor amplification repeat count by one",
+        )
+    if (reduced_pad := pad % 4) != pad:
+        yield (
+            ReductionKind.PADDING_SIMPLIFICATION,
+            DrainedAnchorSwitchTemplate().instantiate(
+                instance_id=_child_id(relation, "pad", reduced_pad),
+                lane=_int_hole(holes, "lane"),
+                token=_int_hole(holes, "token"),
+                epoch=_int_hole(holes, "epoch"),
+                bank_a=_int_hole(holes, "bank_a"),
+                bank_b=_int_hole(holes, "bank_b"),
+                pad=reduced_pad,
+                repeats=repeats,
+                drain_between=bool(_int_hole(holes, "drain_between")),
+            ),
+            "reduce public padding modulo the four-phase scheduler",
+        )
+
+
 def _swap_neighbors(
     relation: RelationInstance,
 ) -> Iterable[tuple[ReductionKind, RelationInstance, str]]:
@@ -1022,6 +1065,18 @@ def _with_child_id(relation: RelationInstance, instance_id: str) -> RelationInst
             bank_b=_int_hole(holes, "bank_b"),
             pad=_int_hole(holes, "pad"),
             repeats=_int_hole(holes, "repeats"),
+        )
+    if relation_id == DrainedAnchorSwitchTemplate.relation_id:
+        return DrainedAnchorSwitchTemplate().instantiate(
+            instance_id=instance_id,
+            lane=_int_hole(holes, "lane"),
+            token=_int_hole(holes, "token"),
+            epoch=_int_hole(holes, "epoch"),
+            bank_a=_int_hole(holes, "bank_a"),
+            bank_b=_int_hole(holes, "bank_b"),
+            pad=_int_hole(holes, "pad"),
+            repeats=_int_hole(holes, "repeats"),
+            drain_between=bool(_int_hole(holes, "drain_between")),
         )
     return relation
 

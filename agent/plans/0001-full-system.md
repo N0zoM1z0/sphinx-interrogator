@@ -204,12 +204,19 @@ the later superseding observations and evidence list record the current behavior
   current, and v1.0 remains intentionally untagged pending the release-claim decision
   in `docs/EVALUATION.md`. `just fmt`, `just schema-check`, `just docs-check`,
   `git diff --check`, `just lint`, and `just test` passed after the alignment.
-- [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
+- [x] (2026-07-16 20:14Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
-  and the clean-tree manifest now completes. Current evidence is still short of a
-  v1.0 release tag because `docs/EVALUATION.md` still requires either a demonstrated
-  B1-B4 cost contribution for the full selector or an explicit documented release-claim
-  revision.
+  and the clean-tree manifest now completes. The release-claim revision is explicit:
+  keep the repository at `0.1.0`, do not tag v1.0/research-complete, and treat the
+  B4/KB-frontier contribution as a future v1.0 claim gate. The refreshed standard
+  benchmark demonstrates the synthesis plus drained-anchor relation cost contribution
+  over B1-B3.
+- [x] (2026-07-16 20:34Z) Rerun the post-drained-anchor task-spec gates. `just fmt`,
+  `just lint`, `just test`, `just schema-check`, `just docs-check`,
+  `just verify-formal`, `just boundary-audit`, `just demo-tutorial`, and
+  `git diff --check` passed; the fault-free standard-control integration test now
+  asserts the current full/off selector cost of 160 logical families and 320 physical
+  executions while preserving the no-false-exact assertions.
 - [x] (2026-07-16 12:08Z) Re-audit every task-spec acceptance area and rerun local
   quality, schema, formal, boundary, tutorial, M8, and M9 checks. Record the remaining
   P0/P1/P2 blockers in `agent/STATUS.md`, `agent/REVIEW_CHECKLIST.md`, this ExecPlan,
@@ -962,28 +969,29 @@ Populate during implementation:
   131,072 guarded-replay cells, and the replay-suppression mutation self-test.
 - Boundary-audit report: `just boundary-audit`, 2026-07-16; recursive protocol
   validation and separate-UID/FD-broker isolation passed with binary SHA-256
-  `c094fff9561f0997dd8c307940dba991b80c920792c07095113f979d430da6cd`.
+  `c094fff76ebf1102a093b6b607f31612bf55e3516393de8d42271f3e079c0d64`.
 - Minimized witness collection:
   `runs/reduced-witnesses-m9/reduced-witnesses-report.json`, 2026-07-16; measured
-  candidates are present, all 10 families are minimized, accepted steps form
+  candidates are present, all 11 families are minimized, accepted steps form
   continuous parent paths, and measured replay honors each relation reset policy; file
-  SHA-256 `a924448f71b27708c35945b5a64bff33f5ffd1394ca84cd700f052c12d95aa56`.
+  SHA-256 `a2d02bab8a0614514ad383fdbc01407691cad1af9f721cdb098efbe00a7883ea`.
 - Standard benchmark v2 full matrix:
   `runs/standard-benchmark-v2/standard-benchmark-report.json`, 2026-07-16; report
   v1.1 contains paired seed-level bootstrap confidence intervals and complete B0-B7
   surface evidence for the full 100-seed / 700-campaign matrix; full/reference,
   random, stateless, KB-no-synthesis, and synthesis-no-KB each reached 100/100 exact;
   B0 random final guess remained 0/100 exact; fault-off produced 0 false exact
-  declarations; `full_published_matrix=true`; `targets_met=true`; file SHA-256
-  `55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480`.
+  declarations; full/reference median/p95 is 28/33 logical families;
+  `full_published_matrix=true`; `targets_met=true`; file SHA-256
+  `fc83eec0a6c3fbdb828556fcd003ab3192bdae4ec8f2d9e04f1d734a197db238`.
 - Tutorial demo v3: `runs/tutorial-demo-v3/report.json`, 2026-07-16; `unique_exact`, judge accepted, 16 logical relation families, file SHA-256 `ad02a85d07f5de69547a7bb1870fe2caa04031e56b482e4fda726b520d63cf5b`; manifest v1.2 SHA-256 `8a77bcbbd91764261c402976cf5c7924bfd0bd6f72de550d54f0e3664b7a4950`.
 - Evaluation CSV/plot artifacts:
   `runs/release-m9/evaluation-artifacts/evaluation-artifacts-manifest.json`,
-  2026-07-16; public CSV rows cover 700 campaigns, 52,928 query executions, 26,464
-  relation decisions, 13 state-learning rows, and 10 reducer-family rows; deterministic
+  2026-07-16; public CSV rows cover 700 campaigns, 67,162 query executions, 33,581
+  relation decisions, 13 state-learning rows, and 11 reducer-family rows; deterministic
   SVG plots cover exact rates, median logical cost, state-learning accuracy, and
   reducer steps; file SHA-256
-  `c7ff125818abd7b8d0a895a897a994638b54cc5c5c32086fe73f0ca1cf8ba367`.
+  `7441b646b246af2e157cc81135efd8a51ac05fca7d993a70e2f30bf9c9ea0dc7`.
 - Release manifest/revision: `runs/release-m9/release-manifest.json`, 2026-07-16;
   five aggregate files are hashed and release checks are fail-closed. The manifest is
   an ignored generated artifact and must be regenerated after each release commit or
@@ -1015,7 +1023,16 @@ Populate during implementation:
 - Full standard benchmark rerun, 2026-07-16:
   `PATH=/tmp/sphinx-just/bin:$PATH just benchmark-standard` passed with 100 seeds /
   700 campaigns, `full_published_matrix=true`, `targets_met=true`, and report SHA-256
-  `55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480`.
+  `fc83eec0a6c3fbdb828556fcd003ab3192bdae4ec8f2d9e04f1d734a197db238`.
+- Drained-anchor standard benchmark rerun, 2026-07-16:
+  `SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python
+  scripts/benchmark_standard.py --output runs/standard-benchmark-v2 --socket-root
+  /tmp/sphinx-standard-v2-drained --require-full-targets` passed 700 campaigns.
+  Full/reference recovered 100/100 exactly with median/p95 28/33 logical families
+  and median 56 physical executions; full/off produced 100/100 `candidate_set` with
+  zero false exact declarations. Paired bootstrap cost deltas are negative versus
+  B1 random, B2 stateless, and B3 KB-no-synthesis, and zero versus B4
+  synthesis-no-KB.
 - M8/M9 semantic artifact repair, 2026-07-16:
   `PATH=/tmp/sphinx-just/bin:$PATH just evaluate-state-learning` and
   `PATH=/tmp/sphinx-just/bin:$PATH just reduce-witnesses` passed. The release manifest
@@ -1097,13 +1114,12 @@ isolation tests; the current standard matrix passes; and M8/M9 semantic artifact
 checks now pass with non-trivial state-conditioned inference and replayable reducer
 paths. Campaign manifests for tutorial and the full standard benchmark matrix now
 record v1.2 runtime reproducibility metadata and artifact hashes. The repository is
-nevertheless not v1.0-tagged: the task-spec standard recovery targets pass, but
-`docs/EVALUATION.md` still requires either a demonstrated B1-B4 cost contribution for
-the full selector or an explicit documented release-claim revision. The integrated
-public controller selector surface is now implemented. Exact-cycle and
+nevertheless not v1.0-tagged: the documented release-claim revision keeps this state
+at `0.1.0` and defers the B4/KB-frontier contribution to a future v1.0 claim gate.
+The integrated public controller selector surface is now implemented. Exact-cycle and
 extractor-output differential tests now cover small-program Rust/Python agreement and
 finite-model extraction agreement. The formal checker now covers reset, confinement,
 gas/progress, and normalized-cost invariants. The generated release manifest has
 passing root-gate evidence and completes from a clean tree; clean CI now includes the
-release-smoke path. Work resumes from the open P2 release-claim/tag item above.
+release-smoke path.
 ```

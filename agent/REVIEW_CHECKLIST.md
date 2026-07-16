@@ -111,9 +111,10 @@
   confirm full release completion.
 - The benchmark v2 artifact now has 100 seeds / 700 campaigns, paired bootstrap
   confidence intervals, complete B0-B7 evidence, and reports
-  `full_published_matrix=true` and `targets_met=true`; the 600-campaign v1 artifact
-  remains historical because it predates the repaired challenge and benchmark
-  implementation.
+  `full_published_matrix=true` and `targets_met=true`. Full/reference now recovers
+  100/100 exactly with median/p95 28/33 logical families and median 56 physical
+  executions; the 600-campaign v1 artifact remains historical because it predates the
+  repaired challenge and benchmark implementation.
 - M8 now persists a non-trivial learned-state effective-nibble constraint, and M9 now
   reports continuous reducer parent paths with reset-policy-aware measured replay.
 - Relation certificates now bind `relation-contracts-v1` to the SHA-256 of the
@@ -156,5 +157,6 @@
   GitHub Actions run `29520515698` passed with that job enabled.
 - The task-spec recovery, evidence, boundary, CI, and release-manifest gates are now
   represented by current tracked docs and generated artifacts. Do not tag v1.0 yet:
-  `docs/EVALUATION.md` still requires either a demonstrated B1-B4 cost contribution
-  for the full selector or an explicit documented release-claim revision.
+  the documented release-claim revision keeps this repository at `0.1.0`; the
+  standard profile proves the synthesis/drained-anchor cost contribution over B1-B3
+  but leaves KB/frontier contribution over B4 for a future v1.0 claim.

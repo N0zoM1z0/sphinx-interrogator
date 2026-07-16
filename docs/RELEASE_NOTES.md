@@ -31,7 +31,9 @@ records passing.
 
 Current benchmark evidence: `just benchmark-standard` has been rerun on the current
 code and produced the full 100-seed / 700-campaign v2 standard report with
-`targets_met=true`. Current M8/M9 semantic evidence has also been regenerated: M8
+`targets_met=true`: full/reference is 100/100 exact with median/p95 28/33 logical
+families and median 56 physical executions, while the full-selector off control has
+zero false exact declarations. Current M8/M9 semantic evidence has also been regenerated: M8
 records a non-trivial learned-state effective-nibble constraint, and M9 records
 continuous reducer parent paths with reset-policy-aware replay. Public CSV/plot
 release artifacts are generated under `runs/release-m9/evaluation-artifacts/`.
@@ -39,8 +41,10 @@ The standard-profile audit now reports mutation aggregate controls with `off=0`,
 `weak=1`, `signed=1`, and `reference=2`. The CI workflow now includes clean
 release-smoke coverage for tutorial, standard smoke, M8, reducer, evaluation artifact
 export, and release-manifest packaging; standard and reducer smoke use short
-`--socket-root` runtime directories on long CI checkout paths. Current v1.0 blockers
-are the unresolved release-claim decision in `docs/EVALUATION.md` and the absence of
-an intentional release tag: the standard benchmark meets task-spec recovery targets,
-but the frozen profile does not yet demonstrate a cost advantage over all B1-B4
-baselines.
+`--socket-root` runtime directories on long CI checkout paths.
+
+Release-claim decision for the current `0.1.0` state: do not tag it as v1.0. The
+standard profile demonstrates a synthesis plus amplified drained-anchor relation cost
+improvement over B1 random probes, B2 stateless testing, and B3 KB-without-synthesis,
+but it is tied with B4 synthesis-without-KB selection. A future v1.0/research-complete
+tag still needs a profile or claim that demonstrates the KB/frontier contribution.

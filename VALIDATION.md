@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 17:44Z**
+Last updated: **2026-07-16 20:34Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -127,9 +127,10 @@ GitHub Actions run 29520325888 on main
 
 README, repository guide, release notes, changelog, STATUS, the active ExecPlan, and
 the review checklist now agree with the current evidence. Public package and semantic
-versions remain `0.1.0`; v1.0 is intentionally untagged because `docs/EVALUATION.md`
-still requires either a demonstrated B1-B4 cost contribution for the full selector or
-an explicit documented release-claim revision.
+versions remain `0.1.0`; v1.0 is intentionally untagged by the documented
+release-claim revision in `docs/EVALUATION.md`. The standard profile now proves the
+synthesis plus drained-anchor relation cost contribution over B1-B3, while the
+KB/frontier contribution over B4 remains a future v1.0 claim gate.
 
 ```text
 PATH=/tmp/sphinx-just/bin:$PATH just fmt
@@ -142,7 +143,68 @@ git diff --check         pass
 PATH=/tmp/sphinx-just/bin:$PATH just lint
                          pass
 PATH=/tmp/sphinx-just/bin:$PATH just test
-                         pass (46 Rust tests; 191 Python tests)
+                         pass (46 Rust tests; 195 Python tests)
+```
+
+## 2026-07-16 drained-anchor standard benchmark rerun
+
+The standard selector now includes the certified `drained-anchor-switch/v1`
+synthesis skeleton. The full published matrix was regenerated from fresh ignored
+trusted challenge bundles with:
+
+```text
+SPHINX_VM_BINARY=target/debug/sphinx-vm \
+uv run --frozen python scripts/benchmark_standard.py \
+  --output runs/standard-benchmark-v2 \
+  --socket-root /tmp/sphinx-standard-v2-drained \
+  --require-full-targets
+                         pass
+```
+
+Results:
+
+```text
+campaigns:                         700
+full/reference exact rate:         100/100
+full/reference median logical:     28
+full/reference p95 logical:        33
+full/reference median physical:    56
+off-control false exact:           0/100
+off-control status:                100/100 candidate_set
+targets_met:                       true
+standard_benchmark_sha256:         fc83eec0a6c3fbdb828556fcd003ab3192bdae4ec8f2d9e04f1d734a197db238
+```
+
+Paired bootstrap cost deltas show full/reference is cheaper than B1 random valid
+probes, B2 stateless testing, and B3 KB-no-synthesis. It is intentionally tied with
+B4 synthesis-no-KB, so the current release claim is scoped to synthesis plus
+relation-family contribution, not KB/frontier contribution.
+
+Follow-up task-spec gate rerun after adding drained-anchor reducer support and
+updating the fault-free standard-control integration test to the current full/off
+selector cost:
+
+```text
+PATH=/tmp/sphinx-just/bin:$PATH just fmt
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just lint
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just test
+                         pass (46 Rust tests; 195 Python tests)
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just docs-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just verify-formal
+                         pass (Z3 unsat x3; TLC 78,333/7,672 states;
+                               reset/gas/confinement/normalized-cost finite checks;
+                               131,072 guarded-replay cells)
+PATH=/tmp/sphinx-just/bin:$PATH just boundary-audit
+                         pass (recursive validation; distinct UID/FD broker;
+                               binary c094fff76ebf1102a093b6b607f31612bf55e3516393de8d42271f3e079c0d64)
+PATH=/tmp/sphinx-just/bin:$PATH just demo-tutorial
+                         pass (unique_exact; judge accepted; 16 logical families)
+git diff --check         pass
 ```
 
 ## 2026-07-16 acceptance re-audit
@@ -182,12 +244,12 @@ The passing commands do not close the following acceptance gaps:
 - `scripts/release_manifest.py` has been repaired after this audit to fail closed:
   the current clean-tree `runs/release-m9/release-manifest.json` reports
   `status=complete`, `semantic_checks_pass=true`, and `validation_gates_pass=true`.
-  It no longer crashes for absolute `--output` paths. Remaining release blockers are
-  the unresolved v1.0 release-claim decision and release-tag evidence tracked in
-  `agent/STATUS.md`.
-- Release versions remain intentionally at `0.1.0` until the v1.0 release-claim
-  decision is resolved. Tutorial and standard benchmark campaign manifests now use
-  v1.2 runtime reproducibility metadata and normative campaign statuses.
+  It no longer crashes for absolute `--output` paths. The current release claim is
+  scoped to the `0.1.0` task-spec artifact; an intentional v1.0 tag remains a future
+  action after KB/frontier contribution evidence or another documented claim revision.
+- Release versions remain intentionally at `0.1.0`. Tutorial and standard benchmark
+  campaign manifests now use v1.2 runtime reproducibility metadata and normative
+  campaign statuses.
   Release-bound public CSV/plot artifacts are now generated and hashed by the release
   manifest, and clean CI now includes the release-smoke path.
 
@@ -201,9 +263,9 @@ GitHub Actions CI has passed on the pushed repair series.
 
 The task-spec gap audit reconfirmed that the current P0 benchmark/security repairs and
 M8/M9 semantic artifact repairs are supported by local evidence. The remaining release
-blocker is the v1.0 release-claim/tag decision: the task-spec recovery targets pass,
-but `docs/EVALUATION.md` still requires either a demonstrated B1-B4 cost contribution
-or an explicit documented release-claim revision.
+release decision is intentionally scoped to `0.1.0`: the task-spec recovery targets
+pass, but v1.0/research-complete remains untagged until a future profile or claim
+demonstrates the KB/frontier contribution over B4.
 
 README, `docs/PROTOCOL.md`, and `docs/REPOSITORY_GUIDE.md` now document the repaired
 split challenge lifecycle: `challenge private-root`, split public/private challenge
@@ -255,7 +317,7 @@ PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
 ```
 
 ```text
-standard_benchmark_sha256: 55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480
+standard_benchmark_sha256: fc83eec0a6c3fbdb828556fcd003ab3192bdae4ec8f2d9e04f1d734a197db238
 validation_evidence_sha256: e6d6f4491e98685f6d1fd47128964da75142663cfceaa7a8da975d3cc32e7cb7
 release_manifest_sha256:    056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
 ```
@@ -317,7 +379,7 @@ status: blocked
 semantic_checks_pass: false
 validation_gates_pass: true
 failed_release_checks: 1
-standard_benchmark_sha256: 55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480
+standard_benchmark_sha256: fc83eec0a6c3fbdb828556fcd003ab3192bdae4ec8f2d9e04f1d734a197db238
 missing_or_failed_gates: 0
 file_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
 ```
@@ -363,7 +425,7 @@ Current regenerated artifacts:
 
 ```text
 state_learning_sha256: ce5b2daecf11499e3d1465200ecf04abd77a906927f3bb337f855ebaa354eef1
-reduced_witnesses_sha256: a924448f71b27708c35945b5a64bff33f5ffd1394ca84cd700f052c12d95aa56
+reduced_witnesses_sha256: a2d02bab8a0614514ad383fdbc01407691cad1af9f721cdb098efbe00a7883ea
 release_manifest_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
 ```
 
@@ -498,11 +560,11 @@ PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
 
 ```text
 campaign_rows: 700
-query_rows: 52928
-relation_rows: 26464
+query_rows: 67162
+relation_rows: 33581
 state_rows: 13
-reducer_family_rows: 10
-evaluation_artifacts_manifest_sha256: c7ff125818abd7b8d0a895a897a994638b54cc5c5c32086fe73f0ca1cf8ba367
+reducer_family_rows: 11
+evaluation_artifacts_manifest_sha256: 7441b646b246af2e157cc81135efd8a51ac05fca7d993a70e2f30bf9c9ea0dc7
 validation_evidence_sha256: e6d6f4491e98685f6d1fd47128964da75142663cfceaa7a8da975d3cc32e7cb7
 release_manifest_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
 ```
@@ -1226,7 +1288,7 @@ just boundary-audit         pass; binary sha256=628cf0df3268710b9109e328ea72c854
 just benchmark-standard     pass; 600 campaigns, targets_met true, full/reference
                                  exact rate 1.0, p95 48 logical, off false exact 0
 just evaluate-state-learning pass; learned-state and exact-history targets met
-just reduce-witnesses       pass; 10/10 relation families minimized
+just reduce-witnesses       pass; 11/11 relation families minimized
 just release-manifest       fails closed; four public artifacts hashed, semantic
                             release checks/gate evidence incomplete
 ```

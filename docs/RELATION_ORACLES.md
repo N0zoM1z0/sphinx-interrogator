@@ -11,7 +11,7 @@ The first responsibility is testing. The second turns testing into inference.
 
 The implementation lives in `python/sphinx_interrogator/relations.py`, with
 certificate, normalization, finite extraction, and solver-independent expression IR
-types split into adjacent modules. The nine hard-reset templates in Section 4.1–4.9
+types split into adjacent modules. The ten hard-reset templates in Section 4.1–4.10
 are enabled, and M8 enables `soft-history-contrast/v1` for research-mode soft-reset
 state experiments. State-conditioned evidence must carry a learned or exact
 state-model provenance marker and remain retractable after counterexamples.
@@ -97,7 +97,36 @@ Possible exact outcomes are `-1`, `0`, or `+1`. With a known active guard, `+1` 
 
 This is the foundational tutorial relation.
 
-### 4.2 `token-switch/v1`
+### 4.2 `drained-anchor-switch/v1`
+
+Compare two anchor substitutions under the same drained repetition schedule:
+
+```text
+repeat r times:
+  PAD pad;
+  PROBE lane, token, epoch;
+  ANCHOR bank_a, epoch;
+  FENCE;
+  PAD restore;
+```
+
+The follow-up uses `bank_b` in place of `bank_a`. Preconditions require
+`bank_a != bank_b`, `2 <= repeats <= 16`, hard reset, identity lane mapping, and the
+same certified drain/phase-restoration recurrence as `repeat-amplify/v1`.
+
+- Architectural relation: equal because both arms are silent and have the same public
+  shape.
+- Fault-free relation: equal after subtracting each arm's public static cost.
+- Fault signal: under active reference/weak/signed members, the normalized source
+  minus follow-up residual is `+r`, `-r`, or `0` for bank `a`, bank `b`, or neither.
+- Extractor: the generic finite-model extractor enumerates all secret/fault/noise
+  assignments consistent with both public buckets and emits bounded constraints only
+  when quantization and `[-1,1]` noise leave a strict model subset.
+
+This is the standard-profile synthesis relation that crosses width-four buckets while
+retaining a three-way anchor partition.
+
+### 4.3 `token-switch/v1`
 
 Keep the anchor fixed and change the probe token.
 
@@ -107,7 +136,7 @@ Keep the anchor fixed and change the probe token.
 
 It is useful when candidate models agree on one token but disagree on another.
 
-### 4.3 `epoch-switch/v1`
+### 4.4 `epoch-switch/v1`
 
 Change epoch and adjust any epoch-dependent static cost.
 
@@ -117,7 +146,7 @@ Change epoch and adjust any epoch-dependent static cost.
 
 This relation should be used with care: epoch also changes phase transition, so a hard reset or certified context is required.
 
-### 4.4 `phase-shift/v1`
+### 4.5 `phase-shift/v1`
 
 Insert `PAD n` symmetrically or asymmetrically with a normalizer that subtracts `n`.
 
@@ -127,7 +156,7 @@ Insert `PAD n` symmetrically or asymmetrically with a normalizer that subtracts 
 
 This is an interrogation-style trick query: the relation is known, but its response reveals whether a prior interpretation of phase is consistent.
 
-### 4.5 `repeat-amplify/v1`
+### 4.6 `repeat-amplify/v1`
 
 Replace one certified cell with `r` repetitions, optionally separated by a drain sequence.
 
@@ -137,7 +166,7 @@ Replace one certified cell with `r` repetitions, optionally separated by a drain
 
 The constructor must reject naive repetition when hidden replay credit would invalidate the assumed amplification.
 
-### 4.6 `independent-swap/v1`
+### 4.7 `independent-swap/v1`
 
 Swap two independent, architecturally silent cells.
 
@@ -147,7 +176,7 @@ Swap two independent, architecturally silent cells.
 
 This relation is especially useful for diagnosing a wrong stateless model.
 
-### 4.7 `context-lift/v1`
+### 4.8 `context-lift/v1`
 
 Given an already certified pair `(P,P')`, embed both in the same context `C[·]`.
 
@@ -157,7 +186,7 @@ Given an already certified pair `(P,P')`, embed both in the same context `C[·]`
 
 Context composition requires explicit entry and exit summaries; arbitrary prefixing is not sound.
 
-### 4.8 `register-rename/v1`
+### 4.9 `register-rename/v1`
 
 Alpha-rename general registers in ordinary setup/output code.
 
@@ -167,7 +196,7 @@ Alpha-rename general registers in ordinary setup/output code.
 
 If it does, the machine model or fault confinement is wrong.
 
-### 4.9 `hard-replay/v1`
+### 4.10 `hard-replay/v1`
 
 Execute the identical query after hard reset several times.
 
@@ -176,7 +205,7 @@ Execute the identical query after hard reset several times.
 
 This relation validates the experimental apparatus rather than separating secrets.
 
-### 4.10 `soft-history-contrast/v1`
+### 4.11 `soft-history-contrast/v1`
 
 Compare the same measurement suffix after two different certified history prefixes.
 

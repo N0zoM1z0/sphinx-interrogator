@@ -5,15 +5,16 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
 ## Overall state
 
 - **Specification/design package:** complete.
-- **Executable system:** substantial and locally testable, but not yet compliant with
-  every acceptance criterion in `agent/CODEX_TASK_SPEC.md`.
+- **Executable system:** task-spec recovery, boundary, M8/M9, release-manifest, and
+  CI evidence gates are implemented and locally testable. The repository remains
+  versioned as `0.1.0`; v1.0/research-complete is intentionally not claimed.
 - **Verified repair:** the challenge private-root split, generic public identifiers,
   public-directory/FD-broker launch, distinct-UID isolation, recursive response
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 17:44Z after final documentation/version alignment
-  validation.
+- **Last updated:** 2026-07-16 20:34Z after the drained-anchor reducer/control test
+  repair and full task-spec gate rerun.
 
 ## Current milestone
 
@@ -38,24 +39,25 @@ equivalence. The CI workflow now includes a clean `release-smoke` job covering
 tutorial, standard smoke, M8, M9 reducer, evaluation artifact export, and
 release-manifest packaging smoke; standard and reducer smoke commands use short
 `/tmp` socket roots to avoid GitHub runner `SUN_LEN` failures without moving
-challenge artifacts. No v1.0 or research-complete release should be created yet: the
-task-spec standard recovery targets pass, but the stricter `docs/EVALUATION.md` v1.0
-release policy still needs either a demonstrated B1-B4 cost contribution or an
-explicit documented release-claim revision.
+challenge artifacts. The standard selector now includes the certified
+`drained-anchor-switch/v1` synthesis skeleton: full/reference is 100/100 exact with
+median/p95 28/33 logical families and zero fault-off false exact declarations. The
+release-claim decision is explicit: keep this state at `0.1.0`, do not tag v1.0, and
+treat the B4/KB-frontier contribution as a future v1.0 claim gate.
 
 ## Verification dashboard
 
 | Check | Last result | Evidence |
 |---|---|---|
-| `just fmt`, `just lint`, `just test` | pass | 2026-07-16 mutation-control pass: Rust 46 tests and Python 191 tests pass |
+| `just fmt`, `just lint`, `just test` | pass | 2026-07-16 drained-anchor follow-up pass: Rust 46 tests and Python 195 tests pass |
 | `just schema-check`, `just docs-check` | pass | Current fixtures, release-manifest schema, and links pass their implemented checks |
 | `just verify-formal` | pass | Z3 `unsat` x3; TLC 78,333 generated/7,672 distinct; finite checker covers reset, gas, confinement, normalized cost, and 131,072 guarded-replay cells |
-| `just boundary-audit` | pass | Recursive schema checks and separate-UID/FD-broker isolation; binary SHA-256 `c094fff9561f0997dd8c307940dba991b80c920792c07095113f979d430da6cd` |
+| `just boundary-audit` | pass | Recursive schema checks and separate-UID/FD-broker isolation; binary SHA-256 `c094fff76ebf1102a093b6b607f31612bf55e3516393de8d42271f3e079c0d64` |
 | `just demo-tutorial` | pass | `unique_exact`, judge accepted, 16 logical families; `runs/tutorial-demo-v3` |
-| standard benchmark v2 | pass | Report v1.1 covers 100 seeds / 700 campaigns with paired bootstrap CI, complete B0-B7 surface, `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact, fault-off 0 false exact, and normative result statuses only |
+| standard benchmark v2 | pass | Report v1.1 covers 100 seeds / 700 campaigns with paired bootstrap CI, complete B0-B7 surface, `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact with median/p95 28/33 logical families, fault-off 0 false exact, and normative result statuses only |
 | standard profile audit v1.1 | pass | `mutation_controls_separated=true`; aggregate controls are off 0, weak 1, signed 1, reference 2 |
 | `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
-| `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
+| `just reduce-witnesses` | pass | Reports 11 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
 | release manifest v2 | pass on clean tree | After the mutation-control audit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
 | GitHub CI | pass | Remote `main` run `29520515698` passed Rust, Python, integration/boundary, and release-smoke jobs |
 | release-smoke CI job | pass | GitHub run `29520515698` generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest; local socket-root regressions for standard and reducer pass |
@@ -80,19 +82,21 @@ explicit documented release-claim revision.
 
 ### P2
 
-- Resolve the final v1.0 release-claim decision. The code remains versioned as
-  `0.1.0`, the current standard benchmark meets task-spec recovery targets, and clean
-  release-smoke CI passes, but the frozen profile does not demonstrate a cost
-  advantage over every B1-B4 baseline required by `docs/EVALUATION.md`.
-- Create an intentional release tag only after that release-claim decision and a fresh
-  clean-tree release manifest regeneration.
+- No open P2 blocker is tracked for the current `0.1.0` task-spec artifact. The final
+  v1.0 release-claim decision is documented: do not tag v1.0/research-complete yet.
+  The refreshed standard benchmark demonstrates synthesis/relation-family cost
+  contribution over B1-B3, but not KB/frontier contribution over B4.
+- Create an intentional v1.0 tag only after a future KB/frontier contribution claim is
+  demonstrated or the release scope is revised again, followed by a fresh clean-tree
+  release manifest regeneration.
 
 ## Current release artifacts
 
 - `runs/standard-benchmark-v2/standard-benchmark-report.json`: full 100-seed,
   700-campaign v2 benchmark with paired bootstrap CI and complete B0-B7 surface;
-  `full_published_matrix=true`, `targets_met=true`, SHA-256
-  `55e571cdeaea5f904e1d9c6cd79071c53a2539507dd3c7b73d24eb02d8456480`.
+  `full_published_matrix=true`, `targets_met=true`, full/reference median/p95
+  28/33 logical families, and SHA-256
+  `fc83eec0a6c3fbdb828556fcd003ab3192bdae4ec8f2d9e04f1d734a197db238`.
 - `runs/standard-profile-audit-m7/standard-profile-audit.json`: report v1.1 with
   public one-shot, learnability, drained-repeat, and stateful aggregate mutation
   controls; `mutation_controls_separated=true`, aggregate controls are `off=0`,
@@ -107,13 +111,13 @@ explicit documented release-claim revision.
   `state_conditioned_inference.status=complete`, `nontrivial_constraints=1`, SHA-256
   `ce5b2daecf11499e3d1465200ecf04abd77a906927f3bb337f855ebaa354eef1`.
 - `runs/reduced-witnesses-m9/reduced-witnesses-report.json`: measured replay reducer
-  report; `all_minimized=true`, `all_replay_paths_valid=true`, and
-  `reset_policy_honored=true`, SHA-256
-  `a924448f71b27708c35945b5a64bff33f5ffd1394ca84cd700f052c12d95aa56`.
+  report; `family_count=11`, `all_minimized=true`, `all_replay_paths_valid=true`,
+  and `reset_policy_honored=true`, SHA-256
+  `a2d02bab8a0614514ad383fdbc01407691cad1af9f721cdb098efbe00a7883ea`.
 - `runs/release-m9/evaluation-artifacts/evaluation-artifacts-manifest.json`: public
-  CSV/SVG artifact manifest; row counts are 700 campaign rows, 52,928 query rows,
-  26,464 relation rows, 13 state rows, and 10 reducer-family rows, SHA-256
-  `c7ff125818abd7b8d0a895a897a994638b54cc5c5c32086fe73f0ca1cf8ba367`.
+  CSV/SVG artifact manifest; row counts are 700 campaign rows, 67,162 query rows,
+  33,581 relation rows, 13 state rows, and 11 reducer-family rows, SHA-256
+  `7441b646b246af2e157cc81135efd8a51ac05fca7d993a70e2f30bf9c9ea0dc7`.
 - `runs/release-m9/release-manifest.json`: generated manifest v2; current
   `status=complete`, `semantic_checks_pass=true`, and
   `validation_gates_pass=true` when regenerated from clean `main`. The standard

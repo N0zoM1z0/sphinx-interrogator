@@ -30,6 +30,7 @@ from sphinx_interrogator.relations import (
     AnchorSwitchTemplate,
     Cell,
     ContextLiftTemplate,
+    DrainedAnchorSwitchTemplate,
     EpochSwitchTemplate,
     HardReplayTemplate,
     IndependentSwapTemplate,
@@ -416,6 +417,16 @@ def _witness_seeds() -> tuple[WitnessSeed, ...]:
         pad=8,
         repeats=6,
     )
+    drained_anchor = DrainedAnchorSwitchTemplate().instantiate(
+        instance_id="m9-drained-anchor",
+        lane=0,
+        token=0,
+        epoch=0,
+        bank_a=0,
+        bank_b=2,
+        pad=8,
+        repeats=6,
+    )
     swap = IndependentSwapTemplate().instantiate(
         instance_id="m9-swap",
         first=Cell(0, 0, 0, 2, 8),
@@ -465,6 +476,7 @@ def _witness_seeds() -> tuple[WitnessSeed, ...]:
         WitnessSeed("epoch-switch/v1", epoch, {}),
         WitnessSeed("phase-shift/v1", phase, {}),
         WitnessSeed("repeat-amplify/v1", repeat, {}),
+        WitnessSeed("drained-anchor-switch/v1", drained_anchor, {}),
         WitnessSeed("independent-swap/v1", swap, {}),
         WitnessSeed("context-lift/v1", context, {anchor.instance_hash: anchor}),
         WitnessSeed("register-rename/v1", register, {}),
