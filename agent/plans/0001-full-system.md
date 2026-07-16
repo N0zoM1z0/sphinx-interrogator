@@ -55,7 +55,9 @@ noise, independent Python target-family model, concrete differential vectors, an
 executable TLC/SMT/exhaustive checks. The verified M3 checkpoint adds all nine stateless
 hard-reset templates, artifact-bound certificates, conservative interval decisions,
 latent-fault finite extractors, and the typed serializable constraint expression IR.
-Persistence, Z3 translation/hypothesis management, and M4–M9 campaign layers remain
+The verified M4 checkpoint adds raw-wire write-ahead, hash-chained events, rebuildable
+SQLite views, deterministic scheduling/frontier logic, and exact Z3 hypothesis
+management with durable provenance. Tutorial recovery and M5–M9 research layers remain
 outstanding.
 
 ## Progress
@@ -66,7 +68,7 @@ outstanding.
 - [ ] (2026-07-15 16:58Z) M1 implementation and milestone-specific acceptance pass: full DSL/AST/validator/interpreter, canonical text/JSON/hash fixtures, sparse memory, malformed-input checks, and generated noninterference tests. Closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
 - [ ] (2026-07-15 17:29Z) M2 implementation and milestone-specific acceptance pass: microcode/state/fault/noise separation, strict public/private profiles, committed challenge packages, one-shot judge, live fault confinement/replay, exhaustive Rust/Python vectors, TLC, and mutation detection. Formal closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
 - [ ] (2026-07-16 01:33Z) M3 implementation and milestone-specific acceptance pass: nine typed stateless templates, strict cached certificates, exact/bounded interval decisions, latent-fault extractors, recursive expression IR, schemas, and reduced/live soundness evidence. Closure is deferred only because the required real `just demo-tutorial` M5 gate still exits 1.
-- [ ] (date) Complete M4 harness, append-only/SQLite knowledge base, constraint IR, and exact hypothesis store.
+- [ ] (2026-07-16 01:54Z) M4 implementation and milestone-specific acceptance pass: balanced public process harness, raw-response write-ahead, hash-chained events, SQLite migration/rebuild, complete materialized graph, TTL/multidimensional frontier, Z3 translation, named cores, exact enumeration/uniqueness/implication, rollback, manifests, reports, and CLI replay. Closure is deferred only because the real `just demo-tutorial` M5 gate still exits 1.
 - [ ] (date) Complete M5 tutorial recovery and fault-free negative control.
 - [ ] (date) Complete M6 grammar-guided CEGIS query synthesis and integrate it into selection.
 - [ ] (date) Complete M7 bounded/stochastic noise, robust sampling, MaxSMT repair, and standard acceptance.
@@ -108,6 +110,12 @@ outstanding.
 - Observation: Equal quantized buckets are compatible with negative, zero, and positive cycle deltas even under a small bounded-noise profile.
   Evidence: the width-four regression produces a normalized interval containing `{-1,0,1}`, returns `inconclusive`, and emits no hard constraint; repeat amplification with certified replay drain moves a signal wholly above zero and emits a sound bounded disjunction for all nine noise pairs.
 
+- Observation: A target response and its derived oracle event are two distinct crash-consistency boundaries.
+  Evidence: the injected recorder crash occurs after exact public response bytes are atomically written but before protocol decode; resume commits one execution from those bytes while the replacement fake endpoint records zero calls.
+
+- Observation: Syntactically new candidates do not establish semantic novelty when an implication query times out.
+  Evidence: the M4 frontier test returns `unknown`, appends no candidate event, and only accepts the same candidate after a `not_implied` result supplies a countermodel status.
+
 Add dated observations here. Include failed assumptions, benchmark results, solver behavior, tool limitations, and concise command/artifact evidence.
 
 ## Decision Log
@@ -135,6 +143,12 @@ Add dated observations here. Include failed assumptions, benchmark results, solv
   Alternatives considered: Assume the reference fault from profile names; store Z3 ASTs; convert bucket equality directly into cycle equality.
   Date/author: 2026-07-16, Codex implementation.
   Consequences: M4 can translate either finite evidence or composed expressions to Z3, and exact recovery must identify a secret despite fault-family ambiguity.
+
+- Decision: Make raw public bytes and the hash-chained event log authoritative; treat SQLite and Z3 state as rebuildable materializations.
+  Rationale: The target cannot replay an already consumed physical budget after an analysis crash, while database/solver caches can be reconstructed deterministically from immutable public evidence.
+  Alternatives considered: Write SQLite first; store only typed responses; pickle live Z3 objects.
+  Date/author: 2026-07-16, Codex implementation.
+  Consequences: Stable execution/event IDs make retries idempotent, constraints require raw/certificate provenance, and replay digest mismatch is a hard error.
 
 - Decision: Start query synthesis with typed relation skeleton enumeration plus SMT-filled holes and CEGIS model counterexamples.
   Rationale: It is easier to verify and debug than synthesizing arbitrary instruction streams, while still exercising syntax-guided synthesis.
@@ -507,13 +521,14 @@ Populate during implementation:
 - M1 language/architecture evidence: `VALIDATION.md`, `tests/fixtures/programs/`, and `docs/DSL_AND_ARCHITECTURE.md`, 2026-07-15; all milestone-specific tests and repository checks pass, while the required M5 tutorial gate remains explicitly pending.
 - M2 target/challenge evidence: `VALIDATION.md`, `tests/fixtures/model/`, `tests/fixtures/challenge/`, and `docs/SYSTEM_A_SPHINX_VM.md`, 2026-07-15; 44 Rust and 68 Python tests cover the semantic split, live fault confinement, deterministic replay, permissions, and judge policy.
 - M3 relation/extractor evidence: `VALIDATION.md`, `tests/python/test_certified_relations.py`, `tests/python/test_constraint_ir.py`, `tests/fixtures/relations/`, and `docs/RELATION_ORACLES.md`, 2026-07-16; 99 Python tests include every stateless relation, all bounded noise/fault generators, strict certificate/IR persistence, and live Rust relation arms.
+- M4 persistence/solver evidence: `VALIDATION.md`, `docs/CAMPAIGN_PERSISTENCE.md`, `tests/python/test_persistence.py`, `test_harness.py`, `test_hypothesis_persistence.py`, `test_frontier.py`, `test_solver.py`, and `test_symbolic_solver_model.py`, 2026-07-16; 125 Python tests cover real/fake write-ahead, replay, provenance, Z3 exactness, rollback, and CLI inspection.
 - Tutorial acceptance report: pending.
 - Standard full-system report: pending.
 - Baseline/ablation report: pending.
 - Fault-free control report: pending.
 - One-shot leakage audit: pending.
 - Mutation ladder: M2 off/reference/weak/signed unit and live confinement evidence in `VALIDATION.md`; statistical M7/M9 calibration remains pending.
-- Formal/TLA+/SMT report: M2 scheduler and M3 reduced relation/expression differential evidence in `VALIDATION.md`; durable-session and final mutation obligations remain M4/M9.
+- Formal/TLA+/SMT report: M2 scheduler, M3 relation, and M4 concrete-versus-Z3 bank/fault/state evidence in `VALIDATION.md`; final mutation/release obligations remain M9.
 - Boundary-audit report: M2 artifact permission/public-key/live-response evidence in `VALIDATION.md`; final release rerun remains pending M9.
 - Minimized witness collection: pending.
 - Release manifest/revision: pending.

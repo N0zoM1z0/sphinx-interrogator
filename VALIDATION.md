@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 01:33Z**
+Last updated: **2026-07-16 01:54Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -262,3 +262,69 @@ checkpoint, not a false claim that the cross-milestone semantic gate has closed.
   acceptance, and the fault-free negative control.
 - CEGIS, stochastic/MaxSMT calibration, stateful learning/retraction, relation-aware
   reduction, benchmarks, and final release evidence remain M6–M9.
+
+## M4 durable campaign and exact hypothesis checkpoint
+
+M4 introduces a four-layer authority order: immutable public `manifest.json`, exact
+content-hashed public wire exchanges under `raw/`, a stable-ID/hash-chained append-only
+`events.jsonl`, and disposable `campaign.sqlite3` materialized views. The real JSONL
+client invokes its recorder immediately after reading an execute response line and
+before JSON decoding. A crash injected at that point leaves raw evidence but no derived
+event; reopening decodes that raw line, commits one stable execution event, and never
+calls the fake endpoint again. A live integration test exercises the identical path
+against the authoritative Rust challenge server.
+
+SQLite version 1 materializes query nodes, seeded balanced/correlated batches,
+executions, certificates, relation edges, decisions, constraints, candidate snapshots,
+state-model versions, witnesses, and TTL frontier candidates. Events are validated
+against current foreign-key/provenance state before append, then written before the
+SQLite transaction. Reopen catches an event committed just before a database crash;
+full rebuild reproduces the same deterministic view digest. Constraints cannot
+materialize unless all raw request IDs, their relation, and certificate exist.
+
+The solver-independent IR now has a complete Z3 translator. Fixed-width operations,
+signed/unsigned comparisons, named assumptions, and finite-domain encodings preserve
+their project semantics. The hypothesis store returns only `sat|unsat|unknown`, tracks
+provenance-rich unsat cores, blocks models for enumeration, selects diverse bounded
+committees, labels exact versus sampled marginals, checks implication, and proves
+uniqueness only by an explicit alternative-model exclusion that returns `unsat`.
+Constraint groups can be quarantined/reactivated/retracted and replayed from JSON IR;
+grouped soft evidence has a configured weight cap and MaxSMT ranking.
+
+The active frontier records independent structural, relation, state, observation,
+partition, and semantic keys. TTL is enforced at insertion/selection and ties use the
+stable candidate ID. Solver implication `unknown` defers a candidate and appends no
+event; it is never treated as semantic novelty proof.
+
+The final M4 suite used the repository-local Cargo home/target, two build jobs, and no
+concurrent Cargo/rustc process:
+
+```text
+just fmt             pass (46 Python/script files and Rustfmt clean)
+just lint            pass (Clippy -D warnings, Ruff, strict mypy over 23 modules)
+just test            pass (42 Rust lib + 2 Rust binary; 125 Python; 8 live process tests)
+just schema-check    pass (including versioned public campaign manifest fixture)
+just docs-check      pass
+just verify-formal   pass (Z3 unsat x3; TLC 70,557 generated/2,276 distinct;
+                          131,072 guarded-replay cells; mutation rejected)
+just boundary-audit  pass; binary sha256=628cf0df3268710b9109e328ea72c854c3a506f4c2159837638e9645d2f64e4b
+```
+
+Python adds focused evidence for raw-write crash resume, exact event replay, empty and
+existing SQLite migrations/future-version rejection, full constraint provenance,
+deterministic schedule balance, fake/live endpoints, implication unknown, TTL and
+tie-breaking, finite secret/fault correlation, exact uniqueness, core rollback, soft
+weight caps, CLI inspect/replay, and 512-cell plus complete reduced fault/replay/phase
+concrete-versus-Z3 differential checks.
+
+`just demo-tutorial` was run and still exits 1 at the checked-in M5 TODO. M4 is a
+verified implementation checkpoint; the deferred cross-milestone gate is not claimed
+until generated recovery, uniqueness, judge, persistence, and reporting are real.
+
+## Remaining limitations after M4
+
+- M5 must integrate relation execution/selection with this repository and hypothesis
+  store, recover every tutorial seed uniquely, invoke the one-shot judge, and prove the
+  fault-free negative control cannot declare exact recovery.
+- CEGIS, stochastic calibration and full MaxSMT repair policy, stateful learning,
+  relation-aware reduction, standard benchmarks, and release evidence remain M6–M9.

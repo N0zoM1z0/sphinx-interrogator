@@ -9,6 +9,7 @@ from pathlib import Path
 import click
 
 from sphinx_interrogator.ast import Program
+from sphinx_interrogator.persistence import CampaignRepository
 from sphinx_interrogator.protocol import VmClient
 from sphinx_interrogator.relations import AnchorSwitchTemplate
 
@@ -76,6 +77,40 @@ def render_cell(lane: int, token: int, epoch: int, anchor: int, pad: int) -> Non
         pad=pad,
     )
     click.echo(program.render(), nl=False)
+
+
+@main.command("inspect")
+@click.option("--run", "run_directory", type=click.Path(path_type=Path, exists=True), required=True)
+def inspect_run(run_directory: Path) -> None:
+    """Print a deterministic public summary of one persisted campaign."""
+    repository = CampaignRepository.open(run_directory)
+    try:
+        report = repository.report()
+    finally:
+        repository.close()
+    click.echo(json.dumps(report, indent=2, sort_keys=True))
+
+
+@main.command("replay")
+@click.option("--run", "run_directory", type=click.Path(path_type=Path, exists=True), required=True)
+def replay_run(run_directory: Path) -> None:
+    """Rebuild SQLite from the append-only log and verify identical materialized state."""
+    repository = CampaignRepository.open(run_directory)
+    try:
+        before = repository.database.digest()
+        after = repository.rebuild()
+        report = {
+            "replay_version": "1.0",
+            "campaign_id": repository.manifest.campaign_id,
+            "before_digest": before,
+            "after_digest": after,
+            "matched": before == after,
+        }
+    finally:
+        repository.close()
+    click.echo(json.dumps(report, indent=2, sort_keys=True))
+    if not report["matched"]:
+        raise click.ClickException("materialized replay digest mismatch")
 
 
 if __name__ == "__main__":

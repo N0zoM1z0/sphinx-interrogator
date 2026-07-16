@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -13,6 +14,8 @@ import jsonschema
 import pytest
 
 from sphinx_interrogator.ast import Program
+from sphinx_interrogator.harness import DurableExecutionHarness, ExecutionSpec
+from sphinx_interrogator.persistence import CampaignManifest, CampaignRepository
 from sphinx_interrogator.protocol import VmClient
 from sphinx_interrogator.relations import (
     AnchorSwitchTemplate,
@@ -442,3 +445,82 @@ def test_certified_relation_arms_match_authoritative_rust_semantics(challenge: P
             assert {result.public_digest for result in results} == {results[0].public_digest}
             if relation.relation_id == "hard-replay/v1":
                 assert len({result.observation.cycle_bucket for result in results}) == 1
+
+
+@pytest.mark.integration
+def test_durable_harness_records_real_wire_bytes_before_materialization(
+    challenge: Path,
+    tmp_path: Path,
+) -> None:
+    """The authoritative process uses stable IDs and replayable write-ahead evidence."""
+    profile_bytes = (challenge / "public/profile.toml").read_bytes()
+    repository = CampaignRepository.create(
+        tmp_path / "durable-run",
+        CampaignManifest(
+            campaign_id="live-durable",
+            challenge_id="pytest-challenge",
+            profile_name="tutorial",
+            semantic_version="0.1.0",
+            public_profile_sha256=hashlib.sha256(profile_bytes).hexdigest(),
+            seed=20260716,
+            minimum_certificate_strength="exhaustive-enumeration",
+            logical_query_budget=80,
+            physical_execution_budget=240,
+            hard_reset_budget=240,
+        ),
+    )
+    program = "PROBE 0, 0, 0\nANCHOR 0, 0\nHALT\n"
+    repository.append_event(
+        event_id="query:live-query",
+        kind="query_created",
+        logical_time=0,
+        payload={
+            "query_id": "live-query",
+            "program_sha256": hashlib.sha256(program.encode()).hexdigest(),
+            "program_text": program,
+            "expires_after": None,
+        },
+    )
+    repository.append_event(
+        event_id="batch:live-batch",
+        kind="batch_scheduled",
+        logical_time=0,
+        payload={
+            "batch_id": "live-batch",
+            "seed": 20260716,
+            "schedule": ["live-execution"],
+            "status": "scheduled",
+        },
+    )
+    harness, client = DurableExecutionHarness.start_process(
+        repository,
+        vm_binary(),
+        challenge=challenge,
+        timeout_seconds=2.0,
+    )
+    try:
+        client.hello()
+        result = harness.execute(
+            ExecutionSpec(
+                execution_id="live-execution",
+                query_id="live-query",
+                batch_id="live-batch",
+                position=0,
+                program=program,
+                session_id="live-session",
+                reset="hard",
+                logical_time=1,
+                execution_seed_id="live-seed",
+            )
+        )
+    finally:
+        client.close()
+    assert result.request_id == "live-execution"
+    raw = repository.raw.get("live-execution")
+    assert raw is not None
+    assert json.loads(raw.request_line)["request_id"] == "live-execution"
+    assert json.loads(raw.response_line)["kind"] == "execute_result"
+    assert repository.database.table_count("executions") == 1
+    digest = repository.database.digest()
+    assert repository.rebuild() == digest
+    repository.close()

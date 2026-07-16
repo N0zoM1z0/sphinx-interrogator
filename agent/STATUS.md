@@ -5,20 +5,21 @@ This file is a concise, living project checkpoint. The active ExecPlan contains 
 ## Overall state
 
 - **Specification/design package:** complete.
-- **Executable system:** M0 boundary, M1 language/architecture, M2 target/challenge, and M3 certified stateless relations are implemented; durable campaign and later research layers remain incomplete.
-- **Implementation:** active; M2 is committed as `f14b407`, and the verified M3 checkpoint is ready to commit.
+- **Executable system:** M0–M4 are implemented through durable black-box execution, certified constraints, replayable campaign state, and exact Z3 hypotheses; recovery and later research layers remain incomplete.
+- **Implementation:** active; M3 is committed as `40d63d7`, and the verified M4 checkpoint is ready to commit.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
 - **Last updated:** 2026-07-16.
 
 ## Current milestone
 
-Milestone 3 checkpoint — Interrogator now has nine typed hard-reset relation templates,
-strict artifact-bound certificates, interval normalization, exact/bounded finite-model
-extractors, and a solver-independent typed expression IR. Extracted constraints retain
-the latent private fault variant and every public-bucket-consistent bounded-noise model.
-Reduced exhaustive and live Rust-process tests pass. `soft-history-contrast/v1` remains
-an explicit M8 state-learning deliverable. Formal milestone closure remains deferred
-with M1/M2 because `just demo-tutorial` is the real M5 recovery flow and still exits 1.
+Milestone 4 checkpoint — public response lines are write-ahead persisted before decode,
+derived events form an idempotent hash chain, and a versioned SQLite view rebuilds from
+that log. The durable graph covers queries, balanced batches, executions, certificates,
+relations, decisions, constraints, snapshots, state models, witnesses, and TTL frontier
+candidates. Project IR translates to Z3 with named cores, exact enumeration,
+alternative-model uniqueness, implication, quarantine/retraction, diverse models, and
+capped grouped MaxSMT. Formal closure remains deferred because `just demo-tutorial` is
+the real M5 recovery flow and still exits 1.
 
 ## Verification dashboard
 
@@ -26,24 +27,24 @@ with M1/M2 because `just demo-tutorial` is the real M5 recovery flow and still e
 |---|---|---|
 | `just fmt` | pass | Rustfmt and Ruff; 2026-07-16 |
 | `just lint` | pass | Clippy `-D warnings`, Ruff, strict mypy; 2026-07-16 |
-| `just test` | pass | 44 Rust + 99 Python, including 7 live process tests; 2026-07-16 |
+| `just test` | pass | 44 Rust + 125 Python, including 8 live process tests; 2026-07-16 |
 | `just schema-check` | pass | Relation/constraint/expression-IR schemas, public protocol/challenge/judge fixtures, and profiles |
 | `just verify-formal` | pass | Z3 `unsat` x3; TLC 70,557 generated/2,276 distinct states; 131,072-cell exhaustive check; mutation rejected |
 | `just demo-tutorial` | fail as specified TODO | exit 1: generate/recover/judge/report belongs to M5 |
-| `just boundary-audit` | M2 pass | public artifacts/modes and typed live responses; binary SHA-256 starts `628cf0df` |
+| `just boundary-audit` | pass | M4 System B modules plus typed public process responses; binary SHA-256 starts `628cf0df` |
 | standard benchmark | intentionally not implemented | — |
 
 ## Active blockers
 
 None. Sphinx builds remain isolated to this repository and limited to two jobs. No
-other Cargo process was active during the M3 command suite.
+other Cargo process was active during the M4 command suite.
 
 ## Next concrete actions
 
-1. Preserve the M3 implementation and evidence in a detailed English Git commit without pushing.
-2. Implement M4 write-ahead raw transcripts, append-only events, migrations, and resumable materialized views.
-3. Translate the project constraint IR to Z3 with named assumptions, exact model enumeration, implication, uniqueness, and honest timeout handling.
-4. Add crash/resume/replay, provenance, frontier/novelty, quarantine, and retraction tests before tutorial recovery.
+1. Preserve the M4 implementation and evidence in a detailed English Git commit without pushing.
+2. Replace the M5 tutorial TODO with a generated-challenge, persisted relation campaign, exact uniqueness proof, one-shot judge, and report.
+3. Run every required tutorial seed and the fault-free negative-control matrix without selector access to private state.
+4. Update CLI/docs/schemas and close the deferred M1–M4 tutorial gate only after the real flow passes.
 
 ## Decision summary
 
@@ -61,6 +62,9 @@ other Cargo process was active during the M3 command suite.
 - Quantization and bounded jitter are eliminated as integer feasibility sets; an interval crossing zero is inconclusive, never exact equality.
 - Certificate artifact digests bind semantics, scope, claims, preconditions, and limitations and are recomputed on strict load.
 - Solver-independent expression persistence uses explicit Boolean/integer/finite/bit-vector sorts; no Z3 object enters campaign storage.
+- Raw public wire bytes precede every analysis event; stable execution IDs make crash resume idempotent.
+- `events.jsonl` is authoritative and hash-chained; SQLite is a versioned disposable materialized view.
+- Exact recovery requires an explicit alternative-model `unsat`; `unknown` never means unique, implied, or novel.
 - The repository remains synthetic-only; no real-target adapters.
 
 ## How to update

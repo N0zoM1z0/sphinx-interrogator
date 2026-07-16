@@ -74,6 +74,7 @@ The numerical budgets in `docs/EVALUATION.md` are project acceptance targets, no
 7. The coding agent must follow [`AGENTS.md`](AGENTS.md) and maintain [`agent/plans/0001-full-system.md`](agent/plans/0001-full-system.md).
 8. Use [`docs/GITHUB_SETUP.md`](docs/GITHUB_SETUP.md) for repository metadata, labels, milestones, and first issues.
 9. See [`VALIDATION.md`](VALIDATION.md) for the current verification record and explicit limitations.
+10. Read [`docs/CAMPAIGN_PERSISTENCE.md`](docs/CAMPAIGN_PERSISTENCE.md) for write-ahead, replay, SQLite, and solver-state contracts.
 
 ## Build and verification commands
 
@@ -89,9 +90,9 @@ just benchmark-standard # reproducible standard-profile campaign suite
 
 `just demo-tutorial` and `just benchmark-standard` remain later-milestone acceptance
 commands. The language, architecture, microcode/fault model, isolated challenges,
-public process server, one-shot judge, and certified hard-reset relation/extractor
-layer are implemented; persistence, solver-backed recovery, synthesis, learning, and
-evaluation are the remaining research layers. Exact status and executed evidence are maintained in
+public process server, one-shot judge, certified hard-reset relations, write-ahead
+campaign persistence, and the exact solver layer are implemented; recovery, synthesis,
+learning, and evaluation are the remaining research layers. Exact status and executed evidence are maintained in
 [`agent/STATUS.md`](agent/STATUS.md) and [`VALIDATION.md`](VALIDATION.md).
 
 ## Local target lifecycle

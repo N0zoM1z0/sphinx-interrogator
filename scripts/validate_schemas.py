@@ -51,6 +51,9 @@ def validate_fixtures() -> list[str]:
             ROOT / "tests/fixtures/challenge/public-challenge.json"
         ],
         ROOT / "spec/judge.schema.json": [ROOT / "tests/fixtures/challenge/judge-response.json"],
+        ROOT / "spec/campaign-manifest.schema.json": [
+            ROOT / "tests/fixtures/campaign/manifest.json"
+        ],
     }
     errors: list[str] = []
     for schema_path, fixtures in assignments.items():

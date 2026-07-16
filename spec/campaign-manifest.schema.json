@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/sphinx/campaign-manifest.schema.json",
+  "title": "Reproducible public Interrogator campaign manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_version",
+    "campaign_id",
+    "challenge_id",
+    "profile_name",
+    "semantic_version",
+    "public_profile_sha256",
+    "seed",
+    "minimum_certificate_strength",
+    "budgets"
+  ],
+  "properties": {
+    "manifest_version": {"const": "1.0"},
+    "campaign_id": {"type": "string", "minLength": 1},
+    "challenge_id": {"type": "string", "minLength": 1},
+    "profile_name": {"type": "string", "minLength": 1},
+    "semantic_version": {"type": "string", "minLength": 1},
+    "public_profile_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "seed": {"type": "integer", "minimum": 0},
+    "minimum_certificate_strength": {
+      "enum": [
+        "empirical-only",
+        "differential-property",
+        "exhaustive-enumeration",
+        "smt-bounded-complete",
+        "theorem"
+      ]
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["logical_queries", "physical_executions", "hard_resets"],
+      "properties": {
+        "logical_queries": {"type": "integer", "minimum": 0},
+        "physical_executions": {"type": "integer", "minimum": 0},
+        "hard_resets": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

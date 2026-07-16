@@ -1,0 +1,15 @@
+{
+  "manifest_version": "1.0",
+  "campaign_id": "fixture-campaign",
+  "challenge_id": "fixture-challenge",
+  "profile_name": "tutorial",
+  "semantic_version": "0.1.0",
+  "public_profile_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+  "seed": 17,
+  "minimum_certificate_strength": "exhaustive-enumeration",
+  "budgets": {
+    "logical_queries": 80,
+    "physical_executions": 240,
+    "hard_resets": 240
+  }
+}

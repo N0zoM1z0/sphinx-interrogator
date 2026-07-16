@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+import re
 import selectors
 import subprocess
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, cast
@@ -15,6 +16,9 @@ from sphinx_interrogator.model import ExecutionObservation, ExecutionResult
 _PROTOCOL_VERSION = "1.0"
 _MAX_RESPONSE_LINE_BYTES = 131_072
 _DEFAULT_TIMEOUT_SECONDS = 5.0
+_PUBLIC_ID = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+
+type ExchangeRecorder = Callable[[str, str], None]
 
 
 class ProtocolError(RuntimeError):
@@ -51,6 +55,7 @@ class VmClient:
         process: subprocess.Popen[str],
         *,
         timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
+        exchange_recorder: ExchangeRecorder | None = None,
     ) -> None:
         """Wrap an already-started text-mode process."""
         if process.stdin is None or process.stdout is None:
@@ -62,6 +67,7 @@ class VmClient:
         self._stdout: IO[str] = process.stdout
         self._counter = 0
         self._timeout_seconds = timeout_seconds
+        self._exchange_recorder = exchange_recorder
 
     @classmethod
     def start(
@@ -71,6 +77,7 @@ class VmClient:
         challenge: str | Path,
         extra_args: Sequence[str] = (),
         timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
+        exchange_recorder: ExchangeRecorder | None = None,
     ) -> VmClient:
         """Start the public VM binary without importing or linking its implementation."""
         command = [str(executable), "serve", "--challenge", str(challenge), *extra_args]
@@ -83,7 +90,11 @@ class VmClient:
             encoding="utf-8",
             bufsize=1,
         )
-        return cls(process, timeout_seconds=timeout_seconds)
+        return cls(
+            process,
+            timeout_seconds=timeout_seconds,
+            exchange_recorder=exchange_recorder,
+        )
 
     def hello(self) -> HelloResult:
         """Perform a versioned protocol handshake."""
@@ -128,12 +139,15 @@ class VmClient:
         registers: Sequence[int] = (),
         memory: Mapping[int, int] | None = None,
         execution_seed_id: str | None = None,
+        request_id: str | None = None,
     ) -> ExecutionResult:
         """Execute one public program and decode its aggregate observation."""
-        request_id = self._next_request_id()
+        resolved_request_id = self._next_request_id() if request_id is None else request_id
+        if _PUBLIC_ID.fullmatch(resolved_request_id) is None:
+            raise ValueError("request_id must be a valid public protocol identifier")
         request: dict[str, object] = {
             "protocol_version": _PROTOCOL_VERSION,
-            "request_id": request_id,
+            "request_id": resolved_request_id,
             "kind": "execute",
             "session_id": session_id,
             "reset": reset,
@@ -147,31 +161,7 @@ class VmClient:
         if execution_seed_id is not None:
             request["execution_seed_id"] = execution_seed_id
         message = self._exchange(request, expected_kind="execute_result")
-        observation = _mapping(message, "observation")
-        metrics = _mapping(message, "public_metrics")
-        budget = _mapping(message, "budget")
-        semantics = _mapping(message, "semantics")
-        return ExecutionResult(
-            request_id=_string(message, "request_id"),
-            session_id=_string(message, "session_id"),
-            status=_string(message, "status"),
-            public_digest=_string(message, "public_digest"),
-            observation=ExecutionObservation(
-                cycle_bucket=_integer(observation, "cycle_bucket"),
-                bucket_width=_integer(observation, "bucket_width"),
-                samples_in_vm=_integer(observation, "samples_in_vm"),
-            ),
-            retired_instructions=_integer(metrics, "retired_instructions"),
-            static_cycles=_integer(metrics, "static_cycles"),
-            physical_executions_used=_integer(budget, "physical_executions_used"),
-            physical_executions_remaining=_integer(budget, "physical_executions_remaining"),
-            logical_queries_used=_integer(budget, "logical_queries_used"),
-            logical_queries_remaining=_integer(budget, "logical_queries_remaining"),
-            hard_resets_used=_integer(budget, "hard_resets_used"),
-            hard_resets_remaining=_integer(budget, "hard_resets_remaining"),
-            server_version=_string(semantics, "server_version"),
-            profile_version=_string(semantics, "profile_version"),
-        )
+        return _execution_result(message)
 
     def close(self) -> None:
         """Request a clean shutdown and wait for the local process."""
@@ -245,30 +235,9 @@ class VmClient:
             raise ProtocolError(f"target closed the protocol stream: {stderr.strip()}")
         if len(response_line.encode("utf-8")) > _MAX_RESPONSE_LINE_BYTES:
             raise ProtocolError("protocol response exceeds the configured line limit")
-        try:
-            decoded: object = json.loads(response_line)
-        except json.JSONDecodeError as error:
-            raise ProtocolError(f"protocol response is invalid JSON: {error}") from error
-        if not isinstance(decoded, dict):
-            raise ProtocolError("protocol response is not a JSON object")
-        message = cast("dict[str, object]", decoded)
-        if message.get("protocol_version") != _PROTOCOL_VERSION:
-            raise ProtocolError("protocol version mismatch")
-        if message.get("request_id") != expected_request_id:
-            raise ProtocolError("protocol response request_id mismatch")
-        if message.get("kind") == "error":
-            error_details = _mapping(message, "error")
-            raise ProtocolError(
-                f"{_string(error_details, 'code')}: {_string(error_details, 'message')}"
-            )
-        if message.get("kind") != expected_kind:
-            raise ProtocolError(
-                f"expected response kind {expected_kind}, received {message.get('kind')!r}"
-            )
-        if message.get("ok") is not True:
-            raise ProtocolError("successful protocol response must set ok=true")
-        _reject_unexpected_top_level_fields(message, expected_kind)
-        return message
+        if self._exchange_recorder is not None:
+            self._exchange_recorder(serialized, response_line.rstrip("\n"))
+        return _decode_response(response_line, expected_request_id, expected_kind)
 
     def _readline_with_timeout(self) -> str:
         selector = selectors.DefaultSelector()
@@ -281,6 +250,74 @@ class VmClient:
             return self._stdout.readline(_MAX_RESPONSE_LINE_BYTES + 1)
         finally:
             selector.close()
+
+
+def decode_execute_response(response_line: str, *, expected_request_id: str) -> ExecutionResult:
+    """Decode a previously write-ahead-recorded public execute response."""
+    if len(response_line.encode("utf-8")) > _MAX_RESPONSE_LINE_BYTES:
+        raise ProtocolError("protocol response exceeds the configured line limit")
+    message = _decode_response(response_line, expected_request_id, "execute_result")
+    return _execution_result(message)
+
+
+def _decode_response(
+    response_line: str,
+    expected_request_id: str,
+    expected_kind: str,
+) -> Mapping[str, object]:
+    """Validate one response independently of whether it came from a live stream or disk."""
+    try:
+        decoded: object = json.loads(response_line)
+    except json.JSONDecodeError as error:
+        raise ProtocolError(f"protocol response is invalid JSON: {error}") from error
+    if not isinstance(decoded, dict):
+        raise ProtocolError("protocol response is not a JSON object")
+    message = cast("dict[str, object]", decoded)
+    if message.get("protocol_version") != _PROTOCOL_VERSION:
+        raise ProtocolError("protocol version mismatch")
+    if message.get("request_id") != expected_request_id:
+        raise ProtocolError("protocol response request_id mismatch")
+    if message.get("kind") == "error":
+        error_details = _mapping(message, "error")
+        raise ProtocolError(
+            f"{_string(error_details, 'code')}: {_string(error_details, 'message')}"
+        )
+    if message.get("kind") != expected_kind:
+        raise ProtocolError(
+            f"expected response kind {expected_kind}, received {message.get('kind')!r}"
+        )
+    if message.get("ok") is not True:
+        raise ProtocolError("successful protocol response must set ok=true")
+    _reject_unexpected_top_level_fields(message, expected_kind)
+    return message
+
+
+def _execution_result(message: Mapping[str, object]) -> ExecutionResult:
+    observation = _mapping(message, "observation")
+    metrics = _mapping(message, "public_metrics")
+    budget = _mapping(message, "budget")
+    semantics = _mapping(message, "semantics")
+    return ExecutionResult(
+        request_id=_string(message, "request_id"),
+        session_id=_string(message, "session_id"),
+        status=_string(message, "status"),
+        public_digest=_string(message, "public_digest"),
+        observation=ExecutionObservation(
+            cycle_bucket=_integer(observation, "cycle_bucket"),
+            bucket_width=_integer(observation, "bucket_width"),
+            samples_in_vm=_integer(observation, "samples_in_vm"),
+        ),
+        retired_instructions=_integer(metrics, "retired_instructions"),
+        static_cycles=_integer(metrics, "static_cycles"),
+        physical_executions_used=_integer(budget, "physical_executions_used"),
+        physical_executions_remaining=_integer(budget, "physical_executions_remaining"),
+        logical_queries_used=_integer(budget, "logical_queries_used"),
+        logical_queries_remaining=_integer(budget, "logical_queries_remaining"),
+        hard_resets_used=_integer(budget, "hard_resets_used"),
+        hard_resets_remaining=_integer(budget, "hard_resets_remaining"),
+        server_version=_string(semantics, "server_version"),
+        profile_version=_string(semantics, "profile_version"),
+    )
 
 
 _EXPECTED_TOP_LEVEL_FIELDS: dict[str, frozenset[str]] = {
