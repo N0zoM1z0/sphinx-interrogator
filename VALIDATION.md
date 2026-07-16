@@ -424,9 +424,11 @@ git diff --check         pass
 Current regenerated artifacts:
 
 ```text
-state_learning_sha256: ce5b2daecf11499e3d1465200ecf04abd77a906927f3bb337f855ebaa354eef1
-reduced_witnesses_sha256: a2d02bab8a0614514ad383fdbc01407691cad1af9f721cdb098efbe00a7883ea
-release_manifest_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
+state_learning_sha256: b75d2b4220ae2dd5c6387930dc8b5b0d66624e0e011cab26ee535d36308c64ed
+reduced_witnesses_sha256: e2cd85c211004d882094d7a98ac182cd8035632c0ae3ff451d7d4755ace8ed85
+release_manifest_status: complete when regenerated from a clean tree; SHA-256 is
+                         intentionally not tracked here because the ignored manifest
+                         embeds the current revision and generation timestamps
 ```
 
 ## 2026-07-16 certificate proof-bundle binding repair
@@ -564,9 +566,11 @@ query_rows: 67162
 relation_rows: 33581
 state_rows: 13
 reducer_family_rows: 11
-evaluation_artifacts_manifest_sha256: 7441b646b246af2e157cc81135efd8a51ac05fca7d993a70e2f30bf9c9ea0dc7
-validation_evidence_sha256: e6d6f4491e98685f6d1fd47128964da75142663cfceaa7a8da975d3cc32e7cb7
-release_manifest_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
+evaluation_artifacts_manifest_sha256: 5ca0445a0eb09d15e9b6c8e2137dda0cc1eedb988da22775edcc8ee388aeb096
+validation_evidence_sha256: c3d7ae40397c132c922f7053205beb44fb60293c7f1c2f9aa24551443e9b4ce8
+release_manifest_status: complete when regenerated from a clean tree; SHA-256 is
+                         intentionally not tracked here because the ignored manifest
+                         embeds the current revision and generation timestamps
 ```
 
 ## M0 environment

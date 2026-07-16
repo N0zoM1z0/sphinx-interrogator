@@ -109,15 +109,15 @@ treat the B4/KB-frontier contribution as a future v1.0 claim gate.
 - `runs/state-learning-m8/state-learning-report.json`: real research state-learning
   measurements plus one learned-state-conditioned effective-nibble constraint;
   `state_conditioned_inference.status=complete`, `nontrivial_constraints=1`, SHA-256
-  `ce5b2daecf11499e3d1465200ecf04abd77a906927f3bb337f855ebaa354eef1`.
+  `b75d2b4220ae2dd5c6387930dc8b5b0d66624e0e011cab26ee535d36308c64ed`.
 - `runs/reduced-witnesses-m9/reduced-witnesses-report.json`: measured replay reducer
   report; `family_count=11`, `all_minimized=true`, `all_replay_paths_valid=true`,
   and `reset_policy_honored=true`, SHA-256
-  `a2d02bab8a0614514ad383fdbc01407691cad1af9f721cdb098efbe00a7883ea`.
+  `e2cd85c211004d882094d7a98ac182cd8035632c0ae3ff451d7d4755ace8ed85`.
 - `runs/release-m9/evaluation-artifacts/evaluation-artifacts-manifest.json`: public
   CSV/SVG artifact manifest; row counts are 700 campaign rows, 67,162 query rows,
   33,581 relation rows, 13 state rows, and 11 reducer-family rows, SHA-256
-  `7441b646b246af2e157cc81135efd8a51ac05fca7d993a70e2f30bf9c9ea0dc7`.
+  `5ca0445a0eb09d15e9b6c8e2137dda0cc1eedb988da22775edcc8ee388aeb096`.
 - `runs/release-m9/release-manifest.json`: generated manifest v2; current
   `status=complete`, `semantic_checks_pass=true`, and
   `validation_gates_pass=true` when regenerated from clean `main`. The standard

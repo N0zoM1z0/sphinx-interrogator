@@ -961,7 +961,7 @@ Populate during implementation:
   no-learner 0.246, exact-history 1.0, and learned-state 1.0; the regenerated report
   records `state_conditioned_inference.status=complete`, one non-trivial
   effective-nibble constraint, and `shared_private_root=false`; file SHA-256
-  `ce5b2daecf11499e3d1465200ecf04abd77a906927f3bb337f855ebaa354eef1`.
+  `b75d2b4220ae2dd5c6387930dc8b5b0d66624e0e011cab26ee535d36308c64ed`.
 - Formal/TLA+/SMT report: `just verify-formal`, 2026-07-16; Z3 relation contracts
   returned `unsat` x3, TLC generated 78,333 states with 7,672 distinct states and no
   invariant violation, and the finite checker covered reset projection, gas/progress,
@@ -974,7 +974,7 @@ Populate during implementation:
   `runs/reduced-witnesses-m9/reduced-witnesses-report.json`, 2026-07-16; measured
   candidates are present, all 11 families are minimized, accepted steps form
   continuous parent paths, and measured replay honors each relation reset policy; file
-  SHA-256 `a2d02bab8a0614514ad383fdbc01407691cad1af9f721cdb098efbe00a7883ea`.
+  SHA-256 `e2cd85c211004d882094d7a98ac182cd8035632c0ae3ff451d7d4755ace8ed85`.
 - Standard benchmark v2 full matrix:
   `runs/standard-benchmark-v2/standard-benchmark-report.json`, 2026-07-16; report
   v1.1 contains paired seed-level bootstrap confidence intervals and complete B0-B7
@@ -991,7 +991,7 @@ Populate during implementation:
   relation decisions, 13 state-learning rows, and 11 reducer-family rows; deterministic
   SVG plots cover exact rates, median logical cost, state-learning accuracy, and
   reducer steps; file SHA-256
-  `7441b646b246af2e157cc81135efd8a51ac05fca7d993a70e2f30bf9c9ea0dc7`.
+  `5ca0445a0eb09d15e9b6c8e2137dda0cc1eedb988da22775edcc8ee388aeb096`.
 - Release manifest/revision: `runs/release-m9/release-manifest.json`, 2026-07-16;
   five aggregate files are hashed and release checks are fail-closed. The manifest is
   an ignored generated artifact and must be regenerated after each release commit or
