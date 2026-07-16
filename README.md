@@ -89,6 +89,10 @@ just demo-tutorial      # recover a seeded 16-bit challenge
 just test-tutorial-matrix      # run 100 published reference-fault tutorial seeds
 just test-tutorial-fault-free  # run the paired 100-seed negative control
 just benchmark-standard # reproducible standard-profile campaign suite
+just evaluate-state-learning   # measured M8 research-profile learner comparison
+just reduce-witnesses          # measured M9 relation witness reduction
+just export-evaluation-artifacts # public CSV/SVG release artifacts
+just release-manifest          # fail-closed release artifact manifest
 ```
 
 `just demo-tutorial` is the generated challenge/recovery/judge/report flow.
@@ -101,6 +105,9 @@ research state learning, measured witness reduction, and a fail-closed manifest 
 release gate are implemented. Exact status, executed evidence, and remaining
 acceptance blockers are maintained in
 [`agent/STATUS.md`](agent/STATUS.md) and [`VALIDATION.md`](VALIDATION.md).
+For long CI checkout paths, the standard benchmark and reducer scripts accept
+`--socket-root /tmp/...` to keep transient VM Unix sockets short without moving
+challenge or report artifacts.
 
 ## Local target lifecycle
 

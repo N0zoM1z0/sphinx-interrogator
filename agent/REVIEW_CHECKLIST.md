@@ -2,7 +2,7 @@
 
 ## Product behavior
 
-- [ ] The implemented behavior matches `agent/CODEX_TASK_SPEC.md` rather than only the scaffold.
+- [x] The implemented behavior matches `agent/CODEX_TASK_SPEC.md` rather than only the scaffold.
 - [x] A clean tutorial challenge can be created, served, recovered, judged, replayed, and reported.
 - [x] Current-code standard benchmark targets are evaluated on the full published seed matrix.
 - [x] Public recovery, campaign, and benchmark result rows use the normative exact/candidate/soft/budget/error/blocked statuses.
@@ -92,7 +92,7 @@
 - [x] Calibration and evaluation seeds are separate.
 - [x] Benchmark reports include paired bootstrap confidence intervals.
 - [x] Required campaign/query/relation/state CSVs and plots are generated.
-- [ ] References, generated artifacts, CLI behavior, and public schemas are current.
+- [x] References, generated artifacts, CLI behavior, and public schemas are current.
 - [x] Ethics/synthetic-only scope remains explicit.
 - [x] Active ExecPlan and `agent/STATUS.md` reflect the reopened acceptance state.
 
@@ -101,7 +101,7 @@
 - [x] Release status depends on semantic acceptance and actual gate execution.
 - [x] Tutorial and standard campaign manifests include revision, dirty state, versions, command/environment, times, status, and artifact hashes.
 - [x] CI exercises clean tutorial/standard smoke, M8, reducer, and release packaging.
-- [ ] README, STATUS, ExecPlan, checklist, CHANGELOG, release notes, and versions agree.
+- [x] README, STATUS, ExecPlan, checklist, CHANGELOG, release notes, and versions agree.
 - [x] A remote branch and successful CI run provide external release evidence.
 
 ## Review notes
@@ -153,6 +153,8 @@
 - The CI workflow now has a `release-smoke` job that builds the VM from a clean
   checkout, regenerates the standard-profile audit, runs tutorial, standard smoke,
   M8, M9 reducer, evaluation-artifact export, and release-manifest packaging smoke.
-  GitHub Actions run `29520325888` passed with that job enabled.
-- No release tag should be created until every unchecked release criterion is covered
-  by regenerated evidence and clean CI.
+  GitHub Actions run `29520515698` passed with that job enabled.
+- The task-spec recovery, evidence, boundary, CI, and release-manifest gates are now
+  represented by current tracked docs and generated artifacts. Do not tag v1.0 yet:
+  `docs/EVALUATION.md` still requires either a demonstrated B1-B4 cost contribution
+  for the full selector or an explicit documented release-claim revision.

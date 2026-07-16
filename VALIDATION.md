@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 17:35Z**
+Last updated: **2026-07-16 17:44Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -123,6 +123,28 @@ GitHub Actions run 29520325888 on main
                          pass; rust, python, integration, and release-smoke jobs all succeeded
 ```
 
+## 2026-07-16 documentation and version alignment update
+
+README, repository guide, release notes, changelog, STATUS, the active ExecPlan, and
+the review checklist now agree with the current evidence. Public package and semantic
+versions remain `0.1.0`; v1.0 is intentionally untagged because `docs/EVALUATION.md`
+still requires either a demonstrated B1-B4 cost contribution for the full selector or
+an explicit documented release-claim revision.
+
+```text
+PATH=/tmp/sphinx-just/bin:$PATH just fmt
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just schema-check
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just docs-check
+                         pass
+git diff --check         pass
+PATH=/tmp/sphinx-just/bin:$PATH just lint
+                         pass
+PATH=/tmp/sphinx-just/bin:$PATH just test
+                         pass (46 Rust tests; 191 Python tests)
+```
+
 ## 2026-07-16 acceptance re-audit
 
 The latest task-spec audit supersedes any later section that describes M8, M9, or the
@@ -161,12 +183,13 @@ The passing commands do not close the following acceptance gaps:
   the current clean-tree `runs/release-m9/release-manifest.json` reports
   `status=complete`, `semantic_checks_pass=true`, and `validation_gates_pass=true`.
   It no longer crashes for absolute `--output` paths. Remaining release blockers are
-  broader release-smoke CI coverage, release-tag evidence, and final
-  documentation/version alignment tracked in `agent/STATUS.md`.
-- Release versions and expanded release-smoke CI coverage remain below the normative
-  task specification. Tutorial and standard benchmark campaign manifests now use v1.2
-  runtime reproducibility metadata and normative campaign statuses. Release-bound
-  public CSV/plot artifacts are now generated and hashed by the release manifest.
+  the unresolved v1.0 release-claim decision and release-tag evidence tracked in
+  `agent/STATUS.md`.
+- Release versions remain intentionally at `0.1.0` until the v1.0 release-claim
+  decision is resolved. Tutorial and standard benchmark campaign manifests now use
+  v1.2 runtime reproducibility metadata and normative campaign statuses.
+  Release-bound public CSV/plot artifacts are now generated and hashed by the release
+  manifest, and clean CI now includes the release-smoke path.
 
 The repaired challenge boundary is a confirmed positive result: private roots are
 unpredictable, public labels do not derive secrets, IDs are generic, System B receives
@@ -177,9 +200,10 @@ GitHub Actions CI has passed on the pushed repair series.
 ## 2026-07-16 task-spec gap audit and lifecycle documentation repair
 
 The task-spec gap audit reconfirmed that the current P0 benchmark/security repairs and
-M8/M9 semantic artifact repairs are supported by local evidence. Release completion is
-still blocked by broader release-smoke CI coverage, release-tag evidence, and final
-documentation/version alignment.
+M8/M9 semantic artifact repairs are supported by local evidence. The remaining release
+blocker is the v1.0 release-claim/tag decision: the task-spec recovery targets pass,
+but `docs/EVALUATION.md` still requires either a demonstrated B1-B4 cost contribution
+or an explicit documented release-claim revision.
 
 README, `docs/PROTOCOL.md`, and `docs/REPOSITORY_GUIDE.md` now document the repaired
 split challenge lifecycle: `challenge private-root`, split public/private challenge

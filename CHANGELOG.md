@@ -25,3 +25,16 @@ All notable changes should be recorded here after implementation begins.
 - Regenerate M8/M9 artifacts with non-trivial learned-state effective-nibble
   constraints, independent M8 campaign private roots, continuous reducer parent paths,
   and reset-policy-aware measured replay.
+- Add a public `CampaignController` facade and `sphinx-interrogate controller-plan`
+  CLI for the integrated infer, learn-state, calibrate, replay, reduce, and diversify
+  selector modes.
+- Add live Rust/Python exact-cycle differential coverage, relation extractor
+  finite-model differential checks, and expanded formal reset, architectural
+  confinement, gas/progress, and normalized-cost invariants.
+- Extend the standard-profile audit to report mutation aggregate controls
+  `off=0`, `weak=1`, `signed=1`, and `reference=2`, while preserving the documented
+  drained-repeat active-variant equivalence.
+- Add a clean GitHub Actions `release-smoke` job covering tutorial recovery,
+  standard benchmark smoke, M8 state learning, M9 reducer smoke, evaluation artifact
+  export, and release-manifest packaging; standard and reducer smoke commands now
+  support short `--socket-root` runtime directories for long CI checkout paths.

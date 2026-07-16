@@ -196,13 +196,20 @@ the later superseding observations and evidence list record the current behavior
   `/tmp/sphinx-interrogator-ci-smoke` worktree. The first pushed job exposed a
   GitHub-runner `SUN_LEN` failure in standard benchmark sockets; standard and reducer
   commands now accept `--socket-root`, local socket-root regressions pass, and
-  GitHub Actions run `29520325888` passed the Rust, Python, integration, and
+  GitHub Actions run `29520515698` passed the Rust, Python, integration, and
   release-smoke jobs.
+- [x] (2026-07-16 17:42Z) Align release documentation, checklist, changelog, README,
+  and versions with current evidence: all review checklist items are checked, package
+  and semantic versions remain `0.1.0`, generated artifacts and public schemas are
+  current, and v1.0 remains intentionally untagged pending the release-claim decision
+  in `docs/EVALUATION.md`. `just fmt`, `just schema-check`, `just docs-check`,
+  `git diff --check`, `just lint`, and `just test` passed after the alignment.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
   and the clean-tree manifest now completes. Current evidence is still short of a
-  release tag because release proof and documentation/version alignment remain
-  incomplete.
+  v1.0 release tag because `docs/EVALUATION.md` still requires either a demonstrated
+  B1-B4 cost contribution for the full selector or an explicit documented release-claim
+  revision.
 - [x] (2026-07-16 12:08Z) Re-audit every task-spec acceptance area and rerun local
   quality, schema, formal, boundary, tutorial, M8, and M9 checks. Record the remaining
   P0/P1/P2 blockers in `agent/STATUS.md`, `agent/REVIEW_CHECKLIST.md`, this ExecPlan,
@@ -1090,11 +1097,13 @@ isolation tests; the current standard matrix passes; and M8/M9 semantic artifact
 checks now pass with non-trivial state-conditioned inference and replayable reducer
 paths. Campaign manifests for tutorial and the full standard benchmark matrix now
 record v1.2 runtime reproducibility metadata and artifact hashes. The repository is
-nevertheless not release-complete: documentation/version, expanded clean-CI release
-smoke, and release-tag evidence remain partial. The integrated public controller
-selector surface is now implemented. Exact-cycle and extractor-output differential
-tests now cover small-program Rust/Python agreement and finite-model extraction
-agreement. The formal checker now covers reset, confinement, gas/progress, and
-normalized-cost invariants. The generated release manifest has passing root-gate
-evidence and completes from a clean tree. Work resumes from the open P2 items above.
+nevertheless not v1.0-tagged: the task-spec standard recovery targets pass, but
+`docs/EVALUATION.md` still requires either a demonstrated B1-B4 cost contribution for
+the full selector or an explicit documented release-claim revision. The integrated
+public controller selector surface is now implemented. Exact-cycle and
+extractor-output differential tests now cover small-program Rust/Python agreement and
+finite-model extraction agreement. The formal checker now covers reset, confinement,
+gas/progress, and normalized-cost invariants. The generated release manifest has
+passing root-gate evidence and completes from a clean tree; clean CI now includes the
+release-smoke path. Work resumes from the open P2 release-claim/tag item above.
 ```

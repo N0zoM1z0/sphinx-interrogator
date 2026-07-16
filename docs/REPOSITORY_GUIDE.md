@@ -99,9 +99,12 @@ Additional useful commands:
 SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/demo_tutorial.py
 SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
 SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/reduce_witnesses.py --output runs/reduced-witnesses-m9
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/benchmark_standard.py --output runs/standard-benchmark-v2 --socket-root /tmp/sphinx-standard-sockets --smoke
 ```
 
-The root commands are the verification surface used by coding agents and CI.
+The root commands are the verification surface used by coding agents and CI. The
+`--socket-root` option is for transient VM Unix sockets on long checkout paths; it
+does not move challenge or report artifacts.
 
 ## 5. Public CLI
 

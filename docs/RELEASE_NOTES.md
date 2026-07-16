@@ -38,5 +38,9 @@ release artifacts are generated under `runs/release-m9/evaluation-artifacts/`.
 The standard-profile audit now reports mutation aggregate controls with `off=0`,
 `weak=1`, `signed=1`, and `reference=2`. The CI workflow now includes clean
 release-smoke coverage for tutorial, standard smoke, M8, reducer, evaluation artifact
-export, and release-manifest packaging. Current release blockers are final
-documentation/version/changelog alignment and the absence of a release tag.
+export, and release-manifest packaging; standard and reducer smoke use short
+`--socket-root` runtime directories on long CI checkout paths. Current v1.0 blockers
+are the unresolved release-claim decision in `docs/EVALUATION.md` and the absence of
+an intentional release tag: the standard benchmark meets task-spec recovery targets,
+but the frozen profile does not yet demonstrate a cost advantage over all B1-B4
+baselines.

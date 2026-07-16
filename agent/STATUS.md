@@ -12,7 +12,8 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 17:35Z after remote release-smoke CI passed.
+- **Last updated:** 2026-07-16 17:44Z after final documentation/version alignment
+  validation.
 
 ## Current milestone
 
@@ -37,8 +38,10 @@ equivalence. The CI workflow now includes a clean `release-smoke` job covering
 tutorial, standard smoke, M8, M9 reducer, evaluation artifact export, and
 release-manifest packaging smoke; standard and reducer smoke commands use short
 `/tmp` socket roots to avoid GitHub runner `SUN_LEN` failures without moving
-challenge artifacts. No v1.0 or research-complete release should be created yet:
-final P2 documentation/version alignment and release-tag obligations remain.
+challenge artifacts. No v1.0 or research-complete release should be created yet: the
+task-spec standard recovery targets pass, but the stricter `docs/EVALUATION.md` v1.0
+release policy still needs either a demonstrated B1-B4 cost contribution or an
+explicit documented release-claim revision.
 
 ## Verification dashboard
 
@@ -54,8 +57,8 @@ final P2 documentation/version alignment and release-tag obligations remain.
 | `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
 | release manifest v2 | pass on clean tree | After the mutation-control audit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
-| GitHub CI | pass | Remote `main` run `29520325888` passed Rust, Python, integration/boundary, and release-smoke jobs |
-| release-smoke CI job | pass | GitHub run `29520325888` generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest; local socket-root regressions for standard and reducer pass |
+| GitHub CI | pass | Remote `main` run `29520515698` passed Rust, Python, integration/boundary, and release-smoke jobs |
+| release-smoke CI job | pass | GitHub run `29520515698` generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest; local socket-root regressions for standard and reducer pass |
 
 ## Release blockers
 
@@ -77,12 +80,12 @@ final P2 documentation/version alignment and release-tag obligations remain.
 
 ### P2
 
-- Finish full documentation/version alignment. README, protocol, and repository-guide
-  local CLI examples now match the repaired private-root and socket/FD interfaces,
-  but release notes, changelog/versioning, generated result schemas, and examples still
-  need a final release consistency pass.
-- Create an intentional release tag only after the final release consistency pass and
-  a fresh clean-tree release manifest regeneration.
+- Resolve the final v1.0 release-claim decision. The code remains versioned as
+  `0.1.0`, the current standard benchmark meets task-spec recovery targets, and clean
+  release-smoke CI passes, but the frozen profile does not demonstrate a cost
+  advantage over every B1-B4 baseline required by `docs/EVALUATION.md`.
+- Create an intentional release tag only after that release-claim decision and a fresh
+  clean-tree release manifest regeneration.
 
 ## Current release artifacts
 
