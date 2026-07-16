@@ -13,8 +13,8 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 20:34Z after the drained-anchor reducer/control test
-  repair and full task-spec gate rerun.
+- **Last updated:** 2026-07-16 20:51Z after the M8 independent research-campaign
+  gate repair and artifact regeneration.
 
 ## Current milestone
 
@@ -41,7 +41,9 @@ release-manifest packaging smoke; standard and reducer smoke commands use short
 `/tmp` socket roots to avoid GitHub runner `SUN_LEN` failures without moving
 challenge artifacts. The standard selector now includes the certified
 `drained-anchor-switch/v1` synthesis skeleton: full/reference is 100/100 exact with
-median/p95 28/33 logical families and zero fault-off false exact declarations. The
+median/p95 28/33 logical families and zero fault-off false exact declarations. M8
+state-learning now reports 98 independent research challenge campaigns, no shared
+private root, and a non-trivial learned-state effective-nibble constraint. The
 release-claim decision is explicit: keep this state at `0.1.0`, do not tag v1.0, and
 treat the B4/KB-frontier contribution as a future v1.0 claim gate.
 
@@ -49,18 +51,18 @@ treat the B4/KB-frontier contribution as a future v1.0 claim gate.
 
 | Check | Last result | Evidence |
 |---|---|---|
-| `just fmt`, `just lint`, `just test` | pass | 2026-07-16 drained-anchor follow-up pass: Rust 46 tests and Python 195 tests pass |
+| `just fmt`, `just lint`, `just test` | pass | 2026-07-16 M8 campaign-count pass: Rust 46 tests and Python 196 tests pass |
 | `just schema-check`, `just docs-check` | pass | Current fixtures, release-manifest schema, and links pass their implemented checks |
 | `just verify-formal` | pass | Z3 `unsat` x3; TLC 78,333 generated/7,672 distinct; finite checker covers reset, gas, confinement, normalized cost, and 131,072 guarded-replay cells |
 | `just boundary-audit` | pass | Recursive schema checks and separate-UID/FD-broker isolation; binary SHA-256 `c094fff76ebf1102a093b6b607f31612bf55e3516393de8d42271f3e079c0d64` |
 | `just demo-tutorial` | pass | `unique_exact`, judge accepted, 16 logical families; `runs/tutorial-demo-v3` |
 | standard benchmark v2 | pass | Report v1.1 covers 100 seeds / 700 campaigns with paired bootstrap CI, complete B0-B7 surface, `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact with median/p95 28/33 logical families, fault-off 0 false exact, and normative result statuses only |
 | standard profile audit v1.1 | pass | `mutation_controls_separated=true`; aggregate controls are off 0, weak 1, signed 1, reference 2 |
-| `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
+| `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; 98 independent research challenge campaigns; retraction demo still passes |
 | `just reduce-witnesses` | pass | Reports 11 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
-| release manifest v2 | pass on clean tree | After the mutation-control audit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
-| GitHub CI | pass | Remote `main` run `29520515698` passed Rust, Python, integration/boundary, and release-smoke jobs |
-| release-smoke CI job | pass | GitHub run `29520515698` generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest; local socket-root regressions for standard and reducer pass |
+| release manifest v2 | pass on clean tree | Current ignored manifest records 5 artifacts, all semantic checks including `m8.independent_research_challenges`, and all 12 validation gates as pass |
+| GitHub CI | pass | Remote `main` run `29533351713` passed Rust, Python, integration/boundary, and release-smoke jobs |
+| release-smoke CI job | pass | GitHub run `29533351713` generated audit, tutorial, standard smoke, M8, M9, evaluation artifacts, and a smoke-blocked release manifest; local socket-root regressions for standard and reducer pass |
 
 ## Release blockers
 
@@ -108,16 +110,17 @@ treat the B4/KB-frontier contribution as a future v1.0 claim gate.
   `8a77bcbbd91764261c402976cf5c7924bfd0bd6f72de550d54f0e3664b7a4950`.
 - `runs/state-learning-m8/state-learning-report.json`: real research state-learning
   measurements plus one learned-state-conditioned effective-nibble constraint;
-  `state_conditioned_inference.status=complete`, `nontrivial_constraints=1`, SHA-256
-  `b75d2b4220ae2dd5c6387930dc8b5b0d66624e0e011cab26ee535d36308c64ed`.
+  `state_conditioned_inference.status=complete`, `nontrivial_constraints=1`,
+  `shared_private_root=false`, `cost.challenge_campaigns=98`, SHA-256
+  `637c69744aee9710bf9df52271aaf6c175c5cd800724f5ef39566c32aa1a02af`.
 - `runs/reduced-witnesses-m9/reduced-witnesses-report.json`: measured replay reducer
   report; `family_count=11`, `all_minimized=true`, `all_replay_paths_valid=true`,
   and `reset_policy_honored=true`, SHA-256
-  `e2cd85c211004d882094d7a98ac182cd8035632c0ae3ff451d7d4755ace8ed85`.
+  `068f6d7a4b77da267504eae17a28b5a92ee7086ba3dbf2581dbfc6c9f738fe64`.
 - `runs/release-m9/evaluation-artifacts/evaluation-artifacts-manifest.json`: public
   CSV/SVG artifact manifest; row counts are 700 campaign rows, 67,162 query rows,
   33,581 relation rows, 13 state rows, and 11 reducer-family rows, SHA-256
-  `5ca0445a0eb09d15e9b6c8e2137dda0cc1eedb988da22775edcc8ee388aeb096`.
+  `a6b701f8598ded2ec91625bab694ec8281b46606d4ace19935c88519100afce5`.
 - `runs/release-m9/release-manifest.json`: generated manifest v2; current
   `status=complete`, `semantic_checks_pass=true`, and
   `validation_gates_pass=true` when regenerated from clean `main`. The standard

@@ -217,6 +217,11 @@ the later superseding observations and evidence list record the current behavior
   `git diff --check` passed; the fault-free standard-control integration test now
   asserts the current full/off selector cost of 160 logical families and 320 physical
   executions while preserving the no-false-exact assertions.
+- [x] (2026-07-16 20:51Z) Close the remaining M8 research-challenge-count audit gap:
+  `just evaluate-state-learning` now regenerates state-learning evidence with 98
+  independent research challenge campaigns, `shared_private_root=false`, and
+  `research_challenge_campaigns_ge_30=true`; release manifest semantic checks now
+  fail closed on fewer than 30 M8 campaigns or a shared private root.
 - [x] (2026-07-16 12:08Z) Re-audit every task-spec acceptance area and rerun local
   quality, schema, formal, boundary, tutorial, M8, and M9 checks. Record the remaining
   P0/P1/P2 blockers in `agent/STATUS.md`, `agent/REVIEW_CHECKLIST.md`, this ExecPlan,
@@ -361,6 +366,15 @@ the later superseding observations and evidence list record the current behavior
   `state_conditioned_inference.status=complete`, `nontrivial_constraints=1`,
   `shared_private_root=false`, and an exact candidate snapshot reducing
   `effective_nibble_lane_0` from 16 values to 4.
+
+- Observation: M8 now also meets the documented research-challenge-count target.
+  Evidence: after reducing the default M8 membership-word rotation to eight words per
+  campaign, `PATH=/tmp/sphinx-just/bin:$PATH just evaluate-state-learning`
+  regenerated `runs/state-learning-m8/state-learning-report.json` with
+  `cost.challenge_campaigns=98`, `shared_private_root=false`, and
+  `targets_met.research_challenge_campaigns_ge_30=true`; release-manifest semantic
+  checks now fail closed if the M8 report has fewer than 30 campaigns or a shared
+  private root.
 
 - Observation: M9 reducer reports now contain continuous replayable parent paths and
   reset-policy-aware replay evidence.
@@ -960,8 +974,9 @@ Populate during implementation:
   2026-07-16; real research SphinxVM evaluation over 126 held-out words reports
   no-learner 0.246, exact-history 1.0, and learned-state 1.0; the regenerated report
   records `state_conditioned_inference.status=complete`, one non-trivial
-  effective-nibble constraint, and `shared_private_root=false`; file SHA-256
-  `b75d2b4220ae2dd5c6387930dc8b5b0d66624e0e011cab26ee535d36308c64ed`.
+  effective-nibble constraint, `shared_private_root=false`, and 98 independent
+  research challenge campaigns; file SHA-256
+  `637c69744aee9710bf9df52271aaf6c175c5cd800724f5ef39566c32aa1a02af`.
 - Formal/TLA+/SMT report: `just verify-formal`, 2026-07-16; Z3 relation contracts
   returned `unsat` x3, TLC generated 78,333 states with 7,672 distinct states and no
   invariant violation, and the finite checker covered reset projection, gas/progress,
@@ -974,7 +989,7 @@ Populate during implementation:
   `runs/reduced-witnesses-m9/reduced-witnesses-report.json`, 2026-07-16; measured
   candidates are present, all 11 families are minimized, accepted steps form
   continuous parent paths, and measured replay honors each relation reset policy; file
-  SHA-256 `e2cd85c211004d882094d7a98ac182cd8035632c0ae3ff451d7d4755ace8ed85`.
+  SHA-256 `068f6d7a4b77da267504eae17a28b5a92ee7086ba3dbf2581dbfc6c9f738fe64`.
 - Standard benchmark v2 full matrix:
   `runs/standard-benchmark-v2/standard-benchmark-report.json`, 2026-07-16; report
   v1.1 contains paired seed-level bootstrap confidence intervals and complete B0-B7
@@ -991,7 +1006,7 @@ Populate during implementation:
   relation decisions, 13 state-learning rows, and 11 reducer-family rows; deterministic
   SVG plots cover exact rates, median logical cost, state-learning accuracy, and
   reducer steps; file SHA-256
-  `5ca0445a0eb09d15e9b6c8e2137dda0cc1eedb988da22775edcc8ee388aeb096`.
+  `a6b701f8598ded2ec91625bab694ec8281b46606d4ace19935c88519100afce5`.
 - Release manifest/revision: `runs/release-m9/release-manifest.json`, 2026-07-16;
   five aggregate files are hashed and release checks are fail-closed. The manifest is
   an ignored generated artifact and must be regenerated after each release commit or

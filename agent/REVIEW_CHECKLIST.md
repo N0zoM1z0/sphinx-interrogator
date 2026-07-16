@@ -115,7 +115,8 @@
   100/100 exactly with median/p95 28/33 logical families and median 56 physical
   executions; the 600-campaign v1 artifact remains historical because it predates the
   repaired challenge and benchmark implementation.
-- M8 now persists a non-trivial learned-state effective-nibble constraint, and M9 now
+- M8 now persists a non-trivial learned-state effective-nibble constraint across 98
+  independent research challenge campaigns with no shared private root, and M9 now
   reports continuous reducer parent paths with reset-policy-aware measured replay.
 - Relation certificates now bind `relation-contracts-v1` to the SHA-256 of the
   declared SMT contract, certificate/extractor tests, and Rust machine semantics file.

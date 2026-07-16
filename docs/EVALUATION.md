@@ -290,7 +290,9 @@ The current release evidence uses generated artifacts under `runs/`:
   and -23.10 respectively. Full and B4 synthesis-no-KB are tied at zero cost delta.
 - `runs/tutorial-demo-v3/report.json`: fresh tutorial recovery and judge acceptance.
 - `runs/state-learning-m8/state-learning-report.json`: one-state, exact-history, and
-  AALpy-backed learner comparison measured on real research-profile SphinxVM campaigns.
+  AALpy-backed learner comparison measured on real research-profile SphinxVM campaigns;
+  current evidence uses 98 independent research challenge campaigns and no shared
+  private root.
 - `runs/reduced-witnesses-m9/reduced-witnesses-report.json`: minimized witnesses for
   every enabled relation family, with measured public VM replay evidence.
 - `runs/release-m9/evaluation-artifacts/evaluation-artifacts-manifest.json`: public

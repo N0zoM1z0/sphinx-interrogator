@@ -382,6 +382,13 @@ def _state_learning_checks(path: Path, decoded: dict[str, object]) -> list[dict[
     target_values = list(targets.values()) if targets else []
     inference = _maybe_mapping(decoded.get("state_conditioned_inference"))
     nontrivial = inference.get("nontrivial_constraints") if inference else None
+    cost = _maybe_mapping(decoded.get("cost"))
+    challenge_campaigns = cost.get("challenge_campaigns") if cost else None
+    independent_challenges = (
+        decoded.get("shared_private_root") is False
+        and isinstance(challenge_campaigns, int)
+        and challenge_campaigns >= 30
+    )
     return [
         _release_check(
             "m8.measurement_targets",
@@ -406,6 +413,18 @@ def _state_learning_checks(path: Path, decoded: dict[str, object]) -> list[dict[
             and nontrivial > 0
             else "state-conditioned secret inference evidence is missing or trivial",
             {"path": str(path), "state_conditioned_inference": inference or {}},
+        ),
+        _release_check(
+            "m8.independent_research_challenges",
+            independent_challenges,
+            "state-learning used at least 30 independent research challenge campaigns"
+            if independent_challenges
+            else "state-learning research campaign independence/count evidence is insufficient",
+            {
+                "path": str(path),
+                "shared_private_root": decoded.get("shared_private_root"),
+                "challenge_campaigns": challenge_campaigns,
+            },
         ),
     ]
 

@@ -33,7 +33,7 @@
     }
   },
   "cost": {
-    "challenge_campaigns": 1,
+    "challenge_campaigns": 30,
     "hard_resets": 2,
     "logical_queries": 3,
     "membership_words": 2,
@@ -137,6 +137,7 @@
     "exact_history_accuracy_eq_1": true,
     "learned_state_accuracy_ge_0_95": true,
     "learned_state_beats_no_learner": true,
+    "research_challenge_campaigns_ge_30": true,
     "state_model_counterexample_retracted": true
   },
   "variants": [

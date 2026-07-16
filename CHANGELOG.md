@@ -27,8 +27,9 @@ All notable changes should be recorded here after implementation begins.
   challenges with median/p95 28/33 logical families and shows paired cost
   improvements over B1-B3 while remaining tied with B4 synthesis-without-KB.
 - Regenerate M8/M9 artifacts with non-trivial learned-state effective-nibble
-  constraints, independent M8 campaign private roots, 11 minimized reducer families,
-  continuous reducer parent paths, and reset-policy-aware measured replay.
+  constraints, 98 independent M8 research challenge campaigns without a shared
+  private root, 11 minimized reducer families, continuous reducer parent paths, and
+  reset-policy-aware measured replay.
 - Add a public `CampaignController` facade and `sphinx-interrogate controller-plan`
   CLI for the integrated infer, learn-state, calibrate, replay, reduce, and diversify
   selector modes.

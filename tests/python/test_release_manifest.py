@@ -60,6 +60,52 @@ def test_standard_smoke_report_is_not_release_complete() -> None:
     assert statuses["standard.off_control_false_exact"] == "pass"
 
 
+def test_state_learning_requires_independent_research_challenges() -> None:
+    """M8 release evidence must prove independent challenge coverage, not only accuracy."""
+    release_manifest = _load_script()
+    report = {
+        "targets_met": {
+            "exact_history_accuracy_eq_1": True,
+            "learned_state_accuracy_ge_0_95": True,
+            "learned_state_beats_no_learner": True,
+            "research_challenge_campaigns_ge_30": True,
+            "state_model_counterexample_retracted": True,
+        },
+        "state_conditioned_inference": {
+            "status": "complete",
+            "nontrivial_constraints": 1,
+        },
+        "shared_private_root": False,
+        "cost": {"challenge_campaigns": 30},
+    }
+
+    checks = release_manifest._state_learning_checks(
+        Path("runs/state-learning-m8/state-learning-report.json"),
+        report,
+    )
+    statuses = {check["name"]: check["status"] for check in checks}
+    assert statuses["m8.measurement_targets"] == "pass"
+    assert statuses["m8.state_conditioned_secret_inference"] == "pass"
+    assert statuses["m8.independent_research_challenges"] == "pass"
+
+    report["cost"] = {"challenge_campaigns": 29}
+    checks = release_manifest._state_learning_checks(
+        Path("runs/state-learning-m8/state-learning-report.json"),
+        report,
+    )
+    statuses = {check["name"]: check["status"] for check in checks}
+    assert statuses["m8.independent_research_challenges"] == "fail"
+
+    report["cost"] = {"challenge_campaigns": 30}
+    report["shared_private_root"] = True
+    checks = release_manifest._state_learning_checks(
+        Path("runs/state-learning-m8/state-learning-report.json"),
+        report,
+    )
+    statuses = {check["name"]: check["status"] for check in checks}
+    assert statuses["m8.independent_research_challenges"] == "fail"
+
+
 def test_validation_commands_require_explicit_gate_evidence(tmp_path: Path) -> None:
     """Root validation gates are missing evidence unless a command log proves success."""
     release_manifest = _load_script()

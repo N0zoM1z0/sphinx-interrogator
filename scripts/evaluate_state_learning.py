@@ -310,7 +310,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, default=ROOT / "runs/state-learning-m8")
     parser.add_argument("--max-depth", type=int, default=6)
-    parser.add_argument("--max-words-per-campaign", type=int, default=50)
+    parser.add_argument("--max-words-per-campaign", type=int, default=8)
     parser.add_argument("--calibration-repetitions", type=int, default=3)
     return parser.parse_args()
 
@@ -441,6 +441,7 @@ def main() -> int:
         total_cost = OracleCost()
         for oracle in oracles:
             total_cost = total_cost.combine(oracle.cost)
+        targets["research_challenge_campaigns_ge_30"] = total_cost.challenge_campaigns >= 30
         state_conditioned_inference = _record_state_conditioned_inference(
             output,
             learned,

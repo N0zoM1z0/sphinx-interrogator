@@ -162,7 +162,8 @@ then compares no-learner, exact-history, and AALpy learned-state variants on sha
 held-out public membership traces. It writes
 `runs/state-learning-m8/state-learning-report.json` and requires exact-history accuracy
 1.0, learned-state accuracy at least 0.95, learned-state accuracy greater than the
-one-state baseline, and a real public counterexample that retracts state-conditioned
+one-state baseline, at least 30 independent research challenge campaigns without a
+shared private root, and a real public counterexample that retracts state-conditioned
 evidence.
 
 ## 12. Research variants

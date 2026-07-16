@@ -143,7 +143,7 @@ git diff --check         pass
 PATH=/tmp/sphinx-just/bin:$PATH just lint
                          pass
 PATH=/tmp/sphinx-just/bin:$PATH just test
-                         pass (46 Rust tests; 195 Python tests)
+                         pass (46 Rust tests; 196 Python tests)
 ```
 
 ## 2026-07-16 drained-anchor standard benchmark rerun
@@ -190,7 +190,7 @@ PATH=/tmp/sphinx-just/bin:$PATH just fmt
 PATH=/tmp/sphinx-just/bin:$PATH just lint
                          pass
 PATH=/tmp/sphinx-just/bin:$PATH just test
-                         pass (46 Rust tests; 195 Python tests)
+                         pass (46 Rust tests; 196 Python tests)
 PATH=/tmp/sphinx-just/bin:$PATH just schema-check
                          pass
 PATH=/tmp/sphinx-just/bin:$PATH just docs-check
@@ -387,11 +387,12 @@ file_sha256: 056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042
 ## 2026-07-16 M8/M9 semantic artifact repair
 
 M8 and M9 were regenerated after the acceptance re-audit. M8 now uses independent
-campaign private roots and records a learned-state-conditioned effective-nibble
-projection constraint. The constraint is intentionally labeled as an effective
-projection because research profiles hide lane permutation and salts; it reduces the
-public macro's effective nibble from 16 values to 4 and is grouped by state-model
-provenance for retraction.
+campaign private roots, rotates research challenge campaigns often enough to exceed
+the documented 30-challenge research target, and records a learned-state-conditioned
+effective-nibble projection constraint. The constraint is intentionally labeled as an
+effective projection because research profiles hide lane permutation and salts; it
+reduces the public macro's effective nibble from 16 values to 4 and is grouped by
+state-model provenance for retraction.
 
 M9 now reconstructs the accepted parent chain to each final reduced witness instead of
 serializing the whole accepted search tree. Measured VM replay records the reset
@@ -401,12 +402,14 @@ rather than hard-resetting every arm.
 ```text
 PATH=/tmp/sphinx-just/bin:$PATH just evaluate-state-learning
                          pass; state_conditioned_inference.status complete,
-                         nontrivial_constraints 1
+                         nontrivial_constraints 1,
+                         cost.challenge_campaigns 98,
+                         research_challenge_campaigns_ge_30 true
 PATH=/tmp/sphinx-just/bin:$PATH just reduce-witnesses
                          pass; all_replay_paths_valid true,
                          reset_policy_honored true
-uv run --frozen pytest tests/python/test_reducer.py tests/python/test_research_state.py tests/python/test_release_manifest.py
-                         pass (14 tests)
+uv run --frozen pytest tests/python/test_reducer.py tests/python/test_research_state.py tests/python/test_release_manifest.py tests/python/test_evaluation_artifacts.py
+                         pass (18 tests)
 PATH=/tmp/sphinx-just/bin:$PATH just schema-check
                          pass
 PATH=/tmp/sphinx-just/bin:$PATH just fmt
@@ -424,8 +427,8 @@ git diff --check         pass
 Current regenerated artifacts:
 
 ```text
-state_learning_sha256: b75d2b4220ae2dd5c6387930dc8b5b0d66624e0e011cab26ee535d36308c64ed
-reduced_witnesses_sha256: e2cd85c211004d882094d7a98ac182cd8035632c0ae3ff451d7d4755ace8ed85
+state_learning_sha256: 637c69744aee9710bf9df52271aaf6c175c5cd800724f5ef39566c32aa1a02af
+reduced_witnesses_sha256: 068f6d7a4b77da267504eae17a28b5a92ee7086ba3dbf2581dbfc6c9f738fe64
 release_manifest_status: complete when regenerated from a clean tree; SHA-256 is
                          intentionally not tracked here because the ignored manifest
                          embeds the current revision and generation timestamps
@@ -566,7 +569,7 @@ query_rows: 67162
 relation_rows: 33581
 state_rows: 13
 reducer_family_rows: 11
-evaluation_artifacts_manifest_sha256: 5ca0445a0eb09d15e9b6c8e2137dda0cc1eedb988da22775edcc8ee388aeb096
+evaluation_artifacts_manifest_sha256: a6b701f8598ded2ec91625bab694ec8281b46606d4ace19935c88519100afce5
 validation_evidence_sha256: c3d7ae40397c132c922f7053205beb44fb60293c7f1c2f9aa24551443e9b4ce8
 release_manifest_status: complete when regenerated from a clean tree; SHA-256 is
                          intentionally not tracked here because the ignored manifest

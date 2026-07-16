@@ -34,9 +34,10 @@ code and produced the full 100-seed / 700-campaign v2 standard report with
 `targets_met=true`: full/reference is 100/100 exact with median/p95 28/33 logical
 families and median 56 physical executions, while the full-selector off control has
 zero false exact declarations. Current M8/M9 semantic evidence has also been regenerated: M8
-records a non-trivial learned-state effective-nibble constraint, and M9 records
-continuous reducer parent paths with reset-policy-aware replay. Public CSV/plot
-release artifacts are generated under `runs/release-m9/evaluation-artifacts/`.
+records a non-trivial learned-state effective-nibble constraint across 98 independent
+research challenge campaigns with no shared private root, and M9 records continuous
+reducer parent paths with reset-policy-aware replay. Public CSV/plot release artifacts
+are generated under `runs/release-m9/evaluation-artifacts/`.
 The standard-profile audit now reports mutation aggregate controls with `off=0`,
 `weak=1`, `signed=1`, and `reference=2`. The CI workflow now includes clean
 release-smoke coverage for tutorial, standard smoke, M8, reducer, evaluation artifact

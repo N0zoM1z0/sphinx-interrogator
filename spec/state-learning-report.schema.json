@@ -279,6 +279,7 @@
         "exact_history_accuracy_eq_1",
         "learned_state_accuracy_ge_0_95",
         "learned_state_beats_no_learner",
+        "research_challenge_campaigns_ge_30",
         "state_model_counterexample_retracted"
       ],
       "properties": {
@@ -289,6 +290,9 @@
           "type": "boolean"
         },
         "learned_state_beats_no_learner": {
+          "type": "boolean"
+        },
+        "research_challenge_campaigns_ge_30": {
           "type": "boolean"
         },
         "state_model_counterexample_retracted": {
