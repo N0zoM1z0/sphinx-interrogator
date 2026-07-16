@@ -46,3 +46,50 @@ def test_client_times_out_and_can_abort_target() -> None:
         client.hello()
     client.abort()
     assert process.poll() is not None
+
+
+def test_nested_private_response_field_is_rejected_before_recording() -> None:
+    """A schema-invalid nested field cannot enter the durable raw transcript."""
+    source = """
+import json
+import sys
+
+request = json.loads(sys.stdin.readline())
+print(json.dumps({
+    "protocol_version": "1.0",
+    "request_id": request["request_id"],
+    "kind": "hello_result",
+    "ok": True,
+    "server": {"name": "sphinx-vm", "version": "0.1.0", "build_id": "test"},
+    "profile": {
+        "name": "tutorial",
+        "semantic_version": "0.1.0",
+        "bucket_width": 1,
+        "lanes": 4,
+        "hard_reset_available": True,
+        "secret": "forbidden"
+    },
+    "capabilities": ["close", "execute", "hard_reset"],
+    "limits": {
+        "max_request_line_bytes": 131072,
+        "max_program_bytes": 65536,
+        "max_instructions": 256,
+        "max_gas": 10000,
+        "max_sessions": 8,
+        "hard_resets": 240,
+        "logical_queries": 80,
+        "physical_executions": 240
+    }
+}), flush=True)
+"""
+    process = fake_process(source)
+    recorded: list[tuple[str, str]] = []
+    client = VmClient(
+        process,
+        timeout_seconds=1.0,
+        exchange_recorder=lambda request, response: recorded.append((request, response)),
+    )
+    with pytest.raises(ProtocolError, match="profile fields"):
+        client.hello()
+    assert recorded == []
+    client.abort()

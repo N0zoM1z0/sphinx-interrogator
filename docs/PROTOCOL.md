@@ -58,23 +58,28 @@ charged per accepted hard-reset execution.
 
 ## Challenge and judge commands
 
-The target is served only from a complete generated challenge:
+The target is served only from a split generated challenge. Trusted local
+orchestration creates the private root and private directory; System B receives only
+the public challenge directory and the public socket path.
 
 ```text
-sphinx-vm challenge create --profile <profile.toml> --output <new-dir> \
-  [--challenge-id <id>] [--seed <development-seed>] \
+sphinx-vm challenge private-root --output <private-root-file>
+sphinx-vm challenge create --profile <profile.toml> \
+  --public-output <public-dir> --private-output <private-dir> \
+  --private-root-file <private-root-file> \
+  [--challenge-id <opaque-public-id>] --campaign-label <private-label> \
   [--fault off|reference|weak|signed]
-sphinx-vm serve --challenge <challenge-dir>
-sphinx-vm judge --challenge <challenge-dir> \
-  --campaign-token <public-token> --guess <ordered-lowercase-hex-cells>
+sphinx-vm serve --public-challenge <public-dir> \
+  --private-challenge-fd <trusted-private-dir-fd> --socket <vm.sock>
+sphinx-vm judge-serve --public-challenge <public-dir> \
+  --private-challenge-fd <trusted-private-dir-fd> --socket <judge.sock>
 ```
 
-`--seed` is a target-side reproducibility facility for local development/evaluation;
-it must never be supplied to System B because it derives the challenge secret. Omitting
-it uses operating-system entropy. The resulting generation root is logged only in the
-mode-0700 private configuration. The fault selection is private as well. In blind
-controls, `standard.toml` and `fault_free.toml` are
-byte-identical public profiles and differ only in private challenge assignment.
+The private root is a protected 256-bit file and is never serialized into public
+challenge metadata. Public campaign seeds may schedule benchmark runs, but they do
+not control the private root, secret, salts, noise key, or fault assignment. In blind
+controls, `standard.toml` and `fault_free.toml` are byte-identical public profiles
+and differ only in private challenge assignment.
 
 The judge validates a complete guess, atomically consumes the campaign token on its
 first well-formed submission, and returns only public IDs plus `submission_recorded`

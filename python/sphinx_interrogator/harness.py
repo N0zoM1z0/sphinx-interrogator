@@ -154,20 +154,18 @@ class DurableExecutionHarness:
         self.client = client
 
     @classmethod
-    def start_process(
+    def connect_unix(
         cls,
         repository: CampaignRepository,
-        executable: str | Path,
         *,
-        challenge: str | Path,
+        socket_path: str | Path,
         timeout_seconds: float = 5.0,
         after_raw: Callable[[], None] | None = None,
     ) -> tuple[DurableExecutionHarness, VmClient]:
-        """Launch the real black-box process with write-ahead recording installed."""
+        """Connect to a broker-launched VM with write-ahead recording installed."""
         recorder = RepositoryWireRecorder(repository, after_raw=after_raw)
-        client = VmClient.start(
-            executable,
-            challenge=challenge,
+        client = VmClient.connect_unix(
+            socket_path,
             timeout_seconds=timeout_seconds,
             exchange_recorder=recorder,
         )

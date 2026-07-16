@@ -97,8 +97,8 @@ Additional useful commands:
 
 ```bash
 SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/demo_tutorial.py
-uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
-uv run --frozen python scripts/reduce_witnesses.py --output runs/reduced-witnesses-m9
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/evaluate_state_learning.py --output runs/state-learning-m8
+SPHINX_VM_BINARY=target/debug/sphinx-vm uv run --frozen python scripts/reduce_witnesses.py --output runs/reduced-witnesses-m9
 ```
 
 The root commands are the verification surface used by coding agents and CI.
@@ -108,27 +108,36 @@ The root commands are the verification surface used by coding agents and CI.
 ### Target
 
 ```text
-sphinx-vm challenge create --profile <public.toml> --output <new-dir> \
-  [--challenge-id <id>] [--seed <n>] [--fault off|reference|weak|signed]
-sphinx-vm serve --challenge <challenge-dir>
-sphinx-vm judge --challenge <challenge-dir> --campaign-token <token> --guess <hex-cells>
+sphinx-vm challenge private-root --output <private-root-file>
+sphinx-vm challenge create --profile <public.toml> \
+  --public-output <public-dir> --private-output <private-dir> \
+  --private-root-file <private-root-file> \
+  [--challenge-id <opaque-public-id>] --campaign-label <private-label> \
+  [--fault off|reference|weak|signed]
+sphinx-vm serve --public-challenge <public-dir> \
+  --private-challenge-fd <trusted-private-dir-fd> --socket <vm.sock>
+sphinx-vm judge-serve --public-challenge <public-dir> \
+  --private-challenge-fd <trusted-private-dir-fd> --socket <judge.sock>
 ```
 
-Challenge creation/judging are development/evaluation tools. The normal Interrogator process should be launched with only the `serve` endpoint.
+Challenge creation and private FD brokerage are trusted development/evaluation
+orchestration. The normal Interrogator process is launched with only a public
+challenge directory plus VM/judge socket paths.
 
 ### Interrogator
 
 ```text
 sphinx-interrogate doctor
-sphinx-interrogate hello --vm <binary> --challenge <dir>
+sphinx-interrogate hello --vm-socket <vm.sock>
 sphinx-interrogate render-cell --lane <n> --token <n> --epoch <n> --anchor <n>
 sphinx-interrogate render-anchor-switch --lane <n> --token <n> --epoch <n> \
   --bank-a <n> --bank-b <n>
-sphinx-interrogate recover --vm <binary> --challenge <dir> --run <dir> --seed <n>
+sphinx-interrogate recover --public-challenge <public-dir> --vm-socket <vm.sock> \
+  --judge-socket <judge.sock> --run <dir> --seed <n>
 sphinx-interrogate replay --run <dir>
 sphinx-interrogate inspect --run <dir>
 sphinx-interrogate reduce --family repeat-amplify/v1
-sphinx-interrogate benchmark --report runs/standard-benchmark-v1/standard-benchmark-report.json
+sphinx-interrogate benchmark --report runs/standard-benchmark-v2/standard-benchmark-report.json
 ```
 
 `benchmark` inspects an existing generated report. The published standard matrix is

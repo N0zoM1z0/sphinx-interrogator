@@ -5,8 +5,11 @@ from __future__ import annotations
 import json
 import re
 import selectors
+import socket
 import subprocess
+import time
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, cast
@@ -48,50 +51,72 @@ class HelloResult:
 
 
 class VmClient:
-    """Synchronous request/response client preserving the process boundary."""
+    """Synchronous request/response client over a public stream or Unix socket."""
 
     def __init__(
         self,
-        process: subprocess.Popen[str],
+        process: subprocess.Popen[str] | None,
         *,
+        stdin: IO[str] | None = None,
+        stdout: IO[str] | None = None,
+        transport_socket: socket.socket | None = None,
         timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
         exchange_recorder: ExchangeRecorder | None = None,
     ) -> None:
-        """Wrap an already-started text-mode process."""
-        if process.stdin is None or process.stdout is None:
-            raise ValueError("process must have stdin and stdout pipes")
+        """Wrap an already-started public transport without target-private capabilities."""
+        if process is not None:
+            if process.stdin is None or process.stdout is None:
+                raise ValueError("process must have stdin and stdout pipes")
+            if stdin is not None or stdout is not None or transport_socket is not None:
+                raise ValueError("process transport cannot be combined with explicit streams")
+            stdin = process.stdin
+            stdout = process.stdout
+        elif stdin is None or stdout is None or transport_socket is None:
+            raise ValueError("socket transport requires streams and its owning socket")
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         self._process = process
-        self._stdin: IO[str] = process.stdin
-        self._stdout: IO[str] = process.stdout
+        self._stdin = stdin
+        self._stdout = stdout
+        self._transport_socket = transport_socket
         self._counter = 0
         self._timeout_seconds = timeout_seconds
         self._exchange_recorder = exchange_recorder
+        self._closed = False
 
     @classmethod
-    def start(
+    def connect_unix(
         cls,
-        executable: str | Path,
+        socket_path: str | Path,
         *,
-        challenge: str | Path,
-        extra_args: Sequence[str] = (),
         timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
         exchange_recorder: ExchangeRecorder | None = None,
     ) -> VmClient:
-        """Start the public VM binary without importing or linking its implementation."""
-        command = [str(executable), "serve", "--challenge", str(challenge), *extra_args]
-        process = subprocess.Popen(
-            command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            bufsize=1,
-        )
+        """Connect to a VM launched by trusted orchestration under a separate identity."""
+        if timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
+        endpoint = str(socket_path)
+        transport = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            try:
+                transport.connect(endpoint)
+                break
+            except (FileNotFoundError, ConnectionRefusedError) as error:
+                if time.monotonic() >= deadline:
+                    transport.close()
+                    raise ProtocolError(f"VM socket is unavailable: {endpoint}") from error
+                time.sleep(0.01)
+            except OSError:
+                transport.close()
+                raise
+        stdin = transport.makefile("w", encoding="utf-8", newline="\n")
+        stdout = transport.makefile("r", encoding="utf-8", newline="\n")
         return cls(
-            process,
+            None,
+            stdin=stdin,
+            stdout=stdout,
+            transport_socket=transport,
             timeout_seconds=timeout_seconds,
             exchange_recorder=exchange_recorder,
         )
@@ -164,8 +189,11 @@ class VmClient:
         return _execution_result(message)
 
     def close(self) -> None:
-        """Request a clean shutdown and wait for the local process."""
-        if self._process.poll() is not None:
+        """Request a clean shutdown and close the public transport."""
+        if self._closed:
+            return
+        if self._process is not None and self._process.poll() is not None:
+            self._closed = True
             return
         try:
             self._exchange(
@@ -181,15 +209,30 @@ class VmClient:
             raise
         finally:
             self._stdin.close()
-        try:
-            self._process.wait(timeout=self._timeout_seconds)
-        except subprocess.TimeoutExpired as error:
-            self.abort()
-            raise ProtocolError("target did not exit after close_result") from error
+            self._stdout.close()
+            if self._transport_socket is not None:
+                self._transport_socket.close()
+            self._closed = True
+        if self._process is not None:
+            try:
+                self._process.wait(timeout=self._timeout_seconds)
+            except subprocess.TimeoutExpired as error:
+                self.abort()
+                raise ProtocolError("target did not exit after close_result") from error
 
     def abort(self) -> None:
-        """Terminate an unresponsive target without waiting indefinitely."""
-        if self._process.poll() is not None:
+        """Close the endpoint or terminate an unresponsive test process."""
+        if self._closed:
+            return
+        self._closed = True
+        if self._transport_socket is not None:
+            with suppress(OSError):
+                self._transport_socket.shutdown(socket.SHUT_RDWR)
+            self._transport_socket.close()
+            self._stdin.close()
+            self._stdout.close()
+            return
+        if self._process is None or self._process.poll() is not None:
             return
         self._process.terminate()
         try:
@@ -221,7 +264,9 @@ class VmClient:
         *,
         expected_kind: str,
     ) -> Mapping[str, object]:
-        if self._process.poll() is not None:
+        if self._closed:
+            raise ProtocolError("target transport is closed")
+        if self._process is not None and self._process.poll() is not None:
             raise ProtocolError("target process is not running")
         expected_request_id = _string(request, "request_id")
         serialized = json.dumps(request, separators=(",", ":"), sort_keys=True)
@@ -230,14 +275,15 @@ class VmClient:
         response_line = self._readline_with_timeout()
         if not response_line:
             stderr = ""
-            if self._process.stderr is not None:
+            if self._process is not None and self._process.stderr is not None:
                 stderr = self._process.stderr.read()
             raise ProtocolError(f"target closed the protocol stream: {stderr.strip()}")
         if len(response_line.encode("utf-8")) > _MAX_RESPONSE_LINE_BYTES:
             raise ProtocolError("protocol response exceeds the configured line limit")
+        message = _decode_response(response_line, expected_request_id, expected_kind)
         if self._exchange_recorder is not None:
             self._exchange_recorder(serialized, response_line.rstrip("\n"))
-        return _decode_response(response_line, expected_request_id, expected_kind)
+        return message
 
     def _readline_with_timeout(self) -> str:
         selector = selectors.DefaultSelector()
@@ -250,6 +296,67 @@ class VmClient:
             return self._stdout.readline(_MAX_RESPONSE_LINE_BYTES + 1)
         finally:
             selector.close()
+
+
+def submit_judge(
+    socket_path: str | Path,
+    *,
+    campaign_token: str,
+    guess: str,
+    timeout_seconds: float = _DEFAULT_TIMEOUT_SECONDS,
+) -> Mapping[str, object]:
+    """Submit one guess to a separately launched one-shot judge endpoint."""
+    if timeout_seconds <= 0:
+        raise ValueError("timeout_seconds must be positive")
+    endpoint = str(socket_path)
+    transport = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        try:
+            transport.connect(endpoint)
+            break
+        except (FileNotFoundError, ConnectionRefusedError) as error:
+            if time.monotonic() >= deadline:
+                transport.close()
+                raise ProtocolError(f"judge socket is unavailable: {endpoint}") from error
+            time.sleep(0.01)
+        except OSError:
+            transport.close()
+            raise
+    try:
+        request = json.dumps(
+            {
+                "judge_protocol_version": "1.0",
+                "campaign_token": campaign_token,
+                "guess": guess,
+            },
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        transport.sendall((request + "\n").encode("utf-8"))
+        transport.settimeout(timeout_seconds)
+        response = bytearray()
+        while b"\n" not in response:
+            chunk = transport.recv(4096)
+            if not chunk:
+                raise ProtocolError("judge closed without a response")
+            response.extend(chunk)
+            if len(response) > _MAX_RESPONSE_LINE_BYTES:
+                raise ProtocolError("judge response exceeds the configured line limit")
+    except TimeoutError as error:
+        raise ProtocolError("judge did not respond before the timeout") from error
+    finally:
+        transport.close()
+    line = bytes(response).split(b"\n", maxsplit=1)[0]
+    try:
+        decoded: object = json.loads(line)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ProtocolError("judge response is invalid JSON") from error
+    if not isinstance(decoded, dict):
+        raise ProtocolError("judge response is not a JSON object")
+    message = cast("dict[str, object]", decoded)
+    _validate_judge_response(message, campaign_token)
+    return message
 
 
 def decode_execute_response(response_line: str, *, expected_request_id: str) -> ExecutionResult:
@@ -277,6 +384,7 @@ def _decode_response(
         raise ProtocolError("protocol version mismatch")
     if message.get("request_id") != expected_request_id:
         raise ProtocolError("protocol response request_id mismatch")
+    _validate_protocol_response(message)
     if message.get("kind") == "error":
         error_details = _mapping(message, "error")
         raise ProtocolError(
@@ -288,7 +396,6 @@ def _decode_response(
         )
     if message.get("ok") is not True:
         raise ProtocolError("successful protocol response must set ok=true")
-    _reject_unexpected_top_level_fields(message, expected_kind)
     return message
 
 
@@ -349,13 +456,226 @@ _EXPECTED_TOP_LEVEL_FIELDS: dict[str, frozenset[str]] = {
         }
     ),
     "close_result": frozenset({"protocol_version", "request_id", "kind", "ok"}),
+    "error": frozenset({"protocol_version", "request_id", "kind", "ok", "error"}),
 }
 
 
-def _reject_unexpected_top_level_fields(message: Mapping[str, object], kind: str) -> None:
-    unexpected = set(message).difference(_EXPECTED_TOP_LEVEL_FIELDS[kind])
-    if unexpected:
-        raise ProtocolError(f"unexpected public response fields: {sorted(unexpected)}")
+def _validate_protocol_response(message: Mapping[str, object]) -> None:
+    """Enforce the complete public response shape before raw persistence or decoding."""
+    kind = _string(message, "kind")
+    expected = _EXPECTED_TOP_LEVEL_FIELDS.get(kind)
+    if expected is None:
+        raise ProtocolError(f"unknown public response kind: {kind!r}")
+    _require_exact_fields(message, expected, "response")
+    request_id = _string(message, "request_id")
+    if _PUBLIC_ID.fullmatch(request_id) is None:
+        raise ProtocolError("response request_id is not a valid public identifier")
+
+    if kind == "hello_result":
+        if message.get("ok") is not True:
+            raise ProtocolError("hello_result must set ok=true")
+        server = _mapping(message, "server")
+        _require_exact_fields(server, {"name", "version", "build_id"}, "server")
+        if _string(server, "name") != "sphinx-vm":
+            raise ProtocolError("server name is not sphinx-vm")
+        _require_bounded_string(server, "version", 1, 64)
+        _require_bounded_string(server, "build_id", 1, 256)
+
+        profile = _mapping(message, "profile")
+        _require_exact_fields(
+            profile,
+            {"name", "semantic_version", "bucket_width", "lanes", "hard_reset_available"},
+            "profile",
+        )
+        _require_bounded_string(profile, "name", 1, 128)
+        _require_bounded_string(profile, "semantic_version", 1, 64)
+        _require_integer_range(profile, "bucket_width", minimum=1)
+        _require_integer_range(profile, "lanes", minimum=1, maximum=64)
+        _boolean(profile, "hard_reset_available")
+
+        capabilities = _string_tuple(message, "capabilities")
+        allowed_capabilities = {"close", "execute", "hard_reset", "soft_reset"}
+        if len(capabilities) != len(set(capabilities)) or not set(capabilities).issubset(
+            allowed_capabilities
+        ):
+            raise ProtocolError("capabilities contain duplicates or unknown values")
+
+        limits = _mapping(message, "limits")
+        _require_exact_fields(
+            limits,
+            {
+                "max_request_line_bytes",
+                "max_program_bytes",
+                "max_instructions",
+                "max_gas",
+                "max_sessions",
+                "hard_resets",
+                "logical_queries",
+                "physical_executions",
+            },
+            "limits",
+        )
+        for key in (
+            "max_request_line_bytes",
+            "max_program_bytes",
+            "max_instructions",
+            "max_gas",
+            "max_sessions",
+        ):
+            _require_integer_range(limits, key, minimum=1)
+        for key in ("hard_resets", "logical_queries", "physical_executions"):
+            _require_integer_range(limits, key, minimum=0)
+        return
+
+    if kind == "execute_result":
+        if message.get("ok") is not True:
+            raise ProtocolError("execute_result must set ok=true")
+        session_id = _string(message, "session_id")
+        if _PUBLIC_ID.fullmatch(session_id) is None:
+            raise ProtocolError("response session_id is not a valid public identifier")
+        if _string(message, "status") not in {"halted", "gas_exhausted"}:
+            raise ProtocolError("execute_result status is invalid")
+        if re.fullmatch(r"[0-9a-f]{16}", _string(message, "public_digest")) is None:
+            raise ProtocolError("public_digest is not a lowercase 64-bit digest")
+
+        observation = _mapping(message, "observation")
+        _require_exact_fields(
+            observation,
+            {"cycle_bucket", "bucket_width", "samples_in_vm"},
+            "observation",
+        )
+        _require_integer_range(observation, "cycle_bucket", minimum=0)
+        _require_integer_range(observation, "bucket_width", minimum=1)
+        if _integer(observation, "samples_in_vm") != 1:
+            raise ProtocolError("samples_in_vm must equal one")
+
+        metrics = _mapping(message, "public_metrics")
+        _require_exact_fields(
+            metrics,
+            {"retired_instructions", "static_cycles"},
+            "public_metrics",
+        )
+        _require_integer_range(metrics, "retired_instructions", minimum=0)
+        _require_integer_range(metrics, "static_cycles", minimum=0)
+
+        budget = _mapping(message, "budget")
+        _require_exact_fields(
+            budget,
+            {
+                "physical_executions_used",
+                "physical_executions_remaining",
+                "logical_queries_used",
+                "logical_queries_remaining",
+                "hard_resets_used",
+                "hard_resets_remaining",
+            },
+            "budget",
+        )
+        for key in budget:
+            _require_integer_range(budget, key, minimum=0)
+
+        semantics = _mapping(message, "semantics")
+        _require_exact_fields(
+            semantics,
+            {"server_version", "profile_version"},
+            "semantics",
+        )
+        _require_bounded_string(semantics, "server_version", 1, 64)
+        _require_bounded_string(semantics, "profile_version", 1, 64)
+        return
+
+    if kind == "close_result":
+        if message.get("ok") is not True:
+            raise ProtocolError("close_result must set ok=true")
+        return
+
+    if message.get("ok") is not False:
+        raise ProtocolError("error response must set ok=false")
+    details = _mapping(message, "error")
+    _require_exact_fields(details, {"code", "message", "recoverable"}, "error")
+    allowed_codes = {
+        "invalid_json",
+        "schema_error",
+        "unsupported_version",
+        "invalid_program",
+        "budget_exhausted",
+        "request_too_large",
+        "session_limit",
+        "internal_error",
+    }
+    if _string(details, "code") not in allowed_codes:
+        raise ProtocolError("error response code is unknown")
+    _require_bounded_string(details, "message", 0, 1024)
+    _boolean(details, "recoverable")
+
+
+def _validate_judge_response(
+    message: Mapping[str, object],
+    expected_campaign_token: str,
+) -> None:
+    _require_exact_fields(
+        message,
+        {
+            "judge_version",
+            "challenge_id",
+            "campaign_token",
+            "submission_recorded",
+            "accepted",
+        },
+        "judge response",
+    )
+    if _string(message, "judge_version") != "1.0":
+        raise ProtocolError("judge version mismatch")
+    for key in ("challenge_id", "campaign_token"):
+        value = _string(message, key)
+        if _PUBLIC_ID.fullmatch(value) is None:
+            raise ProtocolError(f"judge field {key} is not a valid public identifier")
+    if _string(message, "campaign_token") != expected_campaign_token:
+        raise ProtocolError("judge response campaign token mismatch")
+    recorded = _boolean(message, "submission_recorded")
+    accepted = _boolean(message, "accepted")
+    if accepted and not recorded:
+        raise ProtocolError("judge cannot accept an unrecorded submission")
+
+
+def _require_exact_fields(
+    value: Mapping[str, object],
+    expected: set[str] | frozenset[str],
+    role: str,
+) -> None:
+    actual = set(value)
+    missing = set(expected).difference(actual)
+    unexpected = actual.difference(expected)
+    if missing or unexpected:
+        raise ProtocolError(
+            f"{role} fields do not match the public schema: "
+            f"missing={sorted(missing)}, unexpected={sorted(unexpected)}"
+        )
+
+
+def _require_bounded_string(
+    value: Mapping[str, object],
+    key: str,
+    minimum: int,
+    maximum: int,
+) -> str:
+    item = _string(value, key)
+    if not minimum <= len(item) <= maximum:
+        raise ProtocolError(f"field {key} has an invalid string length")
+    return item
+
+
+def _require_integer_range(
+    value: Mapping[str, object],
+    key: str,
+    *,
+    minimum: int,
+    maximum: int | None = None,
+) -> int:
+    item = _integer(value, key)
+    if item < minimum or (maximum is not None and item > maximum):
+        raise ProtocolError(f"field {key} is outside its public range")
+    return item
 
 
 def _mapping(value: Mapping[str, object], key: str) -> Mapping[str, object]:

@@ -91,13 +91,15 @@ just test-tutorial-fault-free  # run the paired 100-seed negative control
 just benchmark-standard # reproducible standard-profile campaign suite
 ```
 
-`just demo-tutorial` is the accepted M5 generated challenge/recovery/judge/report flow;
-`just benchmark-standard` remains a later-milestone acceptance command. The language,
-architecture, microcode/fault model, isolated challenges,
-public process server, one-shot judge, certified hard-reset relations, write-ahead
-campaign persistence, exact solver, tutorial recovery, and grammar-guided CEGIS query
-synthesis are implemented; standard/noise handling, learning, and release evaluation
-are the remaining research layers. Exact status and executed evidence are maintained in
+`just demo-tutorial` is the generated challenge/recovery/judge/report flow.
+`just benchmark-standard`, `just evaluate-state-learning`, `just reduce-witnesses`, and
+`just release-manifest` generate the standard, research-state, reducer, and release
+evidence artifacts. The language, architecture, microcode/fault model, isolated
+challenges, public process server, one-shot judge, certified relations, write-ahead
+campaign persistence, exact solver, tutorial/standard recovery, grammar-guided CEGIS,
+research state learning, measured witness reduction, and a fail-closed manifest v2
+release gate are implemented. Exact status, executed evidence, and remaining
+acceptance blockers are maintained in
 [`agent/STATUS.md`](agent/STATUS.md) and [`VALIDATION.md`](VALIDATION.md).
 
 ## Local target lifecycle
@@ -107,15 +109,25 @@ its public JSONL endpoint:
 
 ```bash
 CARGO_TARGET_DIR=.cache/sphinx-target CARGO_BUILD_JOBS=2 cargo build --locked --bin sphinx-vm
+.cache/sphinx-target/debug/sphinx-vm challenge private-root \
+  --output /tmp/sphinx-tutorial.root
 .cache/sphinx-target/debug/sphinx-vm challenge create \
   --profile benchmarks/profiles/tutorial.toml \
-  --output /tmp/sphinx-tutorial --challenge-id tutorial-1 --seed 7 --fault reference
-.cache/sphinx-target/debug/sphinx-vm serve --challenge /tmp/sphinx-tutorial
+  --public-output /tmp/sphinx-tutorial/public \
+  --private-output /tmp/sphinx-tutorial/private \
+  --private-root-file /tmp/sphinx-tutorial.root \
+  --challenge-id challenge-0001 --campaign-label tutorial-dev --fault reference
+exec {SPHINX_PRIVATE_FD}< /tmp/sphinx-tutorial/private
+.cache/sphinx-target/debug/sphinx-vm serve \
+  --public-challenge /tmp/sphinx-tutorial/public \
+  --private-challenge-fd "$SPHINX_PRIVATE_FD" \
+  --socket /tmp/sphinx-tutorial/vm.sock
 ```
 
-The process reads one JSON request per stdin line and writes one response per stdout
-line. Only the Rust target and judge may access `/tmp/sphinx-tutorial/private/`;
-Interrogator receives the public directory and process observations.
+The socket reads one JSON request per line and writes one response per line. Only
+trusted target orchestration may hold the private directory FD; Interrogator receives
+only the public directory and public socket paths. The repository's tutorial and
+benchmark scripts use `python/sphinx_trusted_runtime.py` to broker those private FDs.
 
 ## Scope and safety
 

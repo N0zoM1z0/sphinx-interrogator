@@ -26,12 +26,13 @@ pub struct JudgeResponse {
 
 /// Submit one final ordered-nibble guess. Every valid first guess consumes the token.
 pub fn submit(
-    root: impl AsRef<Path>,
+    public_directory: impl AsRef<Path>,
+    private_directory: impl AsRef<Path>,
     campaign_token: &str,
     guess_hex: &str,
 ) -> Result<JudgeResponse, ChallengeError> {
-    let root = root.as_ref();
-    let (public, secret) = judge_material(root)?;
+    let private_directory = private_directory.as_ref();
+    let (public, secret) = judge_material(public_directory.as_ref(), private_directory)?;
     if !constant_time_equal(campaign_token.as_bytes(), public.campaign_token.as_bytes()) {
         return Err(ChallengeError::Invalid(
             "campaign token does not belong to this challenge".to_owned(),
@@ -39,7 +40,7 @@ pub fn submit(
     }
     let guess = parse_guess(guess_hex, secret.len())?;
     let marker_name = hex_encode(&Sha256::digest(campaign_token.as_bytes()));
-    let marker_path = root.join("private/judge-used").join(marker_name);
+    let marker_path = private_directory.join("judge-used").join(marker_name);
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
     #[cfg(unix)]
@@ -109,6 +110,7 @@ fn constant_time_equal(left: &[u8], right: &[u8]) -> bool {
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write as _;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use super::submit;
@@ -122,23 +124,50 @@ mod tests {
         std::env::temp_dir().join(format!("sphinx-judge-{}-{ordinal}", std::process::id()))
     }
 
+    fn write_private_root(path: &std::path::Path) {
+        if let Some(parent) = path.parent() {
+            if let Err(error) = std::fs::create_dir_all(parent) {
+                panic!("private root parent should be created: {error}");
+            }
+        }
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt as _;
+
+            options.mode(0o600);
+        }
+        let mut file = match options.open(path) {
+            Ok(value) => value,
+            Err(error) => panic!("private root should be created: {error}"),
+        };
+        if let Err(error) = file.write_all(&[19_u8; 32]) {
+            panic!("private root should be written: {error}");
+        }
+    }
+
     #[test]
     fn judge_accepts_at_most_one_guess_for_the_public_token() {
         let root = temporary_path();
+        let private_root = root.join("root.bin");
+        write_private_root(&private_root);
         let profile = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../benchmarks/profiles/tutorial.toml");
         let options = CreateChallenge {
             profile_path: profile,
-            output: root.clone(),
+            public_output: root.join("public"),
+            private_output: root.join("private"),
+            private_root_path: private_root,
             challenge_id: Some("judge-test".to_owned()),
-            seed: Some(19),
+            campaign_label: "judge-campaign".to_owned(),
             fault_variant: FaultVariant::Reference,
         };
         let public = match create(&options) {
             Ok(value) => value,
             Err(error) => panic!("challenge should be created: {error}"),
         };
-        let material = judge_material(&root);
+        let material = judge_material(&root.join("public"), &root.join("private"));
         let (_, secret) = match material {
             Ok(value) => value,
             Err(error) => panic!("judge material should load: {error}"),
@@ -148,15 +177,37 @@ mod tests {
             .iter()
             .map(|value| char::from(HEX[usize::from(*value)]))
             .collect();
-        assert!(submit(&root, "wrong-campaign-token", &guess).is_err());
-        assert!(submit(&root, &public.campaign_token, "not-hex").is_err());
-        let first = match submit(&root, &public.campaign_token, &guess) {
+        assert!(submit(
+            root.join("public"),
+            root.join("private"),
+            "wrong-campaign-token",
+            &guess
+        )
+        .is_err());
+        assert!(submit(
+            root.join("public"),
+            root.join("private"),
+            &public.campaign_token,
+            "not-hex"
+        )
+        .is_err());
+        let first = match submit(
+            root.join("public"),
+            root.join("private"),
+            &public.campaign_token,
+            &guess,
+        ) {
             Ok(value) => value,
             Err(error) => panic!("first judge submission failed: {error}"),
         };
         assert!(first.submission_recorded);
         assert!(first.accepted);
-        let second = match submit(&root, &public.campaign_token, &guess) {
+        let second = match submit(
+            root.join("public"),
+            root.join("private"),
+            &public.campaign_token,
+            &guess,
+        ) {
             Ok(value) => value,
             Err(error) => panic!("second judge invocation failed: {error}"),
         };
