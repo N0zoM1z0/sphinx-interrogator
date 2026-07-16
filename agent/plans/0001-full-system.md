@@ -167,8 +167,9 @@ the later superseding observations and evidence list record the current behavior
   semantically checks the evaluation artifact manifest.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
-  but current evidence is still blocked by dirty tree, incomplete clean-CI/release
-  proof, and broader documentation/version alignment.
+  and the clean-tree manifest now completes. Current evidence is still short of a
+  release tag because broader CI smoke, release proof, and documentation/version
+  alignment remain incomplete.
 - [x] (2026-07-16 12:08Z) Re-audit every task-spec acceptance area and rerun local
   quality, schema, formal, boundary, tutorial, M8, and M9 checks. Record the remaining
   P0/P1/P2 blockers in `agent/STATUS.md`, `agent/REVIEW_CHECKLIST.md`, this ExecPlan,
@@ -972,15 +973,14 @@ Populate during implementation:
   `tests/python/test_validation_evidence.py`; focused release-manifest/recorder tests
   pass 4/4. `just release-manifest` now reads
   `runs/release-m9/validation-evidence.json`; all 12 root gates have now been rerun
-  through the recorder and pass. The generated manifest remains blocked only because
-  `repository.clean` fails.
+  through the recorder and pass. The generated manifest completes from a clean tree.
 - Post-full-benchmark root checks, 2026-07-16: `just fmt`, `just lint`, `just test`,
   `just schema-check`, `just docs-check`, and `git diff --check` passed; `just test`
   covered 46 Rust tests and 175 Python tests.
 - Historical clean-checkout negative evidence, 2026-07-16: before the bootstrap
   repair, a detached HEAD with no `.tools/` failed formal verification. The current
-  justfile and CI workflow fetch and verify the pinned TLC jar; a fresh remote CI run
-  is still absent.
+  justfile and CI workflow fetch and verify the pinned TLC jar; remote `main` CI now
+  passes after moving the pinned TLC bootstrap before Python formal tests.
 - Historical acceptance negative reproductions, 2026-07-16: before the repairs above,
   release manifest reported complete over a failed/incomplete benchmark; absolute
   manifest output wrote then crashed; M8's state-dependent expression was literal
@@ -1028,7 +1028,7 @@ checks now pass with non-trivial state-conditioned inference and replayable redu
 paths. Campaign manifests for tutorial and the full standard benchmark matrix now
 record v1.2 runtime reproducibility metadata and artifact hashes. The repository is
 nevertheless not release-complete: formal/differential obligations,
-documentation/version, clean-CI, and clean-tree release evidence remain partial. The
-generated release manifest has passing root-gate evidence and remains blocked because
-the working tree is dirty. Work resumes from the open P1/P2 items above.
+documentation/version, expanded clean-CI release smoke, and release-tag evidence remain
+partial. The generated release manifest has passing root-gate evidence and completes
+from a clean tree. Work resumes from the open P1/P2 items above.
 ```

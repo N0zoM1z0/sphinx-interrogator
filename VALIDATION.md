@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 16:24Z**
+Last updated: **2026-07-16 16:37Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -49,26 +49,26 @@ The passing commands do not close the following acceptance gaps:
   `agent/STATUS.md`.
 - The TLA+/SMT suite omits several task-required reset, architectural-confinement,
   gas/progress, normalized-cost, exact-cycle, and extractor-differential obligations.
-- Integrated campaign modes, CLI documentation, release versions, and CI coverage
-  remain below the normative task specification. Tutorial and standard benchmark
-  campaign manifests now use v1.2 runtime reproducibility metadata and normative
-  campaign statuses. Release-bound public CSV/plot artifacts are now generated and
-  hashed by the release manifest.
+- Integrated campaign modes, CLI documentation, release versions, and expanded
+  release-smoke CI coverage remain below the normative task specification. Tutorial
+  and standard benchmark campaign manifests now use v1.2 runtime reproducibility
+  metadata and normative campaign statuses. Release-bound public CSV/plot artifacts
+  are now generated and hashed by the release manifest.
 
 The repaired challenge boundary is a confirmed positive result: private roots are
 unpredictable, public labels do not derive secrets, IDs are generic, System B receives
 only public paths/socket access, and adversarial recursive-field and distinct-UID
-tests pass. A full current benchmark has now been performed; a remote CI run has not,
-and the remote currently has no branch heads or Actions runs.
+tests pass. A full current benchmark has now been performed, remote `main` exists, and
+GitHub Actions CI has passed on the pushed repair series.
 
 ## 2026-07-16 task-spec gap audit and lifecycle documentation repair
 
 The task-spec gap audit reconfirmed that the current P0 benchmark/security repairs and
 M8/M9 semantic artifact repairs are supported by local evidence, but release
-completion is still blocked by dirty-tree state, incomplete formal/differential
-obligations, missing clean CI evidence, non-normative statuses in some public result
-schemas, incomplete mutation-ladder separation, and final documentation/version
-alignment.
+completion is still blocked by incomplete formal/differential obligations,
+non-normative statuses in some public result schemas, incomplete mutation-ladder
+separation, broader release-smoke CI coverage, release-tag evidence, and final
+documentation/version alignment.
 
 README, `docs/PROTOCOL.md`, and `docs/REPOSITORY_GUIDE.md` now document the repaired
 split challenge lifecycle: `challenge private-root`, split public/private challenge

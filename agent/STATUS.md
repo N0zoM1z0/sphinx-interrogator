@@ -12,8 +12,8 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 16:24Z after adding release-bound evaluation CSV/plot
-  artifacts.
+- **Last updated:** 2026-07-16 16:37Z after clean-tree release-manifest completion
+  and successful remote CI.
 
 ## Current milestone
 
@@ -25,9 +25,10 @@ public result statuses; the regenerated standard benchmark has 500 `unique_exact
 rows and 200 `candidate_set` rows. Adversarial mutation regressions now cover a
 contradictory symbolic model and a broken static-cost normalizer. Release-bound CSV
 and SVG artifacts now cover campaign, query, relation, state-learning, and reducer
-evidence. Release remains blocked by a dirty working tree and broader P1/P2 proof,
-documentation, and CI obligations. No v1.0 or research-complete release should be
-created from the current evidence.
+evidence. The clean-tree release manifest now completes, and `main` has a successful
+GitHub Actions CI run. No v1.0 or research-complete release should be created yet:
+broader P1/P2 formal, differential, controller, documentation/version, and release-tag
+obligations remain.
 
 ## Verification dashboard
 
@@ -41,17 +42,16 @@ created from the current evidence.
 | standard benchmark v2 | pass | Report v1.1 covers 100 seeds / 700 campaigns with paired bootstrap CI, complete B0-B7 surface, `full_published_matrix=true`, `targets_met=true`, full/reference 100/100 exact, fault-off 0 false exact, and normative result statuses only |
 | `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
-| release manifest v2 | blocked as intended | `just release-manifest` exits 1 with `--require-complete`; current manifest reads `runs/release-m9/validation-evidence.json`, records all 12 validation gates as pass, and reports only `repository.clean` failed |
-| GitHub CI | no evidence | Remote has no branch heads and `gh run list` returns no runs |
+| release manifest v2 | pass on clean tree | `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
+| GitHub CI | pass | Remote `main` has a successful `ci` workflow covering Python, Rust, and integration/boundary jobs |
 
 ## Release blockers
 
 ### P0
 
-- Keep the release manifest fail-closed through the final clean-tree release
-  candidate. Root-gate evidence is now recorded through `record-validation-gate`, but
-  the manifest must be regenerated after the working tree is committed or otherwise
-  made clean.
+- Keep the release manifest fail-closed through any future release candidate. The
+  current clean-tree manifest completes, but it is an ignored generated artifact and
+  must be regenerated after any subsequent release commit or tag.
 - Keep the repaired full standard benchmark artifact as the current P0 benchmark
   evidence; the legacy 600-campaign v1 report cannot validate current code.
 
@@ -71,8 +71,8 @@ created from the current evidence.
   local CLI examples now match the repaired private-root and socket/FD interfaces,
   but release notes, changelog/versioning, generated result schemas, and examples still
   need a final release consistency pass.
-- Add clean-CI smoke coverage for tutorial, standard, M8, reducer, and release
-  packaging; current remote CI has never run.
+- Broaden CI from the current Python/Rust/integration/boundary coverage to explicit
+  tutorial, standard, M8, reducer, and release-packaging smoke jobs.
 
 ## Current release artifacts
 
@@ -97,11 +97,11 @@ created from the current evidence.
   26,464 relation rows, 13 state rows, and 10 reducer-family rows, SHA-256
   `c7ff125818abd7b8d0a895a897a994638b54cc5c5c32086fe73f0ca1cf8ba367`.
 - `runs/release-m9/release-manifest.json`: generated manifest v2; current
-  `status=blocked`, `semantic_checks_pass=false`, and
-  `validation_gates_pass=true`. The standard benchmark, tutorial, M8, M9, evaluation
-  artifacts, and all 12 validation gate checks now pass; the only failed release
-  check is `repository.clean`. File SHA-256
-  `056de5eb4a0ef4208ed0b6dd05d59bc8c1f855217acc7f5073520dd961314042`.
+  `status=complete`, `semantic_checks_pass=true`, and
+  `validation_gates_pass=true` when regenerated from clean `main`. The standard
+  benchmark, tutorial, M8, M9, evaluation artifacts, and all 12 validation gate checks
+  pass. The manifest is intentionally ignored; regenerate it after future commits
+  before using it as release evidence.
 
 ## Decision summary
 

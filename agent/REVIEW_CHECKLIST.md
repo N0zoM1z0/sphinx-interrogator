@@ -102,7 +102,7 @@
 - [x] Tutorial and standard campaign manifests include revision, dirty state, versions, command/environment, times, status, and artifact hashes.
 - [ ] CI exercises clean tutorial/standard smoke, M8, reducer, and release packaging.
 - [ ] README, STATUS, ExecPlan, checklist, CHANGELOG, release notes, and versions agree.
-- [ ] A remote branch/tag and successful CI run provide external release evidence.
+- [x] A remote branch and successful CI run provide external release evidence.
 
 ## Review notes
 
@@ -134,8 +134,7 @@
 - README, protocol, and repository-guide local lifecycle examples now use the repaired
   split public/private challenge, private-root, private-FD, and public-socket
   interface. Broader release/version/schema/example alignment remains open.
-- The release generator now fails closed; current manifest remains `blocked` because
-  the working tree is dirty, while all 12 root-gate evidence records are present and
-  passing.
+- The release generator now fails closed; the clean-tree manifest completes with all
+  five semantic artifacts and all 12 root-gate evidence records passing.
 - No release tag should be created until every unchecked release criterion is covered
   by regenerated evidence and clean CI.

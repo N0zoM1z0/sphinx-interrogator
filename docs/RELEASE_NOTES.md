@@ -24,9 +24,10 @@ decision/confidence/provenance. It does not use the hidden challenge secret.
 The release manifest is written to `runs/release-m9/release-manifest.json` and records
 manifest v2 status, artifact hashes, repository revision, dirty status, tool versions,
 command line, start/end timestamps, semantic release checks, and validation-gate
-evidence slots. The current manifest is intentionally `blocked`; `just
-release-manifest` exits nonzero until repository-cleanliness passes. The 12 root-gate
-evidence checks are recorded as passing in `runs/release-m9/validation-evidence.json`.
+evidence slots. The manifest is fail-closed: `just release-manifest` exits nonzero
+until repository-cleanliness and semantic evidence pass. From clean
+`main`, the manifest completes with all semantic checks and all 12 root-gate evidence
+records passing.
 
 Current benchmark evidence: `just benchmark-standard` has been rerun on the current
 code and produced the full 100-seed / 700-campaign v2 standard report with
@@ -34,5 +35,5 @@ code and produced the full 100-seed / 700-campaign v2 standard report with
 records a non-trivial learned-state effective-nibble constraint, and M9 records
 continuous reducer parent paths with reset-policy-aware replay. Public CSV/plot
 release artifacts are generated under `runs/release-m9/evaluation-artifacts/`.
-Current release blockers are repository cleanliness and remaining broader
-proof/formal/reproducibility/CI obligations.
+Current release blockers are the remaining broader proof/formal/reproducibility
+obligations, broader release-smoke CI coverage, and the absence of a release tag.

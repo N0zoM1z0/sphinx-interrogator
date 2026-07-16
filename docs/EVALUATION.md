@@ -269,8 +269,9 @@ The current release evidence uses generated artifacts under `runs/`:
   campaign/query/relation/state/reducer CSV exports plus deterministic SVG plots.
 - `runs/release-m9/release-manifest.json`: manifest v2 with revision, versions,
   command, times, status, artifact states, artifact hashes, semantic release checks,
-  and validation-gate evidence. The current generated manifest is `blocked` because
-  the working tree is dirty; all 12 root validation gates are recorded as passing.
+  and validation-gate evidence. When regenerated from clean `main`, the current
+  generated manifest is `complete`; all 12 root validation gates are recorded as
+  passing.
 
 The standard benchmark caveat is explicit: all reference selector baselines recover
 the frozen standard profile exactly on the published seeds, so this profile is useful
