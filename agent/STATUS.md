@@ -12,8 +12,8 @@ This file is the concise project checkpoint. The active ExecPlan contains the de
   validation, alternative-model exactness guard, and relation proof-bundle content
   binding are implemented and tested.
 - **Current active plan:** `agent/plans/0001-full-system.md`.
-- **Last updated:** 2026-07-16 17:18Z after validating standard-profile mutation
-  aggregate-control evidence.
+- **Last updated:** 2026-07-16 17:20Z after validating standard-profile mutation
+  aggregate-control evidence and regenerating the release manifest.
 
 ## Current milestone
 
@@ -50,7 +50,7 @@ documentation/version, explicit release-smoke CI, and release-tag obligations re
 | standard profile audit v1.1 | pass | `mutation_controls_separated=true`; aggregate controls are off 0, weak 1, signed 1, reference 2 |
 | `just evaluate-state-learning` | pass | Real research VM comparison plus one non-trivial learned-state effective-nibble constraint; independent campaign private roots; retraction demo still passes |
 | `just reduce-witnesses` | pass | Reports 10 minimized families with continuous accepted parent paths and reset-policy-aware measured replay |
-| release manifest v2 | pass on clean tree | After the differential commit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
+| release manifest v2 | pass on clean tree | After the mutation-control audit, `just release-manifest` exits 0 with `--require-complete`; current ignored manifest records 5 artifacts, all semantic checks, and all 12 validation gates as pass |
 | GitHub CI | pass | Remote `main` has a successful `ci` workflow covering Python, Rust, and integration/boundary jobs |
 
 ## Release blockers

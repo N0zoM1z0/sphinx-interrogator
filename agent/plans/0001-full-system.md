@@ -186,7 +186,8 @@ the later superseding observations and evidence list record the current behavior
   `signed=1`, and `reference=2`, while retaining the drained-repeat control that
   documents active-variant latent equivalence under the hard-reset M7 grammar.
   Focused audit tests, audit regeneration, `docs-check`, `git diff --check`,
-  `just fmt`, `just lint`, and `just test` passed after the update.
+  `just fmt`, `just lint`, `just test`, and `just release-manifest` passed after the
+  update.
 - [ ] (2026-07-16 13:30Z) Finish P2 release evidence: manifest v2 records useful
   metadata, five aggregate hashes, semantic release checks, and gate-evidence slots,
   and the clean-tree manifest now completes. Current evidence is still short of a

@@ -1,6 +1,6 @@
 # Verification record
 
-Last updated: **2026-07-16 17:18Z**
+Last updated: **2026-07-16 17:20Z**
 
 This is a living implementation record. The immutable generated-package baseline is
 commit `ab30e28`; its original checksum manifest and archive remain in the local
@@ -63,6 +63,8 @@ PATH=/tmp/sphinx-just/bin:$PATH just lint
                          pass
 PATH=/tmp/sphinx-just/bin:$PATH just test
                          pass (46 Rust tests; 191 Python tests)
+PATH=/tmp/sphinx-just/bin:$PATH just release-manifest
+                         pass; status=complete, artifact_count=5
 ```
 
 Regenerated artifact:
